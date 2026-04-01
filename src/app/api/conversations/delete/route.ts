@@ -1,24 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { normalizeEmail } from "../../../../lib/utils";
+import { getAuthenticatedUser } from "../../../../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
-
 export async function DELETE(req: NextRequest) {
   try {
-    const { conversationId, userEmail } = await req.json();
-
-    if (!conversationId || !userEmail) {
-      return NextResponse.json({ error: "Eksik alanlar." }, { status: 400 });
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
     }
 
-    const normalizedEmail = normalizeEmail(userEmail);
+    const { conversationId } = await req.json();
+
+    if (!conversationId) {
+      return NextResponse.json({ error: "Eksik alanlar." }, { status: 400 });
+    }
 
     // Kullanıcının bu sohbetin katılımcısı olduğunu doğrula
     const { data: conversation, error: fetchError } = await supabase
@@ -32,8 +33,8 @@ export async function DELETE(req: NextRequest) {
     }
 
     const isParticipant =
-      normalizeEmail(conversation.owner_email) === normalizedEmail ||
-      normalizeEmail(conversation.claimant_email) === normalizedEmail;
+      normalizeEmail(conversation.owner_email) === authUser.email ||
+      normalizeEmail(conversation.claimant_email) === authUser.email;
 
     if (!isParticipant) {
       return NextResponse.json({ error: "Bu sohbeti silme yetkin yok." }, { status: 403 });
@@ -46,7 +47,6 @@ export async function DELETE(req: NextRequest) {
       .eq("conversation_id", conversationId);
 
     if (msgError) {
-      console.error("Messages delete error:", msgError);
       return NextResponse.json({ error: "Mesajlar silinemedi." }, { status: 500 });
     }
 
@@ -57,13 +57,11 @@ export async function DELETE(req: NextRequest) {
       .eq("id", conversationId);
 
     if (convError) {
-      console.error("Conversation delete error:", convError);
       return NextResponse.json({ error: "Sohbet silinemedi." }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Conversation delete route error:", error);
+  } catch {
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
   }
 }

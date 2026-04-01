@@ -13,10 +13,7 @@ import type { Conversation, Message } from "../../../types/chat";
 import { toast } from "sonner";
 import AppHeader from "../../../components/AppHeader";
 import ConfirmDialog from "../../../components/ConfirmDialog";
-
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
+import { normalizeEmail } from "../../../lib/utils";
 
 function formatDateTime(value: string) {
   const date = new Date(value);
@@ -96,10 +93,6 @@ export default function ConversationDetailPage() {
         .eq("is_read", false)
         .neq("sender_email", normalizedCurrent);
 
-      if (error) {
-        console.error("Mark read error:", error);
-      }
-
       setMessages((prev) =>
         prev.map((msg) =>
           normalizeEmail(msg.sender_email) !== normalizedCurrent
@@ -107,8 +100,7 @@ export default function ConversationDetailPage() {
             : msg
         )
       );
-    } catch (error) {
-      console.error("markMessagesAsRead unexpected error:", error);
+    } catch {
     }
   }
 
@@ -168,8 +160,7 @@ export default function ConversationDetailPage() {
         }
 
         await markMessagesAsRead(currentUserEmail);
-      } catch (error) {
-        console.error("Conversation detail load error:", error);
+      } catch {
         toast.error("Sohbet yüklenirken bir hata oluştu.");
       } finally {
         if (isMounted) setLoading(false);
@@ -294,24 +285,12 @@ export default function ConversationDetailPage() {
           }),
         });
 
-        if (!notifyRes.ok) {
-          const errorText = await notifyRes.text();
-          console.error("Notify request failed:", errorText);
-        }
-      } else {
-        console.error("Geçersiz receiverEmail:", {
-          userEmail: normalizedUserEmail,
-          owner_email: normalizedOwnerEmail,
-          claimant_email: normalizedClaimantEmail,
-          otherSideEmail,
-        });
       }
 
       requestAnimationFrame(() => {
         inputRef.current?.focus();
       });
-    } catch (error) {
-      console.error("Send message error:", error);
+    } catch {
       toast.error("Mesaj gönderilirken bir hata oluştu.");
     } finally {
       setSending(false);
@@ -429,21 +408,30 @@ export default function ConversationDetailPage() {
                           </button>
                         )}
 
-                        <div
-                          className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${
-                            isMine
-                              ? "bg-blue-600 text-white"
-                              : "bg-slate-800 text-slate-100"
-                          }`}
-                        >
-                          <p className="break-words text-sm">{message.content}</p>
-                          <p
-                            className={`mt-2 text-[11px] ${
-                              isMine ? "text-blue-100" : "text-slate-400"
+                        <div>
+                          <div
+                            className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${
+                              isMine
+                                ? "bg-blue-600 text-white"
+                                : "bg-slate-800 text-slate-100"
                             }`}
                           >
-                            {formatDateTime(message.created_at)}
-                          </p>
+                            <p className="break-words text-sm">{message.content}</p>
+                            <p
+                              className={`mt-2 text-[11px] ${
+                                isMine ? "text-blue-100" : "text-slate-400"
+                              }`}
+                            >
+                              {formatDateTime(message.created_at)}
+                            </p>
+                          </div>
+                          {isMine && (
+                            <div className="mt-1 flex justify-end">
+                              <span className={`text-[10px] ${message.is_read ? "text-blue-400" : "text-slate-500"}`}>
+                                {message.is_read ? "✓✓" : "✓"}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

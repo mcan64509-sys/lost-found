@@ -44,12 +44,14 @@ export default function NotificationsPage() {
 
       setNotifications(data || []);
 
-      // Hepsini okundu yap
+      // Hepsini okundu yap (UI'da da güncelle)
       await supabase
         .from("notifications")
         .update({ is_read: true })
         .eq("user_email", email)
         .eq("is_read", false);
+
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
 
       setLoading(false);
     };

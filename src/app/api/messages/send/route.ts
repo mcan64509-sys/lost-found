@@ -1,25 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { normalizeEmail } from "../../../../lib/utils";
+import { getAuthenticatedUser } from "../../../../lib/auth";
+import { checkRateLimit } from "../../../../lib/ratelimit";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
-
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { conversationId, senderEmail, content } = body;
-
-    if (!conversationId || !senderEmail || !content?.trim()) {
-      return NextResponse.json({ error: "Eksik alanlar." }, { status: 400 });
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
     }
 
-    const normalizedSender = normalizeEmail(senderEmail);
+    const rl = await checkRateLimit(`messages:${authUser.id}`);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Çok fazla mesaj. Lütfen bekleyin." }, { status: 429 });
+    }
+
+    const body = await req.json();
+    const { conversationId, content } = body;
+
+    if (!conversationId || !content?.trim()) {
+      return NextResponse.json({ error: "Eksik alanlar." }, { status: 400 });
+    }
 
     // Konuşma var mı ve gönderen katılımcı mı?
     const { data: conversation, error: convError } = await supabase
@@ -33,8 +40,8 @@ export async function POST(req: NextRequest) {
     }
 
     const isParticipant =
-      normalizeEmail(conversation.owner_email) === normalizedSender ||
-      normalizeEmail(conversation.claimant_email) === normalizedSender;
+      normalizeEmail(conversation.owner_email) === authUser.email ||
+      normalizeEmail(conversation.claimant_email) === authUser.email;
 
     if (!isParticipant) {
       return NextResponse.json({ error: "Bu konuşmaya mesaj gönderme yetkin yok." }, { status: 403 });
@@ -44,7 +51,7 @@ export async function POST(req: NextRequest) {
       .from("messages")
       .insert({
         conversation_id: conversationId,
-        sender_email: normalizedSender,
+        sender_email: authUser.email,
         content: content.trim(),
         is_read: false,
       })
@@ -52,13 +59,11 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (insertError || !message) {
-      console.error("Message insert error:", insertError);
       return NextResponse.json({ error: "Mesaj gönderilemedi." }, { status: 500 });
     }
 
     return NextResponse.json({ message }, { status: 201 });
-  } catch (error) {
-    console.error("Messages send error:", error);
+  } catch {
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
   }
 }

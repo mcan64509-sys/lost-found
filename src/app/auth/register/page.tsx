@@ -4,8 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,7 +34,8 @@ export default function RegisterPage() {
       return;
     }
 
-    toast.success("Kayıt başarılı. Email doğrulaması gerekebilir.");
+    toast.success("Kayıt başarılı! E-posta adresinizi doğruladıktan sonra giriş yapabilirsiniz.");
+    router.push("/auth/login");
   }
 
   return (
@@ -54,7 +57,7 @@ export default function RegisterPage() {
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none"
+              className="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none"
               required
             />
           </div>
@@ -67,7 +70,7 @@ export default function RegisterPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none"
+              className="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none"
               required
             />
           </div>
@@ -80,7 +83,7 @@ export default function RegisterPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none"
+              className="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none"
               required
             />
           </div>

@@ -2,11 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "../../../../lib/supabase";
 import { uploadItemImage } from "../../../../lib/storage";
 import { toast } from "sonner";
 import LocationPickerModal from "../../../../components/LocationPickerModal";
+import ImageCropModal from "../../../../components/ImageCropModal";
+import { normalizeEmail } from "../../../../lib/utils";
 
 type DbItem = {
   id: string;
@@ -21,10 +24,6 @@ type DbItem = {
   lat: number | null;
   lng: number | null;
 };
-
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
 
 export default function EditItemPage() {
   const params = useParams();
@@ -47,6 +46,8 @@ export default function EditItemPage() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropFileName, setCropFileName] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -75,8 +76,7 @@ export default function EditItemPage() {
         setDescription(itemData.description || "");
         setLat(itemData.lat || null);
         setLng(itemData.lng || null);
-      } catch (error) {
-        console.error("Edit page unexpected error:", error);
+      } catch {
         setItem(null);
       } finally {
         setLoading(false);
@@ -93,10 +93,17 @@ export default function EditItemPage() {
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] || null;
+    e.target.value = "";
     if (!file) { setSelectedImage(null); setPreviewUrl(""); return; }
     if (!file.type.startsWith("image/")) { toast.error("Lütfen geçerli bir görsel seç."); return; }
-    setSelectedImage(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    setCropFileName(file.name);
+    setCropSrc(URL.createObjectURL(file));
+  }
+
+  function handleCropConfirm(croppedFile: File) {
+    setSelectedImage(croppedFile);
+    setPreviewUrl(URL.createObjectURL(croppedFile));
+    setCropSrc(null);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -137,7 +144,6 @@ export default function EditItemPage() {
         .eq("created_by_email", userEmail);
 
       if (error) {
-        console.error("Update item error:", error);
         toast.error("İlan güncellenemedi.");
         return;
       }
@@ -153,12 +159,11 @@ export default function EditItemPage() {
           category: category.trim(),
           location: location.trim(),
         }),
-      }).catch((err) => console.error("Embed request failed:", err));
+      }).catch(() => {});
 
       toast.success("İlan güncellendi.");
       router.push(`/items/${item.id}`);
-    } catch (error) {
-      console.error("Update item unexpected error:", error);
+    } catch {
       toast.error("İlan güncellenirken bir hata oluştu.");
     } finally {
       setSaving(false);
@@ -211,13 +216,14 @@ export default function EditItemPage() {
           <div>
             <label className="mb-2 block text-sm text-slate-300">Başlık</label>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none" required />
+              className="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none" required />
           </div>
 
           <div>
             <label className="mb-2 block text-sm text-slate-300">Kategori</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none">
+              style={{ colorScheme: "dark" }}
+              className="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none">
               <option value="">Kategori seç</option>
               <option value="Telefon">Telefon</option>
               <option value="Cüzdan">Cüzdan</option>
@@ -235,9 +241,9 @@ export default function EditItemPage() {
             <div className="flex gap-2">
               <input type="text" value={location} onChange={(e) => setLocation(e.target.value)}
                 placeholder="Örn: Kadıköy / İstanbul"
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none" required />
+                className="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none" required />
               <button type="button" onClick={() => setLocationModalOpen(true)}
-                className="shrink-0 rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-white hover:bg-slate-700">
+                className="shrink-0 rounded-xl border border-slate-600 bg-slate-800 px-4 py-3 text-sm text-white hover:bg-slate-700">
                 🗺️ Haritadan Seç
               </button>
             </div>
@@ -249,21 +255,22 @@ export default function EditItemPage() {
           <div>
             <label className="mb-2 block text-sm text-slate-300">Tarih</label>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none" />
+              style={{ colorScheme: "dark" }}
+              className="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none" />
           </div>
 
           <div>
             <label className="mb-2 block text-sm text-slate-300">Açıklama</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)}
               rows={5}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none" />
+              className="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none" />
           </div>
 
           <div>
             <label className="mb-2 block text-sm text-slate-300">Görseli Değiştir <span className="text-slate-500">(isteğe bağlı)</span></label>
             {item.image_url && !previewUrl && (
               <div className="mb-3 overflow-hidden rounded-xl border border-slate-800">
-                <img src={item.image_url} alt="Mevcut görsel" className="h-48 w-full object-cover" />
+                <Image src={item.image_url} alt="Mevcut görsel" width={400} height={192} className="h-48 w-full object-cover" unoptimized />
                 <p className="bg-slate-900 px-3 py-1.5 text-xs text-slate-500">Mevcut görsel</p>
               </div>
             )}
@@ -271,7 +278,7 @@ export default function EditItemPage() {
               className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none file:mr-4 file:rounded-lg file:border-0 file:bg-slate-800 file:px-4 file:py-2 file:text-white hover:file:bg-slate-700" />
             {previewUrl && (
               <div className="mt-3 overflow-hidden rounded-xl border border-slate-800">
-                <img src={previewUrl} alt="Yeni görsel önizleme" className="h-48 w-full object-cover" />
+                <Image src={previewUrl} alt="Yeni görsel önizleme" width={400} height={192} className="h-48 w-full object-cover" unoptimized />
                 <p className="bg-slate-900 px-3 py-1.5 text-xs text-slate-500">Yeni görsel</p>
               </div>
             )}
@@ -300,6 +307,15 @@ export default function EditItemPage() {
           setLocationModalOpen(false);
         }}
       />
+
+      {cropSrc && (
+        <ImageCropModal
+          imageSrc={cropSrc}
+          fileName={cropFileName}
+          onConfirm={handleCropConfirm}
+          onCancel={() => setCropSrc(null)}
+        />
+      )}
     </main>
   );
 }

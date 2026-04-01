@@ -31,13 +31,11 @@ export async function GET(req: NextRequest) {
     const { data: claims, error } = await query;
 
     if (error) {
-      console.error("Incoming claims fetch error:", error);
       return NextResponse.json({ error: "Talepler alınamadı." }, { status: 500 });
     }
 
     return NextResponse.json({ claims: claims ?? [] });
-  } catch (error) {
-    console.error("Claims incoming error:", error);
+  } catch {
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
   }
 }

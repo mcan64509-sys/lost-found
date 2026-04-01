@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import AppHeader from "../../../components/AppHeader";
 import ConfirmDialog from "../../../components/ConfirmDialog";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
+import { normalizeEmail, isValidEmail } from "../../../lib/utils";
 
 type DbItem = {
   id: string;
@@ -18,10 +20,12 @@ type DbItem = {
   type: string | null;
   image_url: string | null;
   image: string | null;
+  image_urls?: string[] | null;
   status: string | null;
   created_at: string | null;
   created_by_email?: string | null;
   embedding?: number[] | null;
+  view_count?: number | null;
 };
 
 type MatchItem = {
@@ -36,15 +40,6 @@ type MatchItem = {
   score: number;
   similarity: number;
 };
-
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
-
-function isValidEmail(value?: string | null) {
-  const email = normalizeEmail(value);
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
 
 export default function ItemDetailPage() {
   const params = useParams();
@@ -64,6 +59,23 @@ export default function ItemDetailPage() {
   const [closingItem, setClosingItem] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [togglingFav, setTogglingFav] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDetails, setReportDetails] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
+
+  // Rating
+  const [ratingScore, setRatingScore] = useState(0);
+  const [ratingHover, setRatingHover] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [submittingRating, setSubmittingRating] = useState(false);
+  const [alreadyRated, setAlreadyRated] = useState(false);
+  const [ratingAvg, setRatingAvg] = useState<number | null>(null);
+  const [ratingCount, setRatingCount] = useState(0);
 
   useEffect(() => {
     const fetchItem = async () => {
@@ -84,11 +96,61 @@ export default function ItemDetailPage() {
         }
 
         setItem(itemData as DbItem);
-        setUserEmail(normalizeEmail(sessionData.session?.user?.email));
+        const email = normalizeEmail(sessionData.session?.user?.email);
+        setUserEmail(email);
+
+        if (email) {
+          fetch(`/api/favorites?userEmail=${encodeURIComponent(email)}`)
+            .then((r) => r.json())
+            .then((d) => {
+              if (d.itemIds && Array.isArray(d.itemIds)) {
+                setIsFavorited(d.itemIds.includes(id));
+              }
+            })
+            .catch(() => {});
+
+          // Check if user already rated this item
+          supabase
+            .from("ratings")
+            .select("id")
+            .eq("item_id", id)
+            .eq("rater_email", email)
+            .maybeSingle()
+            .then(({ data }) => { if (data) setAlreadyRated(true); });
+        }
+
+        // Load rating stats for this item's owner
+        fetch(`/api/ratings/list?email=${encodeURIComponent(itemData.created_by_email || "")}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.avg != null) setRatingAvg(d.avg);
+            if (d.count != null) setRatingCount(d.count);
+          })
+          .catch(() => {});
+
+        fetch("/api/items/view", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ itemId: id }),
+        }).catch(() => {});
+
+        // Save to recently viewed (localStorage)
+        try {
+          const entry = {
+            id: itemData.id,
+            title: itemData.title,
+            type: itemData.type,
+            image_url: itemData.image_url,
+            category: itemData.category,
+            viewedAt: Date.now(),
+          };
+          const existing = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
+          const filtered = existing.filter((e: { id: string }) => e.id !== entry.id);
+          localStorage.setItem("recentlyViewed", JSON.stringify([entry, ...filtered].slice(0, 8)));
+        } catch { /* localStorage unavailable */ }
 
         fetchMatches(id);
-      } catch (err) {
-        console.error("Beklenmeyen hata:", err);
+      } catch {
         setNotFound(true);
         setItem(null);
       } finally {
@@ -102,16 +164,19 @@ export default function ItemDetailPage() {
   async function fetchMatches(itemId: string) {
     try {
       setMatchLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/match", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
         body: JSON.stringify({ itemId }),
       });
 
       const data = await res.json();
       if (data.matches) setMatches(data.matches);
-    } catch (err) {
-      console.error("Match fetch error:", err);
+    } catch {
     } finally {
       setMatchLoading(false);
     }
@@ -162,9 +227,13 @@ export default function ItemDetailPage() {
         matchedItemId: currentItemId || null,
       };
 
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/messages/start-conversation", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -181,8 +250,7 @@ export default function ItemDetailPage() {
       }
 
       toast.error("Konuşma ID dönmedi.");
-    } catch (error) {
-      console.error("Start conversation error:", error);
+    } catch {
       toast.error("Konuşma başlatılamadı.");
     } finally {
       setStartingConv(null);
@@ -222,11 +290,121 @@ export default function ItemDetailPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId: item.id, content: systemContent }),
-      }).catch((err) => console.error("System message error:", err));
+      }).catch(() => {});
     } catch {
       toast.error("İlan kapatılırken bir hata oluştu.");
     } finally {
       setClosingItem(false);
+    }
+  }
+
+  async function handleToggleFavorite() {
+    if (!userEmail) {
+      toast.error("Favorilere eklemek için giriş yapmalısın.");
+      return;
+    }
+    try {
+      setTogglingFav(true);
+      const res = await fetch("/api/favorites", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userEmail, itemId: id }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setIsFavorited(data.favorited);
+        toast.success(data.favorited ? "Favorilere eklendi." : "Favorilerden çıkarıldı.");
+      } else {
+        toast.error("Bir hata oluştu.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setTogglingFav(false);
+    }
+  }
+
+  async function handleSubmitReport() {
+    if (!userEmail) {
+      toast.error("Şikayet göndermek için giriş yapmalısın.");
+      return;
+    }
+    if (!reportReason) {
+      toast.error("Lütfen bir sebep seçin.");
+      return;
+    }
+    try {
+      setSubmittingReport(true);
+      const res = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId: id, reporterEmail: userEmail, reason: reportReason, details: reportDetails }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Şikayetiniz alındı, incelenecek.");
+        setShowReportModal(false);
+        setReportReason("");
+        setReportDetails("");
+      } else {
+        toast.error(data.error || "Şikayet gönderilemedi.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSubmittingReport(false);
+    }
+  }
+
+  async function handleSubmitRating() {
+    if (!userEmail || !item) return;
+    if (ratingScore < 1) { toast.error("Lütfen bir puan seçin."); return; }
+    try {
+      setSubmittingRating(true);
+      const res = await fetch("/api/ratings/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          item_id: item.id,
+          rater_email: userEmail,
+          rated_email: item.created_by_email,
+          score: ratingScore,
+          comment: ratingComment,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAlreadyRated(true);
+        setRatingCount((c) => c + 1);
+        setRatingAvg((prev) =>
+          prev != null ? (prev * ratingCount + ratingScore) / (ratingCount + 1) : ratingScore
+        );
+        toast.success("Değerlendirmeniz kaydedildi.");
+      } else {
+        toast.error(data.error || "Değerlendirme gönderilemedi.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSubmittingRating(false);
+    }
+  }
+
+  async function handleShare() {
+    const url = `${window.location.origin}/items/${id}`;
+    const shareData = { title: item?.title || "Lost & Found İlanı", text: item?.description || "", url };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 2000);
+      }
+    } catch {
+      await navigator.clipboard.writeText(url).catch(() => {});
+      setShareSuccess(true);
+      setTimeout(() => setShareSuccess(false), 2000);
     }
   }
 
@@ -282,7 +460,8 @@ export default function ItemDetailPage() {
     );
   }
 
-  const imageSrc = item.image_url || item.image || "https://placehold.co/1200x900/0f172a/ffffff?text=Gorsel";
+  const allImages = item ? [item.image_url, ...(item.image_urls || [])].filter(Boolean) as string[] : [];
+  const imageSrc = allImages[activeImageIndex] || allImages[0] || "https://placehold.co/1200x900/0f172a/ffffff?text=Gorsel";
   const itemTypeText = item.type === "lost" ? "Kayıp İlanı" : item.type === "found" ? "Bulundu İlanı" : "İlan";
   const typeClasses =
     item.type === "lost"
@@ -363,9 +542,26 @@ export default function ItemDetailPage() {
                   </div>
                 </div>
               )}
-              <div className="h-[320px] w-full md:h-[440px]">
-                <img src={imageSrc} alt={item.title} className="h-full w-full object-cover" />
+
+              <div className="relative h-[320px] w-full md:h-[440px]">
+                <Image src={imageSrc} alt={item.title} className="object-cover" fill unoptimized />
               </div>
+
+              {allImages.length > 1 && (
+                <div className="flex gap-2 p-3 border-t border-slate-800 bg-slate-900/80 overflow-x-auto">
+                  {allImages.map((url, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveImageIndex(i)}
+                      className={`flex-shrink-0 overflow-hidden rounded-lg border-2 transition ${
+                        i === activeImageIndex ? "border-blue-500" : "border-slate-700 opacity-60 hover:opacity-80"
+                      }`}
+                    >
+                      <Image src={url} alt={`Resim ${i+1}`} width={56} height={56} className="h-14 w-14 object-cover" unoptimized />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl shadow-black/20 md:p-8">
@@ -398,6 +594,13 @@ export default function ItemDetailPage() {
                 </div>
               </div>
 
+              {(item.view_count ?? 0) > 0 && (
+                <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Görüntülenme</p>
+                  <p className="mt-2 text-sm text-slate-200">👁 {item.view_count} kez görüntülendi</p>
+                </div>
+              )}
+
               <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
                 <p className="text-xs uppercase tracking-wide text-slate-500">Açıklama</p>
                 <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-300">
@@ -416,8 +619,96 @@ export default function ItemDetailPage() {
                 </div>
               )}
               {!isOwner && item.status === "resolved" && (
-                <div className="mt-8 rounded-2xl border border-green-500/20 bg-green-500/10 p-4">
-                  <p className="text-sm text-green-200">Bu ilan çözüme kavuştu, artık talep gönderilemiyor.</p>
+                <div className="mt-8 space-y-3">
+                  <div className="rounded-2xl border border-green-500/20 bg-green-500/10 p-4">
+                    <p className="text-sm text-green-200">Bu ilan çözüme kavuştu, artık talep gönderilemiyor.</p>
+                  </div>
+
+                  {/* Rating section */}
+                  {userEmail && (
+                    alreadyRated ? (
+                      <div className="rounded-2xl border border-slate-700 bg-slate-800/50 p-4 text-center">
+                        <p className="text-sm text-slate-400">✓ Bu ilan için değerlendirmenizi yaptınız.</p>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4">
+                        <p className="mb-3 text-sm font-semibold text-white">İlan sahibini değerlendir</p>
+                        <div className="flex gap-1 mb-3">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              onMouseEnter={() => setRatingHover(star)}
+                              onMouseLeave={() => setRatingHover(0)}
+                              onClick={() => setRatingScore(star)}
+                              className={`text-2xl transition ${
+                                star <= (ratingHover || ratingScore) ? "text-amber-400" : "text-slate-600"
+                              }`}
+                            >
+                              ★
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          value={ratingComment}
+                          onChange={(e) => setRatingComment(e.target.value)}
+                          placeholder="Yorum ekle (isteğe bağlı)"
+                          rows={2}
+                          maxLength={300}
+                          className="w-full resize-none rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-600 mb-3"
+                        />
+                        <button
+                          onClick={handleSubmitRating}
+                          disabled={submittingRating || ratingScore < 1}
+                          className="w-full rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-amber-400 disabled:opacity-50"
+                        >
+                          {submittingRating ? "Gönderiliyor..." : "Değerlendirmeyi Gönder"}
+                        </button>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={handleToggleFavorite}
+                  disabled={togglingFav}
+                  className={`flex flex-1 items-center justify-center gap-2 rounded-2xl border py-2.5 text-sm font-medium transition disabled:opacity-50 ${
+                    isFavorited
+                      ? "border-amber-500/40 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
+                      : "border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                  }`}
+                >
+                  {isFavorited ? "★ Favoride" : "☆ Favori"}
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-800 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white"
+                >
+                  {shareSuccess ? "✓ Kopyalandı!" : "↗ Paylaş"}
+                </button>
+              </div>
+
+              {!isOwner && (
+                <div className="mt-3">
+                  <button
+                    onClick={() => setShowReportModal(true)}
+                    className="w-full rounded-2xl border border-slate-800 py-2 text-xs text-slate-600 transition hover:border-red-500/30 hover:text-red-400"
+                  >
+                    ⚑ Bu ilanı şikayet et
+                  </button>
+                </div>
+              )}
+
+              {/* Rating stats for this item's owner */}
+              {ratingCount > 0 && (
+                <div className="mt-4 flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3">
+                  <span className="text-amber-400 text-base">{"★".repeat(Math.round(ratingAvg ?? 0))}{"☆".repeat(5 - Math.round(ratingAvg ?? 0))}</span>
+                  <span className="text-sm font-semibold text-white">{(ratingAvg ?? 0).toFixed(1)}</span>
+                  <span className="text-xs text-slate-500">({ratingCount} değerlendirme)</span>
+                  <Link href={`/users/${encodeURIComponent(item.created_by_email || "")}`} className="ml-auto text-xs text-blue-400 hover:text-blue-300">
+                    Profile git →
+                  </Link>
                 </div>
               )}
 
@@ -426,6 +717,70 @@ export default function ItemDetailPage() {
                   <p className="text-sm text-blue-200">
                     Bu ilan sana ait. Menüden düzenleme veya kaldırma işlemlerini yapabilirsin.
                   </p>
+                </div>
+              )}
+
+              {/* Şikayet Modalı */}
+              {showReportModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+                  <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+                    <h2 className="mb-1 text-lg font-bold text-white">İlanı Şikayet Et</h2>
+                    <p className="mb-5 text-sm text-slate-500">Şikayet sebebini seçin ve gönderin.</p>
+
+                    <div className="space-y-2">
+                      {[
+                        { value: "spam", label: "Spam / Reklam" },
+                        { value: "yaniltici", label: "Yanıltıcı / Sahte bilgi" },
+                        { value: "uygunsuz", label: "Uygunsuz içerik" },
+                        { value: "duplicate", label: "Mükerrer ilan" },
+                        { value: "diger", label: "Diğer" },
+                      ].map((opt) => (
+                        <label
+                          key={opt.value}
+                          className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${
+                            reportReason === opt.value
+                              ? "border-blue-500 bg-blue-500/10 text-white"
+                              : "border-slate-700 text-slate-400 hover:border-slate-600"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="reason"
+                            value={opt.value}
+                            checked={reportReason === opt.value}
+                            onChange={() => setReportReason(opt.value)}
+                            className="accent-blue-500"
+                          />
+                          <span className="text-sm">{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <textarea
+                      value={reportDetails}
+                      onChange={(e) => setReportDetails(e.target.value)}
+                      placeholder="Ek açıklama (isteğe bağlı)"
+                      rows={3}
+                      maxLength={500}
+                      className="mt-4 w-full resize-none rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600"
+                    />
+
+                    <div className="mt-5 flex gap-3">
+                      <button
+                        onClick={handleSubmitReport}
+                        disabled={submittingReport || !reportReason}
+                        className="flex-1 rounded-xl bg-red-500 px-4 py-2.5 font-semibold text-white transition hover:bg-red-600 disabled:opacity-50"
+                      >
+                        {submittingReport ? "Gönderiliyor..." : "Şikayet Gönder"}
+                      </button>
+                      <button
+                        onClick={() => { setShowReportModal(false); setReportReason(""); setReportDetails(""); }}
+                        className="flex-1 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 font-medium text-white transition hover:bg-slate-700"
+                      >
+                        İptal
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -470,11 +825,13 @@ export default function ItemDetailPage() {
                     >
                       <Link href={`/items/${match.id}`}>
                         {match.image_url && (
-                          <div className="h-40 overflow-hidden">
-                            <img
+                          <div className="relative h-40 overflow-hidden">
+                            <Image
                               src={match.image_url}
                               alt={match.title}
-                              className="h-full w-full object-cover transition group-hover:scale-105"
+                              className="object-cover transition group-hover:scale-105"
+                              fill
+                              unoptimized
                             />
                           </div>
                         )}
@@ -506,21 +863,24 @@ export default function ItemDetailPage() {
                         </div>
                       </Link>
 
-                      {/* 
-                        Mesaj Gönder butonu:
-                        - Uyum skoru %85 ve üzeri olmalı
-                        - Eşleşen ilanın sahibi ben olmamalıyım
-                        - Giriş yapmış olmalıyım
-                      */}
-                      {match.score >= 0.85 && !matchIsOwner && userEmail && (
+                      {match.score >= 0.85 && !matchIsOwner && (
                         <div className="border-t border-slate-700 p-3">
-                          <button
-                            onClick={() => handleStartConversation(match)}
-                            disabled={startingConv === match.id}
-                            className="w-full rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
-                          >
-                            {startingConv === match.id ? "Başlatılıyor..." : "💬 Mesaj Gönder"}
-                          </button>
+                          {userEmail ? (
+                            <button
+                              onClick={() => handleStartConversation(match)}
+                              disabled={startingConv === match.id}
+                              className="w-full rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+                            >
+                              {startingConv === match.id ? "Başlatılıyor..." : "💬 Mesaj Gönder"}
+                            </button>
+                          ) : (
+                            <Link
+                              href="/auth/login"
+                              className="block w-full rounded-xl border border-blue-500/40 px-4 py-2 text-center text-sm font-semibold text-blue-400 transition hover:bg-blue-500/10"
+                            >
+                              Giriş yap ve iletişime geç →
+                            </Link>
+                          )}
                         </div>
                       )}
 

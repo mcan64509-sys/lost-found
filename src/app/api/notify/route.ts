@@ -30,9 +30,6 @@ export async function POST(req: NextRequest) {
         is_read: false,
       });
 
-    if (insertError) {
-      console.error("Notification insert error:", insertError);
-    }
 
     // 2. Email gönder
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -58,7 +55,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Notify error:", error);
     return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }

@@ -212,9 +212,21 @@ export default function LocationPickerModal({
             <LocationPickerMap
               center={{ lat, lng }}
               radiusKm={radiusKm}
-              onChangeLocation={(newLat, newLng) => {
+              onChangeLocation={async (newLat, newLng) => {
                 setLat(newLat);
                 setLng(newLng);
+                // Reverse geocode to update displayed name
+                try {
+                  const res = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}`,
+                    { headers: { Accept: "application/json" } }
+                  );
+                  const data = await res.json();
+                  if (data?.display_name) {
+                    const short = data.address?.city || data.address?.town || data.address?.village || data.address?.county || data.display_name.split(",")[0];
+                    setQuery(short);
+                  }
+                } catch { setQuery("Seçilen Konum"); }
               }}
             />
           </div>

@@ -53,7 +53,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none"
+              className="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none"
               required
             />
           </div>
@@ -66,7 +66,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none"
+              className="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none"
               required
             />
           </div>
@@ -80,7 +80,13 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-sm text-slate-400">
+        <p className="mt-4 text-sm text-slate-400">
+          <Link href="/auth/forgot-password" className="text-blue-400 hover:text-blue-300">
+            Şifremi unuttum
+          </Link>
+        </p>
+
+        <p className="mt-3 text-sm text-slate-400">
           Hesabın yok mu?{" "}
           <Link
             href="/auth/register"

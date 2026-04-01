@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
+import { normalizeEmail } from "../lib/utils";
 
 type HeaderUser = {
   id: string;
@@ -28,10 +29,6 @@ type Notification = {
   is_read: boolean;
   created_at: string;
 };
-
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
 
 function getInitials(name?: string, email?: string) {
   if (name?.trim()) {
@@ -136,8 +133,7 @@ export default function AppHeader() {
             .neq("sender_email", currentEmail);
           setMessageCount((unreadMessages || []).length);
         }
-      } catch (error) {
-        console.error("Header load error:", error);
+      } catch {
       }
     };
 
@@ -163,6 +159,50 @@ export default function AppHeader() {
     }
     init();
   }, []);
+
+  // Browser push bildirimleri
+  const [userEmail, setUserEmail] = useState("");
+
+  useEffect(() => {
+    async function resolveEmail() {
+      const { data } = await supabase.auth.getSession();
+      const email = normalizeEmail(data.session?.user?.email);
+      setUserEmail(email);
+    }
+    resolveEmail();
+  }, [user]);
+
+  useEffect(() => {
+    if (!userEmail) return;
+
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
+    const notifChannel = supabase
+      .channel(`browser-notif-${userEmail}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_email=eq.${userEmail}` },
+        (payload) => {
+          loadNotifications(userEmail);
+          if (
+            "Notification" in window &&
+            Notification.permission === "granted" &&
+            document.visibilityState === "hidden"
+          ) {
+            const n = payload.new as { title?: string; message?: string };
+            new Notification(n.title || "Lost & Found", {
+              body: n.message || "",
+              icon: "/favicon.ico",
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(notifChannel); };
+  }, [userEmail]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -202,6 +242,19 @@ export default function AppHeader() {
               </span>
             )}
           </Link>
+
+          {user && (
+            <Link
+              href="/favorites"
+              className={`hidden items-center gap-1.5 md:flex ${navClass(pathname === "/favorites")}`}
+              title="Favorilerim"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={pathname === "/favorites" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+              <span>Favoriler</span>
+            </Link>
+          )}
 
           {user && (
             <div ref={notifRef} className="relative">
@@ -294,6 +347,10 @@ export default function AppHeader() {
                     <Link href="/my-items" onClick={() => setMenuOpen(false)}
                       className="mt-1 block rounded-xl px-3 py-2 text-sm text-white transition hover:bg-slate-800">
                       İlanlarım
+                    </Link>
+                    <Link href="/favorites" onClick={() => setMenuOpen(false)}
+                      className="mt-1 block rounded-xl px-3 py-2 text-sm text-white transition hover:bg-slate-800">
+                      ♥ Favorilerim
                     </Link>
                     <Link href="/messages" onClick={() => setMenuOpen(false)}
                       className="mt-1 flex items-center justify-between rounded-xl px-3 py-2 text-sm text-white transition hover:bg-slate-800">

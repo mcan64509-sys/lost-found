@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Supabase__list_tables",
+      "Bash(grep -n \"favorite\\\\|Heart\\\\|favori\\\\|bookmark\\\\|Bookmark\\\\|renew\\\\|Renew\\\\|expires_at\\\\|Yenile\\\\|süresi\" src/app/items/[id]/page.tsx)",
+      "Bash(npx tsc:*)",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(npm install:*)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(npm run:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"middleware.*deprecated\\\\|proxy.*instead\\\\|middleware-to-proxy\" node_modules/next/dist/build/ --include=*.js -l)",
+      "Bash(node:*)",
+      "Bash(grep -n \"shareSuccess\\\\|share\\\\|Share\\\\|paylaş\" src/app/items/[id]/page.tsx)",
+      "Bash(grep -n \"image\\\\|upload\\\\|handleImageChange\" src/app/items/[id]/edit/page.tsx)",
+      "Bash(npm list:*)",
+      "Bash(grep -n \"LocationPickerModal\\\\|</main>\" src/app/items/[id]/edit/page.tsx)",
+      "Bash(ls public/icon*)",
+      "Bash(npm uninstall:*)",
+      "Bash(ls:*)",
+      "Bash(grep -r \"CORS\\\\|cors\\\\|headers\\\\|security\" /c/Users/Gebruiker/lost-found-app/src/middleware*)",
+      "Bash(grep -c \"console\\\\.log\\\\|console\\\\.error\\\\|console\\\\.warn\" /c/Users/Gebruiker/lost-found-app/src/app/api/**/*.ts)",
+      "Bash(find /c/Users/Gebruiker/lost-found-app/src/app/api -name *.ts -exec grep -l console. {})",
+      "Bash(git remote:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}

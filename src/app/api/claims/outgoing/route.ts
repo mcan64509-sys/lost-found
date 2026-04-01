@@ -23,13 +23,11 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Outgoing claims fetch error:", error);
       return NextResponse.json({ error: "Talepler alınamadı." }, { status: 500 });
     }
 
     return NextResponse.json({ claims: claims ?? [] });
-  } catch (error) {
-    console.error("Claims outgoing error:", error);
+  } catch {
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
   }
 }

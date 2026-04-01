@@ -1,21 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { normalizeEmail } from "../../../../lib/utils";
+import { sendClaimApprovedEmail } from "../../../../lib/email";
+import { getAuthenticatedUser } from "../../../../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
-
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { claimId, ownerUserId, ownerEmail } = body;
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+    }
 
-    if (!claimId || (!ownerUserId && !ownerEmail)) {
+    const body = await req.json();
+    const { claimId } = body;
+
+    if (!claimId) {
       return NextResponse.json({ error: "Eksik alanlar." }, { status: 400 });
     }
 
@@ -34,11 +38,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Bu talep zaten işleme alınmış." }, { status: 409 });
     }
 
-    // Yetkili mi kontrol et (ilan sahibi olmalı)
-    const normalizedOwnerEmail = normalizeEmail(ownerEmail);
+    // JWT'den gelen kullanıcı ilan sahibi mi?
     const isOwner =
-      (ownerUserId && claim.owner_user_id === ownerUserId) ||
-      (!ownerUserId && normalizedOwnerEmail && normalizeEmail(claim.owner_email) === normalizedOwnerEmail);
+      (claim.owner_user_id && claim.owner_user_id === authUser.id) ||
+      (!claim.owner_user_id && claim.owner_email && normalizeEmail(claim.owner_email) === authUser.email);
 
     if (!isOwner) {
       return NextResponse.json({ error: "Bu talebi onaylama yetkin yok." }, { status: 403 });
@@ -51,11 +54,10 @@ export async function POST(req: NextRequest) {
     ]);
 
     if (updateClaimError) {
-      console.error("Claim approve update error:", updateClaimError);
       return NextResponse.json({ error: "Talep onaylanamadı." }, { status: 500 });
     }
     if (updateItemError) {
-      console.error("Item status update error:", updateItemError);
+      // Non-critical, continue
     }
 
     // Talep edenin e-postasına bildirim gönder
@@ -76,6 +78,12 @@ export async function POST(req: NextRequest) {
         item_id: claim.item_id,
         is_read: false,
       });
+
+      sendClaimApprovedEmail({
+        claimerEmail: claim.claimer_email,
+        itemTitle,
+        itemId: claim.item_id,
+      }).catch(() => {});
     }
 
     // Konuşmalara sistem mesajı ekle
@@ -103,8 +111,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Claims approve error:", error);
+  } catch {
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
   }
 }

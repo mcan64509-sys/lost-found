@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { normalizeEmail, isValidEmail } from "../../../../lib/utils";
+import { getAuthenticatedUser } from "../../../../lib/auth";
+import { checkRateLimit, getClientIp } from "../../../../lib/ratelimit";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,32 +12,34 @@ const supabase = createClient(
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
-
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
 export async function POST(req: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+    }
+
+    const rl = await checkRateLimit(`startconv:${getClientIp(req)}`);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Çok fazla istek. Lütfen bekleyin." }, { status: 429 });
+    }
+
     const body = await req.json();
 
-    const senderEmail = normalizeEmail(body.senderEmail);
     const receiverEmail = normalizeEmail(body.receiverEmail);
     const itemId = String(body.itemId || "").trim();
     const itemTitle = String(body.itemTitle || "").trim();
     const matchedItemId = body.matchedItemId ? String(body.matchedItemId) : null;
+    const senderEmail = authUser.email!;
 
-    if (!senderEmail || !receiverEmail || !itemId || !itemTitle) {
+    if (!receiverEmail || !itemId || !itemTitle) {
       return NextResponse.json(
         { error: "Eksik alanlar var." },
         { status: 400 }
       );
     }
 
-    if (!isValidEmail(senderEmail) || !isValidEmail(receiverEmail)) {
+    if (!isValidEmail(receiverEmail)) {
       return NextResponse.json(
         { error: "Geçersiz email bilgisi." },
         { status: 400 }
@@ -48,25 +53,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Aynı item + aynı iki kişi için mevcut konuşma var mı?
-    const { data: existingConversation, error: existingError } = await supabase
+    // Aynı item + aynı iki kişi için mevcut konuşma var mı? (her iki yön)
+    const { data: existingConversations, error: existingError } = await supabase
       .from("conversations")
       .select("*")
       .eq("item_id", itemId)
-      .eq("owner_email", receiverEmail)
-      .eq("claimant_email", senderEmail)
-      .maybeSingle();
+      .or(
+        `and(owner_email.eq.${receiverEmail},claimant_email.eq.${senderEmail}),and(owner_email.eq.${senderEmail},claimant_email.eq.${receiverEmail})`
+      );
 
     if (existingError) {
-      console.error("Existing conversation lookup error:", existingError);
       return NextResponse.json(
         { error: "Mevcut konuşma kontrol edilemedi." },
         { status: 500 }
       );
     }
 
-    if (existingConversation) {
-      return NextResponse.json({ conversationId: existingConversation.id });
+    if (existingConversations && existingConversations.length > 0) {
+      return NextResponse.json({ conversationId: existingConversations[0].id });
     }
 
     // Yeni konuşma oluştur
@@ -82,7 +86,6 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (insertError || !conversation) {
-      console.error("Conversation insert error:", insertError);
       return NextResponse.json(
         { error: "Konuşma başlatılamadı." },
         { status: 500 }
@@ -90,28 +93,23 @@ export async function POST(req: NextRequest) {
     }
 
     // Karşı tarafa bildirim
-    const { error: notificationError } = await supabase
-      .from("notifications")
-      .insert({
-        user_email: receiverEmail,
-        type: "match_message",
-        title: "💬 Yeni mesaj isteği!",
-        message: `${senderEmail} kullanıcısı "${itemTitle}" ilanınız için size ulaşmak istiyor.`,
-        item_id: itemId,
-        related_item_id: matchedItemId,
-        is_read: false,
-      });
+    await supabase.from("notifications").insert({
+      user_email: receiverEmail,
+      type: "match_message",
+      title: "💬 Yeni mesaj isteği!",
+      message: `${senderEmail} kullanıcısı "${itemTitle}" ilanınız için size ulaşmak istiyor.`,
+      item_id: itemId,
+      related_item_id: matchedItemId,
+      is_read: false,
+    });
 
-    if (notificationError) {
-      console.error("Start conversation notification insert error:", notificationError);
-    }
-
-    // Email gönderimi opsiyonel, fail olsa da konuşmayı bozma
+    // Email gönderimi opsiyonel
     try {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const fromEmail = process.env.RESEND_FROM_EMAIL || "Lost & Found <onboarding@resend.dev>";
 
       await resend.emails.send({
-        from: "Lost & Found <onboarding@resend.dev>",
+        from: fromEmail,
         to: receiverEmail,
         subject: "💬 Yeni mesaj isteği",
         html: `
@@ -128,13 +126,12 @@ export async function POST(req: NextRequest) {
           </div>
         `,
       });
-    } catch (mailError) {
-      console.error("Start conversation mail error:", mailError);
+    } catch {
+      // Email fail olsa da konuşmayı bozma
     }
 
     return NextResponse.json({ conversationId: conversation.id });
-  } catch (error) {
-    console.error("Start conversation error:", error);
+  } catch {
     return NextResponse.json(
       { error: "Konuşma başlatılamadı." },
       { status: 500 }

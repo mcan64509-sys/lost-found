@@ -1,23 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { normalizeEmail } from "../../../../lib/utils";
+import { sendClaimReceivedEmail } from "../../../../lib/email";
+import { getAuthenticatedUser } from "../../../../lib/auth";
+import { checkRateLimit, getClientIp } from "../../../../lib/ratelimit";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
-
 export async function POST(req: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser) {
+      return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+    }
+
+    const rl = await checkRateLimit(`claims:${authUser.id}`);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Çok fazla istek. Lütfen bekleyin." }, { status: 429 });
+    }
+
     const body = await req.json();
 
     const {
       item_id,
-      claimer_user_id,
-      claimer_email,
       claimant_name,
       owner_user_id,
       owner_email,
@@ -28,18 +36,33 @@ export async function POST(req: NextRequest) {
       extra_note,
     } = body;
 
-    if (!item_id || !claimer_user_id || !claimant_name || !lost_location || !distinctive_feature) {
+    if (!item_id || !claimant_name || !lost_location || !distinctive_feature) {
       return NextResponse.json({ error: "Eksik zorunlu alanlar." }, { status: 400 });
     }
 
-    const normalizedClaimerEmail = normalizeEmail(claimer_email);
+    // JWT'den gelen kullanıcı bilgilerini kullan
+    const claimer_user_id = authUser.id;
+    const claimer_email = authUser.email;
+
+    // Ban check
+    if (claimer_email) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_banned")
+        .eq("email", claimer_email)
+        .maybeSingle();
+      if (profile?.is_banned) {
+        return NextResponse.json({ error: "Hesabınız engellendi. Talep gönderemezsiniz." }, { status: 403 });
+      }
+    }
+
     const normalizedOwnerEmail = normalizeEmail(owner_email);
 
     // Kendi ilanına talep engellemesi
     if (owner_user_id && claimer_user_id === owner_user_id) {
       return NextResponse.json({ error: "Kendi ilanına talep gönderemezsin." }, { status: 400 });
     }
-    if (!owner_user_id && normalizedOwnerEmail && normalizedClaimerEmail === normalizedOwnerEmail) {
+    if (!owner_user_id && normalizedOwnerEmail && claimer_email === normalizedOwnerEmail) {
       return NextResponse.json({ error: "Kendi ilanına talep gönderemezsin." }, { status: 400 });
     }
 
@@ -64,7 +87,7 @@ export async function POST(req: NextRequest) {
       .insert({
         item_id,
         claimer_user_id,
-        claimer_email: normalizedClaimerEmail || null,
+        claimer_email: claimer_email || null,
         claimant_name: claimant_name.trim(),
         owner_user_id: owner_user_id || null,
         owner_email: normalizedOwnerEmail || null,
@@ -79,13 +102,29 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (insertError || !claim) {
-      console.error("Claim insert error:", insertError);
       return NextResponse.json({ error: "Talep oluşturulamadı." }, { status: 500 });
     }
 
+    // İlan sahibine email bildir
+    if (normalizedOwnerEmail) {
+      const { data: item } = await supabase
+        .from("items")
+        .select("title")
+        .eq("id", item_id)
+        .maybeSingle();
+
+      if (item?.title) {
+        sendClaimReceivedEmail({
+          ownerEmail: normalizedOwnerEmail,
+          claimantName: claimant_name.trim(),
+          itemTitle: item.title,
+          itemId: item_id,
+        }).catch(() => {});
+      }
+    }
+
     return NextResponse.json({ claim }, { status: 201 });
-  } catch (error) {
-    console.error("Claims create error:", error);
+  } catch {
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
   }
 }

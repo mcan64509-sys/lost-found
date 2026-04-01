@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import AppHeader from "../../../../components/AppHeader";
 import { supabase } from "../../../../lib/supabase";
 import { toast } from "sonner";
+import { normalizeEmail } from "../../../../lib/utils";
 
 type DbItem = {
   id: string;
@@ -23,10 +24,6 @@ type DbItem = {
   created_by_email?: string | null;
   createdByEmail?: string | null;
 };
-
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
 
 export default function ClaimPage() {
   const params = useParams();
@@ -59,8 +56,7 @@ export default function ClaimPage() {
           return;
         }
         setItem(data as DbItem);
-      } catch (error) {
-        console.error("Claim page unexpected item fetch error:", error);
+      } catch {
         setItem(null);
       } finally {
         setLoadingItem(false);
@@ -137,7 +133,6 @@ export default function ClaimPage() {
       const { error: insertError } = await supabase.from("claims").insert(payload);
 
       if (insertError) {
-        console.error("Claim insert error:", insertError);
         toast.error("Sahiplik talebi gönderilemedi.");
         return;
       }
@@ -155,13 +150,12 @@ export default function ClaimPage() {
             itemId: item.id,
             relatedItemId: null,
           }),
-        }).catch((err) => console.error("Notify request failed:", err));
+        }).catch(() => {});
       }
 
       toast.success("Sahiplik talebi gönderildi.");
       router.push("/profile");
-    } catch (error) {
-      console.error("Claim submit unexpected error:", error);
+    } catch {
       toast.error("Bir hata oluştu.");
     } finally {
       setSubmitting(false);
@@ -230,12 +224,13 @@ export default function ClaimPage() {
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Ad Soyad</label>
                   <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" required />
+                    className="w-full rounded-2xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" required />
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-300">Eşyayı ne zaman kaybettin?</label>
                   <input type="date" value={lostDate} onChange={(e) => setLostDate(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" required />
+                    style={{ colorScheme: "dark" }}
+                    className="w-full rounded-2xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" required />
                 </div>
               </div>
 
@@ -243,27 +238,27 @@ export default function ClaimPage() {
                 <label className="mb-2 block text-sm font-medium text-slate-300">Nerede kaybettin?</label>
                 <input type="text" value={lostLocation} onChange={(e) => setLostLocation(e.target.value)}
                   placeholder="Örn: Kadıköy / İstanbul"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" required />
+                  className="w-full rounded-2xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" required />
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-300">Marka / Model</label>
                 <input type="text" value={brandModel} onChange={(e) => setBrandModel(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" />
+                  className="w-full rounded-2xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" />
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-300">Ayırt Edici Özellik</label>
                 <textarea value={distinctiveFeature} onChange={(e) => setDistinctiveFeature(e.target.value)}
                   rows={5} placeholder="Örn: Siyah kılıf, sağ alt köşede çizik"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" required />
+                  className="w-full rounded-2xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" required />
               </div>
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-300">Ek Not</label>
                 <textarea value={extraNote} onChange={(e) => setExtraNote(e.target.value)}
                   rows={4} placeholder="Varsa ek bilgi gir"
-                  className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" />
+                  className="w-full rounded-2xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500" />
               </div>
 
               <button type="submit" disabled={submitting}

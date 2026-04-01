@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import AppHeader from "../../components/AppHeader";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import { supabase } from "../../lib/supabase";
 import { toast } from "sonner";
+import { normalizeEmail } from "../../lib/utils";
 
 type MyItem = {
   id: string;
@@ -19,11 +21,9 @@ type MyItem = {
   image_url: string | null;
   created_at: string;
   created_by_email: string;
+  expires_at: string | null;
+  status: string | null;
 };
-
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
 
 export default function MyItemsPage() {
   const router = useRouter();
@@ -34,6 +34,7 @@ export default function MyItemsPage() {
   const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null);
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [renewingItemId, setRenewingItemId] = useState<string | null>(null);
 
   const loadMyItems = useCallback(async () => {
     try {
@@ -50,6 +51,7 @@ export default function MyItemsPage() {
 
       if (!sessionUser?.email) {
         setUserEmail("");
+        
         setItems([]);
         setLoading(false);
         return;
@@ -70,8 +72,6 @@ export default function MyItemsPage() {
 
       setItems((data ?? []) as MyItem[]);
     } catch (error) {
-      console.error("My items load error:", error);
-
       if (error instanceof Error) {
         toast.error(error.message);
       } else {
@@ -122,8 +122,6 @@ export default function MyItemsPage() {
       setOpenMenuItemId(null);
       await loadMyItems();
     } catch (error) {
-      console.error("Delete item error:", error);
-
       if (error instanceof Error) {
         toast.error(`İlan silinemedi: ${error.message}`);
       } else {
@@ -131,6 +129,30 @@ export default function MyItemsPage() {
       }
     } finally {
       setDeletingItemId(null);
+    }
+  }
+
+  async function handleRenewItem(itemId: string) {
+    try {
+      setRenewingItemId(itemId);
+      const res = await fetch("/api/items/renew", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId, userEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "İlan yenilenemedi.");
+        return;
+      }
+      toast.success("İlan 60 gün uzatıldı.");
+      setItems((prev) =>
+        prev.map((item) => item.id === itemId ? { ...item, expires_at: data.expires_at } : item)
+      );
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setRenewingItemId(null);
     }
   }
 
@@ -174,6 +196,24 @@ export default function MyItemsPage() {
               </button>
             </div>
           </div>
+
+          {!loading && userEmail && items.length > 0 && (
+            <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {[
+                { label: "Toplam İlan", value: items.length, color: "text-white" },
+                { label: "Aktif", value: items.filter((i) => i.status === "active").length, color: "text-emerald-400" },
+                { label: "Kayıp", value: items.filter((i) => i.type === "lost").length, color: "text-amber-400" },
+                { label: "Bulundu", value: items.filter((i) => i.type === "found").length, color: "text-blue-400" },
+                { label: "Çözüldü", value: items.filter((i) => i.status === "resolved").length, color: "text-green-400" },
+                { label: "Süresi Dolmuş", value: items.filter((i) => i.status === "expired" || (i.expires_at !== null && new Date(i.expires_at) < new Date())).length, color: "text-red-400" },
+              ].map((stat) => (
+                <div key={stat.label} className="rounded-2xl border border-slate-800 bg-slate-900 p-4 text-center">
+                  <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
+                  <p className="mt-1 text-xs text-slate-500">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          )}
 
           {loading ? (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -282,10 +322,12 @@ export default function MyItemsPage() {
 
                     <Link href={`/items/${item.id}`} className="block">
                       <div className="relative h-56 overflow-hidden">
-                        <img
+                        <Image
                           src={imageSrc}
                           alt={item.title}
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                          className="object-cover transition duration-300 group-hover:scale-[1.03]"
+                          fill
+                          unoptimized
                         />
 
                         <div className="absolute left-16 top-4">
@@ -325,8 +367,26 @@ export default function MyItemsPage() {
                         <div className="mt-5 inline-flex items-center text-sm font-medium text-blue-400 transition group-hover:text-blue-300">
                           Detayı görüntüle →
                         </div>
+
+                        {item.expires_at && (
+                          <p className={`mt-3 text-xs ${new Date(item.expires_at) < new Date() ? "text-red-400" : "text-slate-500"}`}>
+                            {new Date(item.expires_at) < new Date()
+                              ? "⚠ Süresi dolmuş"
+                              : `Son: ${new Date(item.expires_at).toLocaleDateString("tr-TR")}`}
+                          </p>
+                        )}
                       </div>
                     </Link>
+
+                    <div className="px-5 pb-4">
+                      <button
+                        onClick={() => handleRenewItem(item.id)}
+                        disabled={renewingItemId === item.id}
+                        className="w-full rounded-xl border border-slate-700 bg-slate-800 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white disabled:opacity-50"
+                      >
+                        {renewingItemId === item.id ? "Yenileniyor..." : "↺ İlanı 60 Gün Uzat"}
+                      </button>
+                    </div>
                   </div>
                 );
               })}

@@ -23,7 +23,6 @@ export async function POST(req: NextRequest) {
       .eq("item_id", itemId);
 
     if (convError) {
-      console.error("System message conversations fetch error:", convError);
       return NextResponse.json({ error: "Konuşmalar alınamadı." }, { status: 500 });
     }
 
@@ -44,13 +43,11 @@ export async function POST(req: NextRequest) {
       .insert(inserts);
 
     if (insertError) {
-      console.error("System message insert error:", insertError);
       return NextResponse.json({ error: "Sistem mesajı eklenemedi." }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, inserted: inserts.length });
-  } catch (error) {
-    console.error("System message route error:", error);
+  } catch {
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
   }
 }

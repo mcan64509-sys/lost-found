@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Embed error:", error);
     return NextResponse.json({ error: "Embedding hatası", detail: String(error) }, { status: 500 });
   }
 }

@@ -8,10 +8,7 @@ import { supabase } from "../../lib/supabase";
 import { getUserConversations } from "../../lib/chat";
 import type { Conversation } from "../../types/chat";
 import { toast } from "sonner";
-
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
+import { normalizeEmail } from "../../lib/utils";
 
 function formatDate(value?: string | null) {
   if (!value) return "";
@@ -78,7 +75,6 @@ export default function MessagesPage() {
           .neq("sender_email", currentUserEmail);
 
         if (unreadError) {
-          console.error("Unread messages fetch error:", unreadError);
           setUnreadMap({});
         } else {
           const nextMap: Record<string, number> = {};
@@ -90,8 +86,6 @@ export default function MessagesPage() {
           setUnreadMap(nextMap);
         }
       } catch (error) {
-        console.error("Messages page load error:", error);
-
         if (error instanceof Error) {
           toast.error(error.message);
         } else {
@@ -112,10 +106,14 @@ export default function MessagesPage() {
     try {
       setDeletingId(conversationId);
 
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/conversations/delete", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId, userEmail }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ conversationId }),
       });
 
       if (!res.ok) {

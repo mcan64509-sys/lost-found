@@ -8,9 +8,11 @@ import {
   useState,
 } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { supabase } from "../../lib/supabase";
 import { toast } from "sonner";
 import AppHeader from "../../components/AppHeader";
+import { normalizeEmail } from "../../lib/utils";
 
 type UserProfile = {
   id: string;
@@ -71,11 +73,24 @@ function getInitials(name?: string, email?: string) {
   return "?";
 }
 
-function normalizeEmail(value?: string | null) {
-  return (value || "").trim().toLowerCase();
-}
+type ActiveTab = "items" | "incoming" | "outgoing" | "favorites" | "email_prefs";
 
-type ActiveTab = "items" | "incoming" | "outgoing";
+type EmailPrefs = {
+  notify_claims: boolean;
+  notify_messages: boolean;
+  notify_matches: boolean;
+  notify_digest: boolean;
+};
+
+type FavoriteItem = {
+  id: string;
+  title: string;
+  type: "lost" | "found";
+  category: string | null;
+  location: string | null;
+  image_url: string | null;
+  status: string | null;
+};
 
 export default function ProfilePage() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -88,6 +103,19 @@ export default function ProfilePage() {
   const [outgoingClaims, setOutgoingClaims] = useState<Claim[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(false);
   const [processingClaim, setProcessingClaim] = useState<string | null>(null);
+  const [favoriteItems, setFavoriteItems] = useState<FavoriteItem[]>([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [emailPrefs, setEmailPrefs] = useState<EmailPrefs>({
+    notify_claims: true,
+    notify_messages: true,
+    notify_matches: true,
+    notify_digest: false,
+  });
+  const [emailPrefsLoading, setEmailPrefsLoading] = useState(false);
+  const [savingEmailPrefs, setSavingEmailPrefs] = useState(false);
 
   const initials = useMemo(
     () => getInitials(user?.fullName, user?.email),
@@ -107,8 +135,7 @@ export default function ProfilePage() {
       ]);
       setIncomingClaims(incomingData.claims ?? []);
       setOutgoingClaims(outgoingData.claims ?? []);
-    } catch (error) {
-      console.error("loadClaims error:", error);
+    } catch {
     } finally {
       setClaimsLoading(false);
     }
@@ -122,7 +149,6 @@ export default function ProfilePage() {
         await supabase.auth.getSession();
 
       if (sessionError) {
-        console.error("Session error:", sessionError);
         setUser(null);
         setMyItems([]);
         return;
@@ -148,10 +174,6 @@ export default function ProfilePage() {
             .order("created_at", { ascending: false }),
         ]);
 
-      if (profileError) {
-        console.error("Profile fetch error:", profileError);
-      }
-
       if (!profileRow) {
         const payload = {
           id: sessionUser.id,
@@ -164,13 +186,9 @@ export default function ProfilePage() {
           .from("profiles")
           .upsert(payload);
 
-        if (insertError) {
-          console.error("Profile upsert error:", insertError);
-        }
       }
 
       if (itemsError) {
-        console.error("My items fetch error:", itemsError);
         setMyItems([]);
       } else {
         setMyItems((itemsData ?? []) as MyItem[]);
@@ -190,8 +208,7 @@ export default function ProfilePage() {
       });
 
       loadClaims(sessionUser.id, currentEmail);
-    } catch (error) {
-      console.error("loadProfile error:", error);
+    } catch {
       setUser(null);
       setMyItems([]);
     } finally {
@@ -199,18 +216,83 @@ export default function ProfilePage() {
     }
   }, [loadClaims]);
 
+  async function loadFavorites(email: string) {
+    setFavoritesLoading(true);
+    try {
+      const res = await fetch(
+        `/api/favorites?userEmail=${encodeURIComponent(email)}&withItems=true`
+      );
+      if (!res.ok) {
+        setFavoriteItems([]);
+        return;
+      }
+      const data = await res.json();
+      setFavoriteItems((data.items ?? []) as FavoriteItem[]);
+    } catch {
+    } finally {
+      setFavoritesLoading(false);
+    }
+  }
+
+  async function loadEmailPrefs() {
+    setEmailPrefsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/email-preferences`, {
+        headers: { Authorization: `Bearer ${session?.access_token ?? ""}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEmailPrefs({
+          notify_claims: data.notify_claims ?? true,
+          notify_messages: data.notify_messages ?? true,
+          notify_matches: data.notify_matches ?? true,
+          notify_digest: data.notify_digest ?? false,
+        });
+      }
+    } catch {
+    } finally {
+      setEmailPrefsLoading(false);
+    }
+  }
+
+  async function saveEmailPrefs() {
+    if (!user?.email) return;
+    setSavingEmailPrefs(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/email-preferences", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify(emailPrefs),
+      });
+      if (res.ok) {
+        toast.success("Email tercihlerın kaydedildi.");
+      } else {
+        toast.error("Kaydedilemedi.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSavingEmailPrefs(false);
+    }
+  }
+
   async function handleApproveClaim(claim: Claim) {
     if (!user) return;
     try {
       setProcessingClaim(claim.id);
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/claims/approve", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          claimId: claim.id,
-          ownerUserId: user.id,
-          ownerEmail: user.email,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ claimId: claim.id }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "Talep onaylanamadı."); return; }
@@ -229,14 +311,14 @@ export default function ProfilePage() {
     if (!user) return;
     try {
       setProcessingClaim(claim.id);
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/claims/reject", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          claimId: claim.id,
-          ownerUserId: user.id,
-          ownerEmail: user.email,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ claimId: claim.id }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error || "Talep reddedilemedi."); return; }
@@ -296,7 +378,6 @@ export default function ProfilePage() {
         });
 
       if (uploadError) {
-        console.error("Avatar upload error:", uploadError);
         toast.error(`Profil resmi yüklenemedi: ${uploadError.message}`);
         return;
       }
@@ -315,7 +396,6 @@ export default function ProfilePage() {
       });
 
       if (updateError) {
-        console.error("Avatar profile update error:", updateError);
         toast.error(`Profil resmi kaydedilemedi: ${updateError.message}`);
         return;
       }
@@ -331,8 +411,6 @@ export default function ProfilePage() {
 
       toast.success("Profil resmi güncellendi.");
     } catch (error) {
-      console.error("handleAvatarChange error:", error);
-
       if (error instanceof Error) {
         toast.error(`Profil resmi yüklenirken hata oluştu: ${error.message}`);
       } else {
@@ -341,6 +419,27 @@ export default function ProfilePage() {
     } finally {
       setUploadingAvatar(false);
       e.target.value = "";
+    }
+  }
+
+  async function handleSaveProfile() {
+    if (!user) return;
+    try {
+      setSavingProfile(true);
+      const trimmedName = editName.trim();
+
+      await Promise.all([
+        supabase.from("profiles").update({ full_name: trimmedName }).eq("id", user.id),
+        supabase.auth.updateUser({ data: { full_name: trimmedName } }),
+      ]);
+
+      setUser((prev) => prev ? { ...prev, fullName: trimmedName } : prev);
+      setEditingProfile(false);
+      toast.success("Profil güncellendi.");
+    } catch {
+      toast.error("Profil güncellenirken bir hata oluştu.");
+    } finally {
+      setSavingProfile(false);
     }
   }
 
@@ -421,10 +520,13 @@ export default function ProfilePage() {
                   }`}
                 >
                   {user.avatarUrl ? (
-                    <img
+                    <Image
                       src={user.avatarUrl}
                       alt="Profil resmi"
+                      width={96}
+                      height={96}
                       className="h-28 w-28 object-cover object-center"
+                      unoptimized
                     />
                   ) : (
                     <div className="flex h-28 w-28 items-center justify-center bg-slate-800 text-3xl font-bold text-white">
@@ -465,12 +567,52 @@ export default function ProfilePage() {
                 </label>
 
                 <button
+                  onClick={() => { setEditName(user.fullName || ""); setEditingProfile(true); }}
+                  className="rounded-2xl border border-slate-600 bg-slate-800 px-5 py-3 font-medium text-white transition hover:bg-slate-700"
+                >
+                  Profili Düzenle
+                </button>
+
+                <button
                   onClick={handleLogout}
                   className="rounded-2xl bg-red-500 px-5 py-3 font-medium text-white transition hover:bg-red-600"
                 >
                   Çıkış Yap
                 </button>
               </div>
+
+              {/* Profil düzenleme modalı */}
+              {editingProfile && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+                  <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+                    <h2 className="text-xl font-bold text-white mb-4">Profili Düzenle</h2>
+                    <div>
+                      <label className="mb-2 block text-sm text-slate-300">Ad Soyad</label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none"
+                      />
+                    </div>
+                    <div className="mt-5 flex gap-3">
+                      <button
+                        onClick={handleSaveProfile}
+                        disabled={savingProfile}
+                        className="flex-1 rounded-xl bg-blue-500 px-4 py-2.5 font-semibold text-white hover:bg-blue-600 disabled:opacity-60"
+                      >
+                        {savingProfile ? "Kaydediliyor..." : "Kaydet"}
+                      </button>
+                      <button
+                        onClick={() => setEditingProfile(false)}
+                        className="flex-1 rounded-xl border border-slate-600 bg-slate-800 px-4 py-2.5 font-medium text-white hover:bg-slate-700"
+                      >
+                        İptal
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -511,6 +653,27 @@ export default function ProfilePage() {
                 <span className="ml-2 rounded-full bg-slate-700 px-2 py-0.5 text-xs">{outgoingClaims.length}</span>
               )}
             </button>
+            <button
+              onClick={() => {
+                setActiveTab("favorites");
+                if (user?.email && favoriteItems.length === 0 && !favoritesLoading) {
+                  loadFavorites(user.email);
+                }
+              }}
+              className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                activeTab === "favorites" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Favorilerim
+            </button>
+            <button
+              onClick={() => setActiveTab("email_prefs")}
+              className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                activeTab === "email_prefs" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Bildirimler
+            </button>
           </div>
 
           {/* İlanlarım tab */}
@@ -533,13 +696,13 @@ export default function ProfilePage() {
                     const imageSrc = item.image_url || "https://placehold.co/1200x900/0f172a/ffffff?text=Gorsel";
                     const typeLabel = item.type === "lost" ? "Kayıp İlanı" : "Bulundu İlanı";
                     const typeClasses = item.type === "lost"
-                      ? "border-amber-500/20 bg-amber-500/10 text-amber-300"
-                      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
+                      ? "border-amber-500/40 bg-amber-500/20 text-amber-200"
+                      : "border-emerald-500/40 bg-emerald-500/20 text-emerald-200";
                     return (
                       <Link key={item.id} href={`/items/${item.id}`}
                         className="group overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 transition hover:-translate-y-1 hover:border-slate-700 hover:shadow-2xl hover:shadow-black/20">
                         <div className="relative h-56 overflow-hidden">
-                          <img src={imageSrc} alt={item.title} className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]" />
+                          <Image src={imageSrc} alt={item.title} className="object-cover transition duration-300 group-hover:scale-[1.03]" fill unoptimized />
                           <div className="absolute left-4 top-4">
                             <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${typeClasses}`}>{typeLabel}</span>
                           </div>
@@ -586,9 +749,9 @@ export default function ProfilePage() {
                 <div className="space-y-4">
                   {incomingClaims.map((claim) => {
                     const statusColors = {
-                      pending: "border-yellow-500/20 bg-yellow-500/10 text-yellow-300",
-                      approved: "border-green-500/20 bg-green-500/10 text-green-300",
-                      rejected: "border-red-500/20 bg-red-500/10 text-red-300",
+                      pending: "border-yellow-500/40 bg-yellow-500/20 text-yellow-200",
+                      approved: "border-green-500/40 bg-green-500/20 text-green-200",
+                      rejected: "border-red-500/40 bg-red-500/20 text-red-200",
                     };
                     const statusLabels = { pending: "Bekliyor", approved: "Onaylandı", rejected: "Reddedildi" };
                     return (
@@ -613,7 +776,7 @@ export default function ProfilePage() {
                           </p>
                         </div>
 
-                        <div className="mt-4 grid gap-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm sm:grid-cols-2">
+                        <div className="mt-4 grid gap-3 rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm sm:grid-cols-2">
                           <div>
                             <p className="text-xs uppercase tracking-wide text-slate-500">Kayıp konumu</p>
                             <p className="mt-1 text-slate-300">{claim.lost_location}</p>
@@ -668,6 +831,124 @@ export default function ProfilePage() {
             </section>
           )}
 
+          {/* Favorilerim tab */}
+          {activeTab === "favorites" && (
+            <section className="mt-6">
+              {favoritesLoading ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+                      <div className="h-40 animate-pulse bg-slate-800" />
+                      <div className="space-y-2 p-4">
+                        <div className="h-3 w-16 animate-pulse rounded-full bg-slate-800" />
+                        <div className="h-4 w-2/3 animate-pulse rounded-full bg-slate-800" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : favoriteItems.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-800 p-10 text-center">
+                  <p className="text-slate-400">Henüz favori ilanın yok.</p>
+                  <p className="mt-2 text-sm text-slate-600">İlan detayında ★ Favori butonuna tıklayarak ekleyebilirsin.</p>
+                  <Link href="/search" className="mt-5 inline-block rounded-2xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+                    İlanlara Göz At
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {favoriteItems.map((item) => {
+                    const isLost = item.type === "lost";
+                    const imageSrc = item.image_url || "https://placehold.co/800x600/0f172a/ffffff?text=Gorsel";
+                    return (
+                      <Link key={item.id} href={`/items/${item.id}`}
+                        className="group overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 transition hover:border-slate-700">
+                        <div className="relative h-40 overflow-hidden">
+                          <Image src={imageSrc} alt={item.title} className="object-cover transition duration-300 group-hover:scale-105" fill unoptimized />
+                        </div>
+                        <div className="p-4">
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${isLost ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"}`}>
+                              {isLost ? "Kayıp" : "Bulundu"}
+                            </span>
+                            {item.status === "resolved" && (
+                              <span className="rounded-md bg-green-500/20 px-1.5 py-0.5 text-[11px] font-semibold text-green-300">Çözüldü</span>
+                            )}
+                          </div>
+                          <h3 className="line-clamp-1 font-semibold text-white">{item.title}</h3>
+                          {item.location && <p className="mt-0.5 text-xs text-slate-500">{item.location}</p>}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Bildirim Tercihleri tab */}
+          {activeTab === "email_prefs" && (
+            <section className="mt-6 max-w-lg">
+              <p className="mb-6 text-slate-400">Hangi durumlarda email bildirimi almak istediğini seç.</p>
+              {emailPrefsLoading ? (
+                <div className="space-y-3">
+                  {[1,2,3,4].map(i => <div key={i} className="h-14 animate-pulse rounded-2xl bg-slate-800" />)}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {([
+                    { key: "notify_claims", label: "Sahiplik Talepleri", desc: "Birileri ilanına talep gönderdiğinde" },
+                    { key: "notify_messages", label: "Mesajlar", desc: "Yeni mesaj aldığında" },
+                    { key: "notify_matches", label: "AI Eşleşmeler", desc: "İlanına benzer bir ilan eklendiğinde" },
+                    { key: "notify_digest", label: "Haftalık Özet", desc: "Her hafta özet email al" },
+                  ] as const).map(({ key, label, desc }) => (
+                    <button
+                      key={key}
+                      onClick={() => setEmailPrefs(prev => ({ ...prev, [key]: !prev[key] }))}
+                      className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left transition ${
+                        emailPrefs[key]
+                          ? "border-blue-500/30 bg-blue-500/10"
+                          : "border-slate-700 bg-slate-900 hover:border-slate-600"
+                      }`}
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-white">{label}</p>
+                        <p className="text-xs text-slate-500">{desc}</p>
+                      </div>
+                      <div className={`ml-4 h-6 w-11 shrink-0 rounded-full transition-colors ${emailPrefs[key] ? "bg-blue-600" : "bg-slate-700"}`}>
+                        <div className={`mt-0.5 ml-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${emailPrefs[key] ? "translate-x-5" : "translate-x-0"}`} />
+                      </div>
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={async () => {
+                      if (!user?.email) return;
+                      setSavingEmailPrefs(true);
+                      try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const res = await fetch("/api/email-preferences", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${session?.access_token ?? ""}`,
+                          },
+                          body: JSON.stringify(emailPrefs),
+                        });
+                        if (res.ok) { toast.success("Bildirim tercihleri kaydedildi."); }
+                        else { toast.error("Kaydedilemedi."); }
+                      } catch { toast.error("Bir hata oluştu."); }
+                      finally { setSavingEmailPrefs(false); }
+                    }}
+                    disabled={savingEmailPrefs}
+                    className="mt-2 w-full rounded-2xl bg-blue-600 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {savingEmailPrefs ? "Kaydediliyor..." : "Kaydet"}
+                  </button>
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Gönderilen Talepler tab */}
           {activeTab === "outgoing" && (
             <section className="mt-6">
@@ -690,9 +971,9 @@ export default function ProfilePage() {
                 <div className="space-y-4">
                   {outgoingClaims.map((claim) => {
                     const statusColors = {
-                      pending: "border-yellow-500/20 bg-yellow-500/10 text-yellow-300",
-                      approved: "border-green-500/20 bg-green-500/10 text-green-300",
-                      rejected: "border-red-500/20 bg-red-500/10 text-red-300",
+                      pending: "border-yellow-500/40 bg-yellow-500/20 text-yellow-200",
+                      approved: "border-green-500/40 bg-green-500/20 text-green-200",
+                      rejected: "border-red-500/40 bg-red-500/20 text-red-200",
                     };
                     const statusLabels = { pending: "Değerlendiriliyor", approved: "Onaylandı", rejected: "Reddedildi" };
                     return (
@@ -715,13 +996,13 @@ export default function ProfilePage() {
                           </div>
                         </div>
 
-                        <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-sm">
+                        <div className="mt-3 rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm">
                           <p className="text-xs uppercase tracking-wide text-slate-500">Ayırt edici özellik</p>
                           <p className="mt-1 text-slate-300">{claim.distinctive_feature}</p>
                         </div>
 
                         {claim.status === "approved" && (
-                          <div className="mt-3 rounded-xl border border-green-500/20 bg-green-500/10 p-3">
+                          <div className="mt-3 rounded-xl border border-green-500/40 bg-green-500/20 p-3">
                             <p className="text-sm text-green-200">Talebiniz onaylandı! İlan sahibiyle iletişime geçebilirsiniz.</p>
                           </div>
                         )}
@@ -752,10 +1033,13 @@ export default function ProfilePage() {
               ×
             </button>
 
-            <img
+            <Image
               src={user.avatarUrl}
               alt="Profil resmi büyük önizleme"
+              width={800}
+              height={800}
               className="max-h-[85vh] max-w-[85vw] rounded-3xl object-contain shadow-2xl"
+              unoptimized
             />
           </div>
         </div>
