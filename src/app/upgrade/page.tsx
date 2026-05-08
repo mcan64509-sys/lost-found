@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import AppHeader from "../../components/AppHeader";
 import { supabase } from "../../lib/supabase";
 import { normalizeEmail } from "../../lib/utils";
-import { PRODUCTS, type ProductType } from "../../lib/stripe";
+import { PRODUCTS, type ProductType } from "../../lib/stripe-products";
 import { Star, Zap, Check, ArrowRight, Loader2 } from "lucide-react";
 
 function UpgradeContent() {
