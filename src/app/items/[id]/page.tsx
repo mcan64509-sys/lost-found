@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import AppHeader from "../../../components/AppHeader";
 import ConfirmDialog from "../../../components/ConfirmDialog";
+import QRCodeModal from "../../../components/QRCodeModal";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 import { normalizeEmail, isValidEmail } from "../../../lib/utils";
@@ -26,6 +27,9 @@ type DbItem = {
   created_by_email?: string | null;
   embedding?: number[] | null;
   view_count?: number | null;
+  reward_amount?: number | null;
+  is_urgent?: boolean | null;
+  is_featured?: boolean | null;
 };
 
 type MatchItem = {
@@ -60,6 +64,7 @@ export default function ItemDetailPage() {
   const [confirmClose, setConfirmClose] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
   const [togglingFav, setTogglingFav] = useState(false);
@@ -565,7 +570,7 @@ export default function ItemDetailPage() {
             </div>
 
             <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl shadow-black/20 md:p-8">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${typeClasses}`}>
                   {itemTypeText}
                 </span>
@@ -574,12 +579,33 @@ export default function ItemDetailPage() {
                     {item.category}
                   </span>
                 )}
+                {item.is_featured && (
+                  <span className="rounded-full border border-yellow-500/40 bg-yellow-500/15 px-3 py-1 text-xs font-bold text-yellow-400">
+                    ⭐ Öne Çıkan
+                  </span>
+                )}
+                {item.is_urgent && (
+                  <span className="rounded-full border border-red-500/40 bg-red-500/15 px-3 py-1 text-xs font-bold text-red-400">
+                    🔴 Acil
+                  </span>
+                )}
                 {item.status === "resolved" && (
                   <span className="rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-xs font-semibold text-green-300">
                     Çözüldü
                   </span>
                 )}
               </div>
+
+              {item.reward_amount && item.reward_amount > 0 && (
+                <div className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
+                  <div className="text-2xl">💰</div>
+                  <div>
+                    <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Ödül Teklifi</div>
+                    <div className="text-xl font-black text-white mt-0.5">{item.reward_amount.toLocaleString("tr-TR")} TL</div>
+                    <div className="text-xs text-emerald-300/70 mt-0.5">Eşyayı sahibine ulaştırana verilecek</div>
+                  </div>
+                </div>
+              )}
 
               <h1 className="mt-5 text-3xl font-black md:text-4xl">{item.title}</h1>
 
@@ -687,6 +713,12 @@ export default function ItemDetailPage() {
                 >
                   {shareSuccess ? "✓ Kopyalandı!" : "↗ Paylaş"}
                 </button>
+                <button
+                  onClick={() => setShowQR(true)}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-800 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white"
+                >
+                  ▦ QR Kod
+                </button>
               </div>
 
               {!isOwner && (
@@ -718,6 +750,15 @@ export default function ItemDetailPage() {
                     Bu ilan sana ait. Menüden düzenleme veya kaldırma işlemlerini yapabilirsin.
                   </p>
                 </div>
+              )}
+
+              {/* QR Kod Modalı */}
+              {showQR && item && (
+                <QRCodeModal
+                  url={`${window.location.origin}/items/${id}`}
+                  title={item.title}
+                  onClose={() => setShowQR(false)}
+                />
               )}
 
               {/* Şikayet Modalı */}

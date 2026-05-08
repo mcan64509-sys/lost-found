@@ -12,6 +12,7 @@ import Image from "next/image";
 import { supabase } from "../../lib/supabase";
 import { toast } from "sonner";
 import AppHeader from "../../components/AppHeader";
+import PushNotificationButton from "../../components/PushNotificationButton";
 import { normalizeEmail } from "../../lib/utils";
 
 type UserProfile = {
@@ -888,6 +889,11 @@ export default function ProfilePage() {
           {/* Bildirim Tercihleri tab */}
           {activeTab === "email_prefs" && (
             <section className="mt-6 max-w-lg">
+              <div className="mb-6 p-4 rounded-2xl border border-slate-800 bg-slate-900/60">
+                <h3 className="text-sm font-bold text-white mb-2">🔔 Anlık Bildirimler (Push)</h3>
+                <p className="text-xs text-slate-500 mb-3">Tarayıcı bildirimleri ile yeni eşleşmeler, mesajlar ve talep güncellemelerinden anında haberdar ol.</p>
+                <PushNotificationButton />
+              </div>
               <p className="mb-6 text-slate-400">Hangi durumlarda email bildirimi almak istediğini seç.</p>
               {emailPrefsLoading ? (
                 <div className="space-y-3">

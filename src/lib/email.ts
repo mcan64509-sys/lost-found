@@ -138,3 +138,40 @@ export async function sendItemMatchEmail({
     `),
   });
 }
+
+export async function sendAlertMatchEmail({
+  userEmail,
+  keyword,
+  matchedItems,
+}: {
+  userEmail: string;
+  keyword: string;
+  matchedItems: { id: string; title: string; type: string; location: string | null }[];
+}) {
+  const itemList = matchedItems
+    .slice(0, 5)
+    .map(
+      (item) => `
+        <div style="border:1px solid #1e293b;border-radius:10px;padding:12px 16px;margin-bottom:8px;">
+          <span style="display:inline-block;background:${item.type === "lost" ? "#92400e" : "#065f46"};color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-bottom:6px;">
+            ${item.type === "lost" ? "Kayıp" : "Bulundu"}
+          </span>
+          <p style="margin:0;font-weight:700;color:#fff;">${item.title}</p>
+          ${item.location ? `<p style="margin:4px 0 0;font-size:12px;color:#94a3b8;">📍 ${item.location}</p>` : ""}
+          <a href="${APP_URL}/items/${item.id}" style="display:inline-block;margin-top:8px;color:#60a5fa;font-size:13px;text-decoration:none;">İlanı Görüntüle →</a>
+        </div>`
+    )
+    .join("");
+
+  await resend.emails.send({
+    from: FROM,
+    to: userEmail,
+    subject: `🔔 Arama uyarısı: "${keyword}" için yeni ilanlar`,
+    html: baseTemplate(`
+      <p style="font-size:16px;font-weight:700;color:#fff;">Arama Uyarısı: Yeni Eşleşmeler</p>
+      <p style="color:#94a3b8;font-size:14px;">"<strong style="color:#fff;">${keyword}</strong>" aramanızla eşleşen ${matchedItems.length} yeni ilan bulundu.</p>
+      <div style="margin-top:16px;">${itemList}</div>
+      <a href="${APP_URL}/search?q=${encodeURIComponent(keyword)}" style="display:inline-block;background:#1d4ed8;color:#fff;padding:11px 22px;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;margin-top:16px;">Tüm eşleşmeleri gör →</a>
+    `),
+  });
+}

@@ -6,8 +6,24 @@ import Link from "next/link";
 import LocationPickerModal from "../../components/LocationPickerModal";
 import SearchMiniMap from "../../components/SearchMiniMap";
 import FullMapModal from "../../components/FullMapModal";
+import AppHeader from "../../components/AppHeader";
 import { supabase } from "../../lib/supabase";
 import type { ItemMarker } from "../../components/SearchMiniMapInner";
+import {
+  Search,
+  MapPin,
+  Filter,
+  X,
+  Map,
+  ChevronDown,
+  SlidersHorizontal,
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  Calendar,
+  Tag,
+  ArrowRight,
+} from "lucide-react";
 
 type SearchItem = ItemMarker & {
   created_at: string;
@@ -15,6 +31,10 @@ type SearchItem = ItemMarker & {
   status: string | null;
   description: string | null;
   location: string | null;
+  reward_amount?: number | null;
+  is_urgent?: boolean | null;
+  is_featured?: boolean | null;
+  priority_level?: number | null;
 };
 
 type SelectedLocation = {
@@ -31,12 +51,16 @@ const defaultLocation: SelectedLocation = {
   radiusKm: 40,
 };
 
-const categories = [
+const CATEGORIES = [
   "Tüm kategoriler", "Cüzdan", "Telefon", "Anahtar", "Çanta",
-  "Laptop", "Saat / Takı", "Kimlik / Evrak", "Diğer",
+  "Laptop", "Saat / Takı", "Kimlik / Evrak", "Evcil Hayvan", "Diğer",
 ];
 
-const itemTypes = ["Tümü", "Kayıp", "Buluntu"];
+const SORT_OPTIONS = [
+  { value: "newest", label: "En yeni" },
+  { value: "oldest", label: "En eski" },
+  { value: "most_viewed", label: "En çok görüntülenen" },
+];
 
 function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
@@ -50,41 +74,41 @@ function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-const SORT_OPTIONS = [
-  { value: "newest", label: "En yeni" },
-  { value: "oldest", label: "En eski" },
-  { value: "most_viewed", label: "En çok görüntülenen" },
-];
-
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // URL'den başlangıç değerleri
-  const [itemType, setItemType] = useState(() => searchParams.get("type") || "Tümü");
+  const [activeTab, setActiveTab] = useState<"all" | "lost" | "found">(
+    () => {
+      const t = searchParams.get("type");
+      if (t === "lost") return "lost";
+      if (t === "found") return "found";
+      return "all";
+    }
+  );
   const [category, setCategory] = useState(() => searchParams.get("cat") || "Tüm kategoriler");
   const [keyword, setKeyword] = useState(() => searchParams.get("q") || "");
   const [sortBy, setSortBy] = useState(() => searchParams.get("sort") || "newest");
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-  const [isFullMapOpen, setIsFullMapOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<SelectedLocation>(defaultLocation);
-  const [openLost, setOpenLost] = useState(true);
-  const [openFound, setOpenFound] = useState(true);
-  const [allItems, setAllItems] = useState<SearchItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(12);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const isFirstRender = useRef(true);
   const [dateFrom, setDateFrom] = useState(() => searchParams.get("from") || "");
   const [dateTo, setDateTo] = useState(() => searchParams.get("to") || "");
   const [hideResolved, setHideResolved] = useState(() => searchParams.get("hide_resolved") === "1");
+  const [selectedLocation, setSelectedLocation] = useState<SelectedLocation>(defaultLocation);
+  const [allItems, setAllItems] = useState<SearchItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(12);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [isFullMapOpen, setIsFullMapOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
 
-  // URL'yi güncelle
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const isFirstRender = useRef(true);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
   const syncUrl = useCallback((params: Record<string, string>) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
     Object.entries(params).forEach(([k, v]) => {
-      if (v && v !== "Tümü" && v !== "Tüm kategoriler" && v !== "newest") {
+      if (v && v !== "all" && v !== "Tüm kategoriler" && v !== "newest") {
         current.set(k, v);
       } else {
         current.delete(k);
@@ -93,15 +117,6 @@ function SearchPageContent() {
     router.replace(`/search?${current.toString()}`, { scroll: false });
   }, [searchParams, router]);
 
-  const handleTypeChange = (v: string) => { setItemType(v); syncUrl({ type: v }); };
-  const handleCategoryChange = (v: string) => { setCategory(v); syncUrl({ cat: v }); };
-  const handleKeywordChange = (v: string) => { setKeyword(v); syncUrl({ q: v }); };
-  const handleSortChange = (v: string) => { setSortBy(v); syncUrl({ sort: v }); };
-  const handleDateFromChange = (v: string) => { setDateFrom(v); syncUrl({ from: v }); };
-  const handleDateToChange = (v: string) => { setDateTo(v); syncUrl({ to: v }); };
-  const handleHideResolvedChange = (v: boolean) => { setHideResolved(v); syncUrl({ hide_resolved: v ? "1" : "" }); };
-
-  // Load search history from localStorage
   useEffect(() => {
     try {
       const h = JSON.parse(localStorage.getItem("searchHistory") || "[]");
@@ -109,7 +124,6 @@ function SearchPageContent() {
     } catch { /* ignore */ }
   }, []);
 
-  // Save keyword to history when user types — skip first render (URL param on mount)
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
     if (!keyword.trim() || keyword.trim().length < 2) return;
@@ -126,7 +140,7 @@ function SearchPageContent() {
       setLoading(true);
       const { data, error } = await supabase
         .from("items")
-        .select("id, type, title, description, category, location, lat, lng, image_url, created_at, view_count, status")
+        .select("id, type, title, description, category, location, lat, lng, image_url, created_at, view_count, status, reward_amount, is_urgent, is_featured, priority_level")
         .not("lat", "is", null)
         .not("lng", "is", null);
       if (!error) setAllItems(data as SearchItem[]);
@@ -135,34 +149,28 @@ function SearchPageContent() {
     fetchItems();
   }, []);
 
-  useEffect(() => {
-    setVisibleCount(12);
-  }, [itemType, category, keyword, selectedLocation, sortBy, dateFrom, dateTo, hideResolved]);
+  useEffect(() => { setVisibleCount(12); }, [activeTab, category, keyword, selectedLocation, sortBy, dateFrom, dateTo, hideResolved]);
 
-  // Infinite scroll via IntersectionObserver
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleCount((prev) => prev + 12);
-        }
-      },
+      (entries) => { if (entries[0].isIntersecting) setVisibleCount((prev) => prev + 12); },
       { threshold: 0.1 }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [openLost, openFound]);
+  }, []);
 
   const filteredItems = useMemo(() => {
     const fromMs = dateFrom ? new Date(dateFrom).getTime() : null;
     const toMs = dateTo ? new Date(dateTo + "T23:59:59").getTime() : null;
+
     const filtered = allItems.filter((item) => {
       const dist = getDistanceKm(selectedLocation.lat, selectedLocation.lng, item.lat, item.lng);
       if (dist > selectedLocation.radiusKm) return false;
-      if (itemType === "Kayıp" && item.type !== "lost") return false;
-      if (itemType === "Buluntu" && item.type !== "found") return false;
+      if (activeTab === "lost" && item.type !== "lost") return false;
+      if (activeTab === "found" && item.type !== "found") return false;
       if (category !== "Tüm kategoriler" && item.category !== category) return false;
       if (keyword.trim()) {
         const kw = keyword.toLowerCase();
@@ -178,17 +186,30 @@ function SearchPageContent() {
     });
 
     return [...filtered].sort((a, b) => {
+      // Featured ilanlar her zaman üstte
+      if (a.is_featured && !b.is_featured) return -1;
+      if (!a.is_featured && b.is_featured) return 1;
+      // Öncelikli ilanlar (priority_level yüksek olan önce)
+      const aPriority = a.priority_level ?? 0;
+      const bPriority = b.priority_level ?? 0;
+      if (aPriority !== bPriority) return bPriority - aPriority;
+      // Urgent ilanlar sonra
+      if (a.is_urgent && !b.is_urgent) return -1;
+      if (!a.is_urgent && b.is_urgent) return 1;
       if (sortBy === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       if (sortBy === "most_viewed") return (b.view_count ?? 0) - (a.view_count ?? 0);
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime(); // newest
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [allItems, selectedLocation, itemType, category, keyword, sortBy]);
+  }, [allItems, selectedLocation, activeTab, category, keyword, sortBy, dateFrom, dateTo, hideResolved]);
 
   const lostItems = filteredItems.filter((i) => i.type === "lost");
   const foundItems = filteredItems.filter((i) => i.type === "found");
+  const displayedItems = activeTab === "all" ? filteredItems : activeTab === "lost" ? lostItems : foundItems;
+
+  const hasActiveFilter = keyword || category !== "Tüm kategoriler" || sortBy !== "newest" || dateFrom || dateTo || hideResolved;
 
   const handleClear = () => {
-    setItemType("Tümü");
+    setActiveTab("all");
     setCategory("Tüm kategoriler");
     setKeyword("");
     setSortBy("newest");
@@ -200,118 +221,239 @@ function SearchPageContent() {
   };
 
   return (
-    <main className="min-h-screen bg-[#030b24] px-4 py-10 text-white md:px-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-10 max-w-4xl">
-          <Link href="/" className="mb-4 inline-block rounded-xl border border-slate-700 px-4 py-2 text-sm text-white transition hover:bg-slate-900">
-            ← Ana Sayfa
-          </Link>
-          <h1 className="text-4xl font-extrabold md:text-6xl">
-            Kayıp ve Buluntu<br />İlanları Filtrele
-          </h1>
-          <p className="mt-4 text-slate-300">
-            Konum, kategori ve anahtar kelimelerle ilanları filtrele.
-          </p>
-        </div>
+    <>
+      <AppHeader />
+      <main className="min-h-screen bg-slate-950 text-white">
 
-        <div className="grid gap-6 lg:grid-cols-[1.15fr_0.95fr]">
-          <section className="rounded-[32px] border border-white/10 bg-[#081633] p-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <select value={itemType} onChange={(e) => handleTypeChange(e.target.value)}
-                style={{ colorScheme: "dark" }}
-                className="h-14 rounded-2xl border border-slate-600 bg-slate-950 px-4 text-white">
-                {itemTypes.map((type) => <option key={type}>{type}</option>)}
-              </select>
+        {/* ── ÜSTTEKI BAŞLIK & ARAMA ── */}
+        <div className="border-b border-slate-800/60 bg-slate-900/30">
+          <div className="mx-auto max-w-7xl px-4 md:px-6 py-8">
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <div className="flex-1">
+                <h1 className="text-2xl font-black text-white">İlan Ara</h1>
+                <p className="text-sm text-slate-500 mt-1">
+                  {loading ? "Yükleniyor..." : `${filteredItems.length} ilan bulundu`}
+                  {selectedLocation.name && (
+                    <span className="ml-2 text-slate-600">— {selectedLocation.name} ({selectedLocation.radiusKm} km)</span>
+                  )}
+                </p>
+              </div>
 
-              <select value={category} onChange={(e) => handleCategoryChange(e.target.value)}
-                style={{ colorScheme: "dark" }}
-                className="h-14 rounded-2xl border border-slate-600 bg-slate-950 px-4 text-white">
-                {categories.map((cat) => <option key={cat}>{cat}</option>)}
-              </select>
-
-              <div className="flex flex-col gap-1">
-                <input value={keyword} onChange={(e) => handleKeywordChange(e.target.value)}
-                  placeholder="Anahtar kelime (başlıkta ara)" className="h-14 rounded-2xl border border-slate-600 bg-slate-950 px-4 text-white placeholder:text-slate-500" />
-                {searchHistory.length > 0 && !keyword && (
-                  <div className="flex flex-wrap items-center gap-1.5 px-1 pt-1">
-                    <span className="text-[10px] text-slate-600 uppercase tracking-wider">Son aramalar:</span>
-                    {searchHistory.map((h) => (
-                      <button key={h} onClick={() => handleKeywordChange(h)}
-                        className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs text-slate-400 hover:text-white hover:border-slate-500 transition">
-                        {h}
-                      </button>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); localStorage.removeItem("searchHistory"); setSearchHistory([]); }}
-                      className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs text-red-400 hover:bg-red-500/20 transition">
-                      × Geçmişi Sil
-                    </button>
-                  </div>
+              {/* Arama kutusu */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  ref={searchInputRef}
+                  value={keyword}
+                  onChange={(e) => { setKeyword(e.target.value); syncUrl({ q: e.target.value }); }}
+                  placeholder="Başlık, açıklama veya konum ara..."
+                  className="w-full h-11 rounded-xl border border-slate-700 bg-slate-900 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 outline-none focus:border-slate-600 transition"
+                />
+                {keyword && (
+                  <button
+                    onClick={() => { setKeyword(""); syncUrl({ q: "" }); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 )}
               </div>
 
-              <select value={sortBy} onChange={(e) => handleSortChange(e.target.value)}
-                style={{ colorScheme: "dark" }}
-                className="h-14 rounded-2xl border border-slate-600 bg-slate-950 px-4 text-white">
-                {SORT_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-              </select>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-500 px-1">Başlangıç tarihi</label>
-                <input type="date" value={dateFrom} onChange={(e) => handleDateFromChange(e.target.value)}
-                  style={{ colorScheme: "dark" }}
-                  className="h-14 rounded-2xl border border-slate-600 bg-slate-950 px-4 text-white" />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-slate-500 px-1">Bitiş tarihi</label>
-                <input type="date" value={dateTo} onChange={(e) => handleDateToChange(e.target.value)}
-                  style={{ colorScheme: "dark" }}
-                  className="h-14 rounded-2xl border border-slate-600 bg-slate-950 px-4 text-white" />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <label className="flex cursor-pointer items-center gap-3">
-                <div
-                  onClick={() => handleHideResolvedChange(!hideResolved)}
-                  className={`relative h-6 w-11 rounded-full transition-colors ${hideResolved ? "bg-blue-600" : "bg-slate-700"}`}
+              {/* Filtreler butonu */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowFilters((v) => !v)}
+                  className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${showFilters || hasActiveFilter ? "border-blue-500/40 bg-blue-500/10 text-blue-400" : "border-slate-700 bg-slate-900 text-slate-300 hover:text-white"}`}
                 >
-                  <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${hideResolved ? "translate-x-5" : ""}`} />
-                </div>
-                <span className="text-sm text-slate-300">Çözüme kavuşanları gizle</span>
-              </label>
-            </div>
-
-            <div className="mt-6 flex items-center gap-3">
-              <button onClick={handleClear} className="rounded-2xl border border-slate-600 bg-slate-800 px-6 py-3 text-white hover:bg-slate-700">Temizle</button>
-              <span className="text-sm text-slate-400">
-                {loading ? "Yükleniyor..." : `${filteredItems.length} ilan bulundu`}
-              </span>
-            </div>
-
-            <div className="mt-8">
-              <div className="mb-3 flex justify-between">
-                <h2 className="text-xl font-bold">Mini Harita</h2>
+                  <SlidersHorizontal className="w-4 h-4" />
+                  Filtreler
+                  {hasActiveFilter && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                  )}
+                </button>
                 <button
                   onClick={() => setIsFullMapOpen(true)}
-                  className="rounded-xl bg-blue-600 px-4 py-2"
+                  className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-300 hover:text-white transition"
                 >
-                  Aç
+                  <Map className="w-4 h-4" />
+                  Harita
                 </button>
               </div>
+            </div>
 
-              <div className="mb-2 flex gap-4 text-xs text-slate-400">
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-3 w-3 rounded-full bg-red-500" />Kayıp
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="inline-block h-3 w-3 rounded-full bg-green-500" />Bulundu
-                </span>
+            {/* Arama geçmişi */}
+            {searchHistory.length > 0 && !keyword && (
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <span className="text-[11px] text-slate-600 uppercase tracking-wider">Son aramalar:</span>
+                {searchHistory.map((h) => (
+                  <button key={h} onClick={() => { setKeyword(h); syncUrl({ q: h }); }}
+                    className="rounded-full border border-slate-700 bg-slate-800/60 px-3 py-1 text-xs text-slate-400 hover:text-white hover:border-slate-600 transition">
+                    {h}
+                  </button>
+                ))}
+                <button
+                  onClick={() => { localStorage.removeItem("searchHistory"); setSearchHistory([]); }}
+                  className="rounded-full border border-red-500/20 bg-red-500/5 px-2 py-1 text-[10px] text-red-500 hover:bg-red-500/10 transition">
+                  Sil
+                </button>
               </div>
+            )}
 
-              <div className="search-mini-map relative z-0 overflow-hidden rounded-2xl">
+            {/* FİLTRE PANELİ */}
+            {showFilters && (
+              <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Kategori */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Kategori</label>
+                    <div className="relative">
+                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                      <select
+                        value={category}
+                        onChange={(e) => { setCategory(e.target.value); syncUrl({ cat: e.target.value }); }}
+                        style={{ colorScheme: "dark" }}
+                        className="w-full h-10 rounded-xl border border-slate-700 bg-slate-950 pl-9 pr-4 text-sm text-white outline-none appearance-none"
+                      >
+                        {CATEGORIES.map((cat) => <option key={cat}>{cat}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Sıralama */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Sıralama</label>
+                    <div className="relative">
+                      <select
+                        value={sortBy}
+                        onChange={(e) => { setSortBy(e.target.value); syncUrl({ sort: e.target.value }); }}
+                        style={{ colorScheme: "dark" }}
+                        className="w-full h-10 rounded-xl border border-slate-700 bg-slate-950 px-4 text-sm text-white outline-none appearance-none"
+                      >
+                        {SORT_OPTIONS.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Başlangıç tarihi */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Başlangıç Tarihi</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                      <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => { setDateFrom(e.target.value); syncUrl({ from: e.target.value }); }}
+                        style={{ colorScheme: "dark" }}
+                        className="w-full h-10 rounded-xl border border-slate-700 bg-slate-950 pl-9 pr-4 text-sm text-white outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Bitiş tarihi */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 block">Bitiş Tarihi</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+                      <input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => { setDateTo(e.target.value); syncUrl({ to: e.target.value }); }}
+                        style={{ colorScheme: "dark" }}
+                        className="w-full h-10 rounded-xl border border-slate-700 bg-slate-950 pl-9 pr-4 text-sm text-white outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800">
+                  {/* Konum */}
+                  <button
+                    onClick={() => setIsLocationModalOpen(true)}
+                    className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-300 hover:text-white transition"
+                  >
+                    <MapPin className="w-4 h-4 text-blue-400" />
+                    <span className="font-medium text-white">{selectedLocation.name}</span>
+                    <span className="text-slate-500">({selectedLocation.radiusKm} km)</span>
+                  </button>
+
+                  <div className="flex items-center gap-4">
+                    {/* Çözüldü gizle toggle */}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <div
+                        onClick={() => { setHideResolved(!hideResolved); syncUrl({ hide_resolved: !hideResolved ? "1" : "" }); }}
+                        className={`relative w-9 h-5 rounded-full transition-colors ${hideResolved ? "bg-blue-600" : "bg-slate-700"}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${hideResolved ? "translate-x-4" : ""}`} />
+                      </div>
+                      <span className="text-xs text-slate-400">Çözülenleri gizle</span>
+                    </label>
+
+                    {hasActiveFilter && (
+                      <button onClick={handleClear}
+                        className="flex items-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400 hover:bg-red-500/20 transition">
+                        <X className="w-3.5 h-3.5" />
+                        Temizle
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mx-auto max-w-7xl px-4 md:px-6 py-6">
+
+          {/* ── SEKMELER ── */}
+          <div className="flex items-center gap-1 mb-6 p-1 rounded-2xl border border-slate-800 bg-slate-900/60 w-fit">
+            {[
+              { key: "all", label: "Tümü", count: filteredItems.length, color: "text-white" },
+              { key: "lost", label: "Kayıp İlanlar", count: lostItems.length, color: "text-amber-400", icon: <AlertCircle className="w-3.5 h-3.5" /> },
+              { key: "found", label: "Bulundu İlanlar", count: foundItems.length, color: "text-emerald-400", icon: <CheckCircle2 className="w-3.5 h-3.5" /> },
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => { setActiveTab(tab.key as "all" | "lost" | "found"); syncUrl({ type: tab.key }); }}
+                className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all ${
+                  activeTab === tab.key
+                    ? "bg-slate-800 text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+                <span className={`text-xs font-bold ${activeTab === tab.key ? tab.color : "text-slate-600"}`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* ── MİNİ HARİTA ── */}
+          {filteredItems.filter(i => i.lat && i.lng).length > 0 && (
+            <div className="mb-6 rounded-2xl border border-slate-800 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/40">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    <span className="text-xs text-slate-400">Kayıp ({lostItems.length})</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span className="text-xs text-slate-400">Bulundu ({foundItems.length})</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsFullMapOpen(true)}
+                  className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition"
+                >
+                  <Map className="w-3.5 h-3.5" />
+                  Tam ekran aç
+                </button>
+              </div>
+              <div className="search-mini-map relative z-0" style={{ height: 220, isolation: "isolate" }}>
                 <SearchMiniMap
                   lat={selectedLocation.lat}
                   lng={selectedLocation.lng}
@@ -320,179 +462,161 @@ function SearchPageContent() {
                 />
               </div>
             </div>
-          </section>
+          )}
 
-          <aside className="rounded-[32px] border border-white/10 bg-[#081633] p-6">
-            <h2 className="text-xl font-bold">Konum</h2>
-            <button onClick={() => setIsLocationModalOpen(true)}
-              className="mt-4 h-12 w-full rounded-xl border border-blue-500/40 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 transition">
-              Konumu Değiştir
-            </button>
-            <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-300">
-              <p className="font-medium text-white">{selectedLocation.name}</p>
-              <p className="mt-0.5 text-slate-500">{selectedLocation.radiusKm} km yarıçap</p>
-            </div>
-
-            <div className="mt-6 space-y-2">
-              <button
-                onClick={() => setOpenLost((v) => !v)}
-                className="flex w-full items-center justify-between rounded-xl bg-red-500/10 px-4 py-3 text-sm transition hover:bg-red-500/20"
-              >
-                <span className="text-red-400">Kayıp</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-red-400">{lostItems.length}</span>
-                  <span className={`text-red-400 transition-transform duration-200 inline-block ${openLost ? "rotate-90" : ""}`}>›</span>
-                </div>
-              </button>
-              {openLost && (
-                <div className="space-y-2 pl-1">
-                  {lostItems.length === 0 ? (
-                    <p className="px-3 py-2 text-xs text-slate-500">Bu bölgede kayıp ilan yok.</p>
-                  ) : (
-                    lostItems.slice(0, visibleCount).map((item) => (
-                      <a key={item.id} href={`/items/${item.id}`}
-                        className="flex items-center justify-between rounded-xl bg-[#020b24] px-4 py-3 text-sm hover:bg-red-500/10 transition">
-                        <div>
-                          <div className="flex items-center gap-2 font-medium text-white">
-                            {item.title}
-                            {item.status === "resolved" && (
-                              <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-green-500/20 text-green-300">Çözüldü</span>
-                            )}
-                          </div>
-                          <div className="text-xs text-slate-400">{item.category}</div>
-                        </div>
-                        <span className="text-red-400">›</span>
-                      </a>
-                    ))
-                  )}
-                  {visibleCount < lostItems.length && (
-                    <div ref={sentinelRef} className="flex justify-center py-3">
-                      <span className="text-xs text-slate-500">Yükleniyor...</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <button
-                onClick={() => setOpenFound((v) => !v)}
-                className="flex w-full items-center justify-between rounded-xl bg-green-500/10 px-4 py-3 text-sm transition hover:bg-green-500/20"
-              >
-                <span className="text-green-400">Bulundu</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-green-400">{foundItems.length}</span>
-                  <span className={`text-green-400 transition-transform duration-200 inline-block ${openFound ? "rotate-90" : ""}`}>›</span>
-                </div>
-              </button>
-              {openFound && (
-                <div className="space-y-2 pl-1">
-                  {foundItems.length === 0 ? (
-                    <p className="px-3 py-2 text-xs text-slate-500">Bu bölgede buluntu ilan yok.</p>
-                  ) : (
-                    <>
-                      {foundItems.slice(0, visibleCount).map((item) => (
-                        <a key={item.id} href={`/items/${item.id}`}
-                          className="flex items-center justify-between rounded-xl bg-[#020b24] px-4 py-3 text-sm hover:bg-green-500/10 transition">
-                          <div>
-                            <div className="flex items-center gap-2 font-medium text-white">
-                              {item.title}
-                              {item.status === "resolved" && (
-                                <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-green-500/20 text-green-300">Çözüldü</span>
-                              )}
-                            </div>
-                            <div className="text-xs text-slate-400">{item.category}</div>
-                          </div>
-                          <span className="text-green-400">›</span>
-                        </a>
-                      ))}
-                      {visibleCount < foundItems.length && (
-                        <div ref={sentinelRef} className="flex justify-center py-3">
-                          <span className="text-xs text-slate-500">Yükleniyor...</span>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </aside>
-        </div>
-
-        {/* İlan Listesi */}
-        {!loading && filteredItems.length > 0 && (
-          <div className="mt-10">
-            <h2 className="mb-5 text-2xl font-bold text-white">
-              Eşleşen İlanlar
-              <span className="ml-3 text-base font-normal text-slate-400">({filteredItems.length})</span>
-            </h2>
+          {/* ── İLAN LİSTESİ ── */}
+          {loading ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {filteredItems.slice(0, visibleCount).map((item) => (
-                <a
-                  key={item.id}
-                  href={`/items/${item.id}`}
-                  className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#081633] transition hover:border-blue-500/40 hover:shadow-lg hover:shadow-blue-500/5"
-                >
-                  <div className="relative h-44 w-full overflow-hidden bg-slate-800">
-                    {item.image_url ? (
-                      <img
-                        src={item.image_url}
-                        alt={item.title}
-                        className="h-full w-full object-cover transition group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-slate-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                      </div>
-                    )}
-                    <span className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold ${item.type === "lost" ? "bg-red-500/90 text-white" : "bg-green-500/90 text-white"}`}>
-                      {item.type === "lost" ? "Kayıp" : "Bulundu"}
-                    </span>
-                    {item.status === "resolved" && (
-                      <span className="absolute right-3 top-3 rounded-full bg-blue-500/90 px-2.5 py-1 text-[11px] font-bold text-white">
-                        Çözüldü
-                      </span>
-                    )}
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden">
+                  <div className="h-44 animate-pulse bg-slate-800" />
+                  <div className="p-4 space-y-2">
+                    <div className="h-3 w-16 animate-pulse rounded-full bg-slate-800" />
+                    <div className="h-4 w-3/4 animate-pulse rounded-full bg-slate-800" />
+                    <div className="h-3 w-1/2 animate-pulse rounded-full bg-slate-800" />
                   </div>
-                  <div className="flex flex-1 flex-col p-4">
-                    <h3 className="font-semibold text-white line-clamp-2 leading-snug">{item.title}</h3>
-                    {item.description && (
-                      <p className="mt-1.5 text-xs text-slate-400 line-clamp-2">{item.description}</p>
-                    )}
-                    <div className="mt-auto flex items-center justify-between pt-3">
-                      <div className="flex flex-col gap-0.5">
-                        {item.category && <span className="text-xs text-slate-500">{item.category}</span>}
-                        {item.location && <span className="text-xs text-slate-500 truncate max-w-[140px]">{item.location}</span>}
-                      </div>
-                      <span className="text-xs text-slate-600">
-                        {new Date(item.created_at).toLocaleDateString("tr-TR")}
-                      </span>
-                    </div>
-                  </div>
-                </a>
+                </div>
               ))}
             </div>
-            {visibleCount < filteredItems.length && (
-              <div ref={sentinelRef} className="mt-8 flex justify-center">
-                <span className="text-sm text-slate-500">Daha fazla yükleniyor...</span>
-              </div>
-            )}
-          </div>
-        )}
+          ) : displayedItems.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-slate-800 bg-slate-900/30 p-16 text-center">
+              <Search className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+              <p className="text-lg font-bold text-white mb-2">Eşleşen ilan bulunamadı</p>
+              <p className="text-sm text-slate-500 mb-6">
+                Farklı anahtar kelime, kategori veya konumla tekrar dene.
+              </p>
+              {hasActiveFilter && (
+                <button onClick={handleClear}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:text-white transition">
+                  <X className="w-4 h-4" />
+                  Filtreleri temizle
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {displayedItems.slice(0, visibleCount).map((item) => {
+                  const isLost = item.type === "lost";
+                  return (
+                    <Link
+                      key={item.id}
+                      href={`/items/${item.id}`}
+                      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 hover:border-slate-700 hover:shadow-lg hover:shadow-black/30 transition-all"
+                    >
+                      {/* Görsel */}
+                      <div className="relative h-44 overflow-hidden bg-slate-800">
+                        {item.image_url ? (
+                          <img
+                            src={item.image_url}
+                            alt={item.title}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="text-slate-700">
+                              <rect x="3" y="3" width="18" height="18" rx="2"/>
+                              <circle cx="8.5" cy="8.5" r="1.5"/>
+                              <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                          </div>
+                        )}
+                        {/* Tip badge */}
+                        <div className="absolute top-3 left-3 flex flex-wrap items-start gap-1.5 max-w-[85%]">
+                          <span className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                            isLost
+                              ? "bg-amber-500/90 text-slate-950"
+                              : "bg-emerald-500/90 text-slate-950"
+                          }`}>
+                            {isLost ? <AlertCircle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                            {isLost ? "Kayıp" : "Bulundu"}
+                          </span>
+                          {item.is_featured && (
+                            <span className="rounded-full bg-yellow-400/90 px-2 py-1 text-[11px] font-bold text-slate-950">
+                              ⭐ Öne Çıkan
+                            </span>
+                          )}
+                          {(item.priority_level ?? 0) > 0 && !item.is_featured && (
+                            <span className="rounded-full bg-amber-500/90 px-2 py-1 text-[11px] font-bold text-slate-950">
+                              {item.priority_level === 3 ? "🥇" : item.priority_level === 2 ? "🥈" : "🥉"} Öncelikli
+                            </span>
+                          )}
+                          {item.is_urgent && (
+                            <span className="rounded-full bg-red-500/90 px-2 py-1 text-[11px] font-bold text-white">
+                              🔴 Acil
+                            </span>
+                          )}
+                          {item.status === "resolved" && (
+                            <span className="rounded-full bg-blue-500/90 px-2 py-1 text-[11px] font-bold text-white">
+                              Çözüldü
+                            </span>
+                          )}
+                        </div>
+                        {/* Ödül badge */}
+                        {item.reward_amount && item.reward_amount > 0 && (
+                          <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-emerald-500/90 px-2.5 py-1 backdrop-blur-sm">
+                            <span className="text-[11px] font-bold text-slate-950">💰 {item.reward_amount.toLocaleString("tr-TR")} TL ödül</span>
+                          </div>
+                        )}
+                        {/* Görüntülenme */}
+                        {item.view_count !== null && item.view_count > 0 && (
+                          <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 backdrop-blur-sm">
+                            <Eye className="w-3 h-3 text-slate-300" />
+                            <span className="text-[10px] text-slate-300">{item.view_count}</span>
+                          </div>
+                        )}
+                      </div>
 
-        {!loading && filteredItems.length === 0 && (keyword || category !== "Tüm kategoriler" || itemType !== "Tümü" || dateFrom || dateTo) && (
-          <div className="mt-10 rounded-2xl border border-dashed border-slate-700 bg-[#081633] p-10 text-center">
-            <p className="text-lg font-semibold text-white">Eşleşen ilan bulunamadı</p>
-            <p className="mt-2 text-sm text-slate-400">Farklı anahtar kelime veya filtreler deneyin.</p>
-          </div>
-        )}
-      </div>
+                      {/* İçerik */}
+                      <div className="flex flex-col flex-1 p-4">
+                        <h3 className="font-semibold text-white text-sm leading-snug line-clamp-2 mb-2">
+                          {item.title}
+                        </h3>
+                        {item.description && (
+                          <p className="text-xs text-slate-500 line-clamp-2 mb-3 leading-5">{item.description}</p>
+                        )}
+                        <div className="mt-auto space-y-1.5">
+                          {item.category && (
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                              <Tag className="w-3 h-3" />
+                              {item.category}
+                            </div>
+                          )}
+                          {item.location && (
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                              <MapPin className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">{item.location}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-800">
+                          <span className="text-[11px] text-slate-600">
+                            {new Date(item.created_at).toLocaleDateString("tr-TR")}
+                          </span>
+                          <span className="text-xs text-blue-400 flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                            Detay <ArrowRight className="w-3 h-3" />
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+              {visibleCount < displayedItems.length && (
+                <div ref={sentinelRef} className="mt-8 flex justify-center">
+                  <span className="text-sm text-slate-500">Daha fazla yükleniyor...</span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </main>
 
       <LocationPickerModal
         isOpen={isLocationModalOpen}
         initialLocation={selectedLocation}
         onClose={() => setIsLocationModalOpen(false)}
-        onApply={(loc) => {
-          setSelectedLocation(loc);
-        }}
+        onApply={(loc) => { setSelectedLocation(loc); setIsLocationModalOpen(false); }}
       />
 
       <FullMapModal
@@ -503,13 +627,13 @@ function SearchPageContent() {
         items={filteredItems}
         onClose={() => setIsFullMapOpen(false)}
       />
-    </main>
+    </>
   );
 }
 
 export default function SearchPageWrapper() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#030b24]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
       <SearchPageContent />
     </Suspense>
   );

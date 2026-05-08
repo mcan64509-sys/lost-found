@@ -6,6 +6,19 @@ import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
 import { normalizeEmail } from "../lib/utils";
+import {
+  Bell,
+  ChevronDown,
+  Heart,
+  LogOut,
+  MessageCircle,
+  PlusCircle,
+  Search,
+  Settings,
+  FileText,
+  Menu,
+  X,
+} from "lucide-react";
 
 type HeaderUser = {
   id: string;
@@ -40,27 +53,24 @@ function getInitials(name?: string, email?: string) {
   return "?";
 }
 
-function navClass(active: boolean) {
-  return active
-    ? "rounded-2xl bg-white/10 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/10"
-    : "rounded-2xl px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white";
-}
-
 export default function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
 
   const [user, setUser] = useState<HeaderUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [claimCount, setClaimCount] = useState(0);
   const [messageCount, setMessageCount] = useState(0);
-
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
-  const notifRef = useRef<HTMLDivElement | null>(null);
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const [showIlanMenu, setShowIlanMenu] = useState(false);
 
+  const notifRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const ilanRef = useRef<HTMLDivElement | null>(null);
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const [userEmail, setUserEmail] = useState("");
 
   const initials = useMemo(
     () => getInitials(user?.fullName, user?.email),
@@ -91,17 +101,14 @@ export default function AppHeader() {
       try {
         const { data: sessionData, error: sessionError } =
           await supabase.auth.getSession();
-
         if (sessionError || !sessionData.session?.user) {
           setUser(null);
           setClaimCount(0);
           setMessageCount(0);
           return;
         }
-
         const sessionUser = sessionData.session.user;
         const currentEmail = normalizeEmail(sessionUser.email);
-
         const [
           { data: profile },
           { count: pendingClaims },
@@ -111,16 +118,13 @@ export default function AppHeader() {
           supabase.from("claims").select("*", { count: "exact", head: true }).eq("owner_email", currentEmail).eq("status", "pending"),
           supabase.from("conversations").select("id, owner_email, claimant_email").or(`owner_email.eq.${currentEmail},claimant_email.eq.${currentEmail}`),
         ]);
-
         setUser({
           id: sessionUser.id,
           email: sessionUser.email,
           fullName: profile?.full_name || sessionUser.user_metadata?.full_name || "",
           avatarUrl: profile?.avatar_url || null,
         });
-
         setClaimCount(pendingClaims || 0);
-
         const conversationIds = ((conversations ?? []) as ConversationRow[]).map((c) => c.id);
         if (conversationIds.length === 0) {
           setMessageCount(0);
@@ -133,16 +137,11 @@ export default function AppHeader() {
             .neq("sender_email", currentEmail);
           setMessageCount((unreadMessages || []).length);
         }
-      } catch {
-      }
+      } catch { /* ignore */ }
     };
 
     loadHeaderData();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      loadHeaderData();
-    });
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => { loadHeaderData(); });
     window.addEventListener("focus", loadHeaderData);
     return () => {
       subscription.unsubscribe();
@@ -150,7 +149,6 @@ export default function AppHeader() {
     };
   }, [pathname]);
 
-  // Bildirimleri sadece bir kez yükle
   useEffect(() => {
     async function init() {
       const { data } = await supabase.auth.getSession();
@@ -159,9 +157,6 @@ export default function AppHeader() {
     }
     init();
   }, []);
-
-  // Browser push bildirimleri
-  const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
     async function resolveEmail() {
@@ -174,33 +169,21 @@ export default function AppHeader() {
 
   useEffect(() => {
     if (!userEmail) return;
-
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
-
     const notifChannel = supabase
       .channel(`browser-notif-${userEmail}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications", filter: `user_email=eq.${userEmail}` },
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_email=eq.${userEmail}` },
         (payload) => {
           loadNotifications(userEmail);
-          if (
-            "Notification" in window &&
-            Notification.permission === "granted" &&
-            document.visibilityState === "hidden"
-          ) {
+          if ("Notification" in window && Notification.permission === "granted" && document.visibilityState === "hidden") {
             const n = payload.new as { title?: string; message?: string };
-            new Notification(n.title || "Lost & Found", {
-              body: n.message || "",
-              icon: "/favicon.ico",
-            });
+            new Notification(n.title || "Lost & Found", { body: n.message || "", icon: "/favicon.ico" });
           }
         }
       )
       .subscribe();
-
     return () => { supabase.removeChannel(notifChannel); };
   }, [userEmail]);
 
@@ -208,6 +191,7 @@ export default function AppHeader() {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+      if (ilanRef.current && !ilanRef.current.contains(e.target as Node)) setShowIlanMenu(false);
     };
     window.addEventListener("click", handleClickOutside);
     return () => window.removeEventListener("click", handleClickOutside);
@@ -222,161 +206,324 @@ export default function AppHeader() {
     }
   }
 
-  return (
-    <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
-        <Link href="/" className="text-lg font-black tracking-tight text-white transition hover:text-blue-300">
-          Lost & Found
-        </Link>
+  const isActive = (path: string) =>
+    pathname === path || (path !== "/" && pathname.startsWith(path));
 
-        <div className="flex items-center gap-2 md:gap-3">
-          <Link href="/" className={navClass(pathname === "/")}>Ana Sayfa</Link>
-          <Link href="/search" className={navClass(pathname === "/search")}>Ara</Link>
-          <Link href="/messages" className="relative">
-            <span className={navClass(pathname === "/messages" || pathname.startsWith("/messages/"))}>
-              Mesajlar
-            </span>
-            {messageCount > 0 && (
-              <span className="absolute -right-1 -top-1 z-10 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white shadow-lg">
-                {messageCount > 99 ? "99+" : messageCount}
-              </span>
-            )}
+  const navLinkClass = (path: string) =>
+    `relative text-sm font-medium transition-colors ${
+      isActive(path)
+        ? "text-white"
+        : "text-slate-400 hover:text-white"
+    }`;
+
+  return (
+    <>
+      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
+
+          {/* LOGO */}
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-white font-black text-lg tracking-tight hover:opacity-80 transition-opacity"
+          >
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-emerald-500 flex items-center justify-center text-slate-950 text-xs font-black">
+              L&F
+            </div>
+            <span className="hidden sm:block">Lost &amp; Found</span>
           </Link>
 
-          {user && (
-            <Link
-              href="/favorites"
-              className={`hidden items-center gap-1.5 md:flex ${navClass(pathname === "/favorites")}`}
-              title="Favorilerim"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill={pathname === "/favorites" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-              </svg>
-              <span>Favoriler</span>
+          {/* DESKTOP NAV */}
+          <nav className="hidden md:flex items-center gap-1">
+            <Link href="/" className={navLinkClass("/") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
+              Ana Sayfa
+              {isActive("/") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
             </Link>
-          )}
+            <Link href="/search" className={navLinkClass("/search") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
+              İlanlar
+              {isActive("/search") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
+            </Link>
+            <Link href="/map" className={navLinkClass("/map") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
+              🗺️ Harita
+              {isActive("/map") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
+            </Link>
+            <Link href="/priority" className={navLinkClass("/priority") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
+              ⭐ Öncelikli
+              {isActive("/priority") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
+            </Link>
+            <Link href="/pets" className={navLinkClass("/pets") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
+              🐾 Hayvanlar
+              {isActive("/pets") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
+            </Link>
+          </nav>
 
-          {user && (
-            <div ref={notifRef} className="relative">
+          {/* SAĞ KISIM */}
+          <div className="flex items-center gap-2">
+
+            {/* İLAN VER dropdown */}
+            <div ref={ilanRef} className="relative hidden md:block">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const opening = !notifOpen;
-                  setNotifOpen(opening);
-                  if (opening && user.email) {
-                    markAllRead(normalizeEmail(user.email));
-                  }
-                }}
-                className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-300 transition hover:bg-white/5 hover:text-white"
+                onClick={(e) => { e.stopPropagation(); setShowIlanMenu((v) => !v); }}
+                className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-950 hover:bg-slate-100 transition-all"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                </svg>
-                {unreadCount > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                )}
+                <PlusCircle className="w-4 h-4" />
+                İlan Ver
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showIlanMenu ? "rotate-180" : ""}`} />
               </button>
-
-              {notifOpen && (
-                <div className="absolute right-0 mt-3 w-80 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
-                  <div className="border-b border-slate-800 px-4 py-3">
-                    <p className="font-semibold text-white">Bildirimler</p>
-                  </div>
-                  <div className="max-h-96 overflow-y-auto">
-                    {notifications.length === 0 ? (
-                      <p className="px-4 py-6 text-center text-sm text-slate-400">Henüz bildirim yok.</p>
-                    ) : (
-                      notifications.map((n) => (
-                        <button
-                          key={n.id}
-                          onClick={() => {
-                            setNotifOpen(false);
-                            router.push(`/items/${n.item_id}`);
-                          }}
-                          className={`w-full border-b border-slate-800 px-4 py-3 text-left transition last:border-0 hover:bg-slate-800 ${!n.is_read ? "bg-blue-500/5" : ""}`}
-                        >
-                          <p className="text-sm font-medium text-white">{n.title}</p>
-                          <p className="mt-1 text-xs leading-5 text-slate-400">{n.message}</p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {new Date(n.created_at).toLocaleDateString("tr-TR")}
-                          </p>
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {user ? (
-            <div ref={menuRef} className="relative">
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setMenuOpen((prev) => !prev); }}
-                className="relative overflow-hidden rounded-full ring-2 ring-slate-700 transition hover:ring-slate-500"
-              >
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt="Profil" className="h-11 w-11 object-cover" />
-                ) : (
-                  <div className="flex h-11 w-11 items-center justify-center bg-slate-800 text-sm font-bold text-white">
-                    {initials}
-                  </div>
-                )}
-              </button>
-
-              {menuOpen && (
-                <div className="absolute right-0 mt-3 w-72 rounded-2xl border border-slate-800 bg-slate-900 p-2 shadow-2xl">
-                  <div className="border-b border-slate-800 px-3 pb-3 pt-2">
-                    <p className="font-semibold text-white">{user.fullName || "Kullanıcı"}</p>
-                    <p className="mt-1 text-sm text-slate-400">{user.email || "E-posta yok"}</p>
-                  </div>
-                  <div className="pt-2">
-                    <Link href="/profile" onClick={() => setMenuOpen(false)}
-                      className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-white transition hover:bg-slate-800">
-                      <span>Profil</span>
-                      {claimCount > 0 && (
-                        <span className="rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
-                          {claimCount > 99 ? "99+" : claimCount}
-                        </span>
-                      )}
-                    </Link>
-                    <Link href="/my-items" onClick={() => setMenuOpen(false)}
-                      className="mt-1 block rounded-xl px-3 py-2 text-sm text-white transition hover:bg-slate-800">
-                      İlanlarım
-                    </Link>
-                    <Link href="/favorites" onClick={() => setMenuOpen(false)}
-                      className="mt-1 block rounded-xl px-3 py-2 text-sm text-white transition hover:bg-slate-800">
-                      ♥ Favorilerim
-                    </Link>
-                    <Link href="/messages" onClick={() => setMenuOpen(false)}
-                      className="mt-1 flex items-center justify-between rounded-xl px-3 py-2 text-sm text-white transition hover:bg-slate-800">
-                      <span>Mesajlar</span>
-                      {messageCount > 0 && (
-                        <span className="rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
-                          {messageCount > 99 ? "99+" : messageCount}
-                        </span>
-                      )}
-                    </Link>
-                    <button onClick={handleLogout}
-                      className="mt-1 w-full rounded-xl px-3 py-2 text-left text-sm text-red-300 transition hover:bg-slate-800">
-                      Çıkış Yap
+              {showIlanMenu && (
+                <div className="absolute right-0 mt-2 w-60 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden">
+                  <div className="p-1.5">
+                    <button
+                      onClick={() => { setShowIlanMenu(false); router.push("/lost/report"); }}
+                      className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-left hover:bg-amber-500/10 transition group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-amber-400 text-base">!</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white group-hover:text-amber-400 transition-colors">Kayıp İlanı</div>
+                        <div className="text-xs text-slate-500">Eşyamı kaybettim</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setShowIlanMenu(false); router.push("/found/report"); }}
+                      className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-left hover:bg-emerald-500/10 transition group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-emerald-400 text-base">✓</span>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white group-hover:text-emerald-400 transition-colors">Bulundu İlanı</div>
+                        <div className="text-xs text-slate-500">Bir eşya buldum</div>
+                      </div>
                     </button>
                   </div>
                 </div>
               )}
             </div>
-          ) : (
-            <Link href="/auth/login"
-              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
-              Giriş Yap
+
+            {/* MESAJLAR */}
+            <Link
+              href="/messages"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition"
+              title="Mesajlar"
+            >
+              <MessageCircle className="w-5 h-5" />
+              {messageCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-bold text-white leading-none py-0.5">
+                  {messageCount > 99 ? "99+" : messageCount}
+                </span>
+              )}
             </Link>
-          )}
+
+            {/* BİLDİRİMLER */}
+            {user && (
+              <div ref={notifRef} className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const opening = !notifOpen;
+                    setNotifOpen(opening);
+                    if (opening && user.email) markAllRead(normalizeEmail(user.email));
+                  }}
+                  className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition"
+                  title="Bildirimler"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 flex min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none py-0.5">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {notifOpen && (
+                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+                      <p className="font-bold text-white text-sm">Bildirimler</p>
+                      {unreadCount > 0 && (
+                        <span className="text-xs text-slate-500">{unreadCount} okunmamış</span>
+                      )}
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-8 text-center">
+                          <Bell className="w-8 h-8 text-slate-700 mx-auto mb-2" />
+                          <p className="text-sm text-slate-500">Henüz bildirim yok.</p>
+                        </div>
+                      ) : (
+                        notifications.map((n) => (
+                          <button
+                            key={n.id}
+                            onClick={() => { setNotifOpen(false); router.push(`/items/${n.item_id}`); }}
+                            className={`w-full border-b border-slate-800 px-4 py-3 text-left transition last:border-0 hover:bg-slate-800 ${!n.is_read ? "bg-blue-500/5 border-l-2 border-l-blue-500" : ""}`}
+                          >
+                            <p className="text-xs font-semibold text-white">{n.title}</p>
+                            <p className="mt-0.5 text-xs leading-5 text-slate-400">{n.message}</p>
+                            <p className="mt-1 text-[10px] text-slate-600">
+                              {new Date(n.created_at).toLocaleDateString("tr-TR")}
+                            </p>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* KULLANICI MENÜSÜ */}
+            {user ? (
+              <div ref={menuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setMenuOpen((prev) => !prev); }}
+                  className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 pl-1 pr-3 py-1 hover:border-slate-600 transition"
+                >
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="Profil" className="h-8 w-8 rounded-lg object-cover" />
+                  ) : (
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-700 text-xs font-bold text-white">
+                      {initials}
+                    </div>
+                  )}
+                  <span className="hidden sm:block text-sm text-white max-w-[100px] truncate">
+                    {user.fullName?.split(" ")[0] || "Profil"}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${menuOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden">
+                    {/* Kullanıcı başlığı */}
+                    <div className="border-b border-slate-800 px-4 py-3 bg-slate-800/50">
+                      <p className="font-semibold text-white text-sm">{user.fullName || "Kullanıcı"}</p>
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">{user.email}</p>
+                    </div>
+                    <div className="p-1.5">
+                      <Link href="/profile" onClick={() => setMenuOpen(false)}
+                        className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <div className="flex items-center gap-2.5">
+                          <Settings className="w-4 h-4" />
+                          <span>Profil & Ayarlar</span>
+                        </div>
+                        {claimCount > 0 && (
+                          <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            {claimCount > 99 ? "99+" : claimCount}
+                          </span>
+                        )}
+                      </Link>
+                      <Link href="/my-items" onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <FileText className="w-4 h-4" />
+                        <span>İlanlarım</span>
+                      </Link>
+                      <Link href="/favorites" onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <Heart className="w-4 h-4" />
+                        <span>Favorilerim</span>
+                      </Link>
+                      <Link href="/alerts" onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <Bell className="w-4 h-4" />
+                        <span>Arama Uyarılarım</span>
+                      </Link>
+                      <Link href="/messages" onClick={() => setMenuOpen(false)}
+                        className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
+                        <div className="flex items-center gap-2.5">
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Mesajlar</span>
+                        </div>
+                        {messageCount > 0 && (
+                          <span className="rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                            {messageCount > 99 ? "99+" : messageCount}
+                          </span>
+                        )}
+                      </Link>
+                      <div className="border-t border-slate-800 mt-1 pt-1">
+                        <button onClick={handleLogout}
+                          className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition">
+                          <LogOut className="w-4 h-4" />
+                          <span>Çıkış Yap</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link href="/auth/login"
+                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition">
+                  Giriş Yap
+                </Link>
+                <Link href="/auth/register"
+                  className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-950 hover:bg-slate-100 transition">
+                  Kayıt Ol
+                </Link>
+              </div>
+            )}
+
+            {/* MOBİL HAMBURGER */}
+            <button
+              onClick={() => setMobileOpen((v) => !v)}
+              className="flex md:hidden h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition"
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
-      </div>
-    </header>
+
+        {/* MOBİL MENÜ */}
+        {mobileOpen && (
+          <div className="md:hidden border-t border-slate-800 bg-slate-950 px-4 py-4 space-y-1">
+            <Link href="/" onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+              Ana Sayfa
+            </Link>
+            <Link href="/search" onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/search") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+              <Search className="w-4 h-4" />
+              İlanlar
+            </Link>
+            <Link href="/map" onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/map") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+              🗺️ Harita
+            </Link>
+            <Link href="/priority" onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/priority") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+              ⭐ Öncelikli İlanlar
+            </Link>
+            <Link href="/pets" onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/pets") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+              🐾 Evcil Hayvanlar
+            </Link>
+            <Link href="/messages" onClick={() => setMobileOpen(false)}
+              className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/messages") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+              <div className="flex items-center gap-3">
+                <MessageCircle className="w-4 h-4" />
+                Mesajlar
+              </div>
+              {messageCount > 0 && (
+                <span className="rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{messageCount}</span>
+              )}
+            </Link>
+            <div className="border-t border-slate-800 pt-3 mt-3 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { setMobileOpen(false); router.push("/lost/report"); }}
+                className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-slate-950"
+              >
+                Kayıp İlanı
+              </button>
+              <button
+                onClick={() => { setMobileOpen(false); router.push("/found/report"); }}
+                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-slate-950"
+              >
+                Bulundu İlanı
+              </button>
+            </div>
+          </div>
+        )}
+      </header>
+    </>
   );
 }

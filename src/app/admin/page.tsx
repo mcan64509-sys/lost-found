@@ -26,6 +26,9 @@ type AdminItem = {
   created_by_email: string | null;
   created_at: string;
   view_count: number | null;
+  is_featured: boolean | null;
+  is_urgent: boolean | null;
+  reward_amount: number | null;
 };
 
 type Report = {
@@ -152,6 +155,26 @@ export default function AdminPage() {
     if (error) { toast.error("Silinemedi."); }
     else { toast.success("İlan silindi."); setItems((prev) => prev.filter((i) => i.id !== id)); }
     setDeleting(null);
+  }
+
+  async function handleToggleFeatured(id: string, current: boolean | null) {
+    const newVal = !current;
+    const featuredUntil = newVal ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null;
+    const { error } = await supabase
+      .from("items")
+      .update({ is_featured: newVal, featured_until: featuredUntil })
+      .eq("id", id);
+    if (error) { toast.error("Güncellenemedi."); return; }
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_featured: newVal } : i));
+    toast.success(newVal ? "⭐ İlan öne çıkarıldı (7 gün)." : "Öne çıkarma kaldırıldı.");
+  }
+
+  async function handleToggleUrgent(id: string, current: boolean | null) {
+    const newVal = !current;
+    const { error } = await supabase.from("items").update({ is_urgent: newVal }).eq("id", id);
+    if (error) { toast.error("Güncellenemedi."); return; }
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_urgent: newVal } : i));
+    toast.success(newVal ? "🔴 Acil işareti eklendi." : "Acil işareti kaldırıldı.");
   }
 
   async function handleToggleBan(targetEmail: string, currentBan: boolean) {
@@ -326,13 +349,37 @@ export default function AdminPage() {
                       {item.created_by_email} · {item.category} · 👁 {item.view_count || 0} · {new Date(item.created_at).toLocaleDateString("tr-TR")}
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleDeleteItem(item.id)}
-                    disabled={deleting === item.id}
-                    className="shrink-0 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/20 disabled:opacity-50"
-                  >
-                    {deleting === item.id ? "..." : "Sil"}
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleToggleFeatured(item.id, item.is_featured)}
+                      className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                        item.is_featured
+                          ? "border-yellow-500/40 bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/10"
+                          : "border-slate-700 bg-slate-800 text-slate-400 hover:border-yellow-500/30 hover:text-yellow-400"
+                      }`}
+                      title={item.is_featured ? "Öne çıkarmayı kaldır" : "Öne çıkar"}
+                    >
+                      {item.is_featured ? "⭐ Featured" : "⭐"}
+                    </button>
+                    <button
+                      onClick={() => handleToggleUrgent(item.id, item.is_urgent)}
+                      className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
+                        item.is_urgent
+                          ? "border-red-500/40 bg-red-500/20 text-red-400 hover:bg-red-500/10"
+                          : "border-slate-700 bg-slate-800 text-slate-400 hover:border-red-500/30 hover:text-red-400"
+                      }`}
+                      title={item.is_urgent ? "Acili kaldır" : "Acil işaretle"}
+                    >
+                      🔴
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(item.id)}
+                      disabled={deleting === item.id}
+                      className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+                    >
+                      {deleting === item.id ? "..." : "Sil"}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
