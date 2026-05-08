@@ -30,6 +30,7 @@ type DbItem = {
   reward_amount?: number | null;
   is_urgent?: boolean | null;
   is_featured?: boolean | null;
+  priority_level?: number | null;
 };
 
 type MatchItem = {
@@ -720,6 +721,23 @@ export default function ItemDetailPage() {
                   ▦ QR Kod
                 </button>
               </div>
+
+              {/* İlan sahibi için Öne Çıkar butonu */}
+              {isOwner && item.status !== "resolved" && (
+                <div className="mt-3">
+                  <a
+                    href={`/upgrade?item=${id}`}
+                    className="flex items-center justify-center gap-2 w-full rounded-2xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition"
+                  >
+                    ⭐ İlanı Öne Çıkar
+                    {(item.priority_level ?? 0) > 0 && (
+                      <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded-full">
+                        {item.priority_level === 3 ? "🥇 Altın" : item.priority_level === 2 ? "🥈 Gümüş" : "🥉 Bronz"} aktif
+                      </span>
+                    )}
+                  </a>
+                </div>
+              )}
 
               {!isOwner && (
                 <div className="mt-3">

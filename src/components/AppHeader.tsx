@@ -254,6 +254,9 @@ export default function AppHeader() {
               🐾 Hayvanlar
               {isActive("/pets") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
             </Link>
+            <Link href="/upgrade" className="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition border border-amber-500/20">
+              ⭐ Öne Çıkar
+            </Link>
           </nav>
 
           {/* SAĞ KISIM */}
