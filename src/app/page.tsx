@@ -93,7 +93,7 @@ export default function HomePage() {
           <div className="w-full max-w-sm flex items-start gap-3 rounded-2xl border border-blue-500/30 bg-slate-900/95 backdrop-blur px-4 py-3 shadow-2xl shadow-black/40">
             <Zap className="mt-0.5 w-4 h-4 shrink-0 fill-blue-400 text-blue-400" />
             <p className="text-xs text-slate-300 leading-5">
-              Uygulamamız Hakkında İlgi Çekici Detaylar İçin Lütfen Göz Atın
+              Uygulamamız Hakkında İlgi Çekici Detaylar İçin Lütfen Aşağıya Kaydırın
             </p>
             <button
               onClick={() => setShowPopup(false)}
