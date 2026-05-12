@@ -168,8 +168,11 @@ export default function HomePage() {
             </div>
 
             {/* Aşağı ok */}
-            <div className="flex justify-center mt-16 animate-bounce">
-              <ChevronDown className="w-6 h-6 text-slate-600" />
+            <div className="flex flex-col items-center mt-8 gap-2">
+              <p className="text-xs text-slate-500 tracking-wide">Uygulamamız Hakkında İlgi Çekici Detaylar İçin Lütfen Göz Atın</p>
+              <div className="animate-bounce">
+                <ChevronDown className="w-6 h-6 text-slate-600" />
+              </div>
             </div>
           </div>
         </section>
@@ -615,9 +618,10 @@ export default function HomePage() {
                   © {new Date().getFullYear()} Kayıp eşyaları bul, sahibine kavuştur.
                 </div>
               </div>
-              <div className="flex gap-5 text-xs text-slate-600">
+              <div className="flex flex-wrap gap-5 text-xs text-slate-600">
                 <Link href="/gizlilik" className="hover:text-slate-400 transition">Gizlilik Politikası</Link>
                 <Link href="/kullanim-sartlari" className="hover:text-slate-400 transition">Kullanım Şartları</Link>
+                <Link href="/iade-politikasi" className="hover:text-slate-400 transition">İade Politikası</Link>
                 <Link href="/favorites" className="hover:text-slate-400 transition">Favorilerim</Link>
                 <Link href="/search" className="hover:text-slate-400 transition">Tüm İlanlar</Link>
               </div>
