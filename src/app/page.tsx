@@ -89,8 +89,8 @@ export default function HomePage() {
 
       {/* Bilgi pop-up */}
       {showPopup && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-[90vw] max-w-sm animate-fade-in-down">
-          <div className="flex items-start gap-3 rounded-2xl border border-blue-500/30 bg-slate-900/95 backdrop-blur px-4 py-3 shadow-2xl shadow-black/40">
+        <div className="fixed top-20 inset-x-0 z-50 flex justify-center px-4 animate-fade-in-down">
+          <div className="w-full max-w-sm flex items-start gap-3 rounded-2xl border border-blue-500/30 bg-slate-900/95 backdrop-blur px-4 py-3 shadow-2xl shadow-black/40">
             <Zap className="mt-0.5 w-4 h-4 shrink-0 fill-blue-400 text-blue-400" />
             <p className="text-xs text-slate-300 leading-5">
               Uygulamamız Hakkında İlgi Çekici Detaylar İçin Lütfen Göz Atın
