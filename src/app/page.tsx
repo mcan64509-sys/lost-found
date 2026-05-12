@@ -39,7 +39,13 @@ export default function HomePage() {
   const [stats, setStats] = useState({ total: 0, lost: 0, found: 0, resolved: 0 });
   const [statsLoaded, setStatsLoaded] = useState(false);
   const [priorityItems, setPriorityItems] = useState<PriorityPreview[]>([]);
+  const [showPopup, setShowPopup] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowPopup(true), 1500);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     async function loadStats() {
@@ -80,6 +86,24 @@ export default function HomePage() {
   return (
     <>
       <AppHeader />
+
+      {/* Bilgi pop-up */}
+      {showPopup && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[90vw] max-w-sm animate-fade-in-up">
+          <div className="flex items-start gap-3 rounded-2xl border border-blue-500/30 bg-slate-900/95 backdrop-blur px-4 py-3 shadow-2xl shadow-black/40">
+            <Zap className="mt-0.5 w-4 h-4 shrink-0 fill-blue-400 text-blue-400" />
+            <p className="text-xs text-slate-300 leading-5">
+              Uygulamamız Hakkında İlgi Çekici Detaylar İçin Lütfen Göz Atın
+            </p>
+            <button
+              onClick={() => setShowPopup(false)}
+              className="ml-auto shrink-0 text-slate-500 hover:text-slate-300 transition text-base leading-none"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
       <main className="bg-slate-950 text-white">
 
         {/* ══════════════════════════════════════════════════════════
@@ -168,11 +192,8 @@ export default function HomePage() {
             </div>
 
             {/* Aşağı ok */}
-            <div className="flex flex-col items-center mt-8 gap-2">
-              <p className="text-xs text-slate-500 tracking-wide">Uygulamamız Hakkında İlgi Çekici Detaylar İçin Lütfen Göz Atın</p>
-              <div className="animate-bounce">
-                <ChevronDown className="w-6 h-6 text-slate-600" />
-              </div>
+            <div className="flex justify-center mt-8 animate-bounce">
+              <ChevronDown className="w-6 h-6 text-slate-600" />
             </div>
           </div>
         </section>
