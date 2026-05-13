@@ -44,6 +44,18 @@ type Report = {
 
 type DayCount = { day: string; kayip: number; bulundu: number };
 
+type Sighting = {
+  id: string;
+  item_id: string;
+  reporter_email: string;
+  location_text: string | null;
+  lat: number | null;
+  lng: number | null;
+  note: string | null;
+  created_at: string;
+  item_title?: string;
+};
+
 type AdminUser = {
   id: string;
   email: string;
@@ -72,8 +84,9 @@ export default function AdminPage() {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [items, setItems] = useState<AdminItem[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [sightings, setSightings] = useState<Sighting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"stats" | "items" | "reports" | "users">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "items" | "reports" | "users" | "sightings">("stats");
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminEmail, setAdminEmail] = useState("");
   const [togglingBan, setTogglingBan] = useState<string | null>(null);
@@ -104,9 +117,10 @@ export default function AdminPage() {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = token || session?.access_token || "";
-    const [{ data: itemData }, { data: reportData }, usersRes] = await Promise.all([
+    const [{ data: itemData }, { data: reportData }, { data: sightingData }, usersRes] = await Promise.all([
       supabase.from("items").select("*").order("created_at", { ascending: false }),
       supabase.from("reports").select("*, items(title)").order("created_at", { ascending: false }),
+      supabase.from("sightings").select("*, items(title)").order("created_at", { ascending: false }).limit(200),
       fetch("/api/admin/users", {
         headers: { Authorization: `Bearer ${accessToken}` },
       }).then((r) => r.json()),
@@ -143,6 +157,12 @@ export default function AdminPage() {
       item_title: (r.items as { title?: string } | null)?.title || "—",
     }));
     setReports(reportsWithTitle);
+
+    const sightingsWithTitle = (sightingData || []).map((s: Record<string, unknown>) => ({
+      ...(s as Sighting),
+      item_title: (s.items as { title?: string } | null)?.title || "—",
+    }));
+    setSightings(sightingsWithTitle);
 
     setAdminUsers(usersRes.users ?? []);
     setLoading(false);
@@ -251,12 +271,13 @@ export default function AdminPage() {
           </div>
 
           {/* Tab bar */}
-          <div className="mb-6 flex gap-1 rounded-2xl border border-slate-800 bg-slate-900 p-1">
+          <div className="mb-6 flex flex-wrap gap-1 rounded-2xl border border-slate-800 bg-slate-900 p-1">
             {([
               ["stats", "İstatistikler"],
               ["items", "İlanlar"],
               ["reports", stats.pendingReports > 0 ? `Şikayetler (${stats.pendingReports})` : "Şikayetler"],
               ["users", `Kullanıcılar (${adminUsers.length})`],
+              ["sightings", sightings.length > 0 ? `👁 Gördüm (${sightings.length})` : "👁 Gördüm"],
             ] as const).map(([tab, label]) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition ${activeTab === tab ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"}`}>
@@ -446,6 +467,87 @@ export default function AdminPage() {
                     </div>
                   );
                 })
+              )}
+            </div>
+          ) : activeTab === "sightings" ? (
+            /* Sightings tab */
+            <div className="space-y-3">
+              {/* Özet */}
+              <div className="grid gap-4 sm:grid-cols-3 mb-2">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                  <p className="text-xs text-slate-500">Toplam Bildirim</p>
+                  <p className="mt-1 text-2xl font-black text-amber-400">{sightings.length}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                  <p className="text-xs text-slate-500">Farklı İlan</p>
+                  <p className="mt-1 text-2xl font-black text-white">
+                    {new Set(sightings.map((s) => s.item_id)).size}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                  <p className="text-xs text-slate-500">Farklı Bildiren</p>
+                  <p className="mt-1 text-2xl font-black text-blue-400">
+                    {new Set(sightings.map((s) => s.reporter_email)).size}
+                  </p>
+                </div>
+              </div>
+
+              {sightings.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
+                  Henüz "Gördüm" bildirimi yok.
+                </div>
+              ) : (
+                sightings.map((s) => (
+                  <div key={s.id} className="rounded-2xl border border-amber-500/15 bg-amber-500/5 px-4 py-3.5">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="rounded px-2 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300">
+                            👁 Gördüm
+                          </span>
+                          <Link
+                            href={`/items/${s.item_id}`}
+                            className="text-sm font-semibold text-white hover:text-amber-300 truncate max-w-xs"
+                          >
+                            {s.item_title}
+                          </Link>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          <span className="text-slate-400">{s.reporter_email}</span>
+                          {" · "}
+                          {new Date(s.created_at).toLocaleString("tr-TR")}
+                        </p>
+                        {s.location_text && (
+                          <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-300">
+                            <span className="text-amber-400">📍</span>
+                            {s.location_text}
+                          </p>
+                        )}
+                        {s.lat != null && s.lng != null && (
+                          <a
+                            href={`https://www.openstreetmap.org/?mlat=${s.lat}&mlon=${s.lng}#map=16/${s.lat}/${s.lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                          >
+                            🗺 {s.lat.toFixed(5)}, {s.lng.toFixed(5)} — Haritada Gör ↗
+                          </a>
+                        )}
+                        {s.note && (
+                          <p className="mt-1.5 text-xs text-slate-400 italic border-l-2 border-slate-700 pl-2">
+                            "{s.note}"
+                          </p>
+                        )}
+                      </div>
+                      <Link
+                        href={`/items/${s.item_id}`}
+                        className="shrink-0 rounded-xl border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition"
+                      >
+                        İlana Git →
+                      </Link>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           ) : (
