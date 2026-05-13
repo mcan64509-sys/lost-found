@@ -15,7 +15,7 @@ const supabase = createClient(
 );
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.RESEND_FROM_EMAIL || "Lost & Found <onboarding@resend.dev>";
+const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <onboarding@resend.dev>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export async function POST(req: NextRequest) {
@@ -63,11 +63,11 @@ export async function POST(req: NextRequest) {
         subject: title,
         html: `
           <div style="font-family:sans-serif;max-width:580px;margin:0 auto;background:#0f172a;color:#e2e8f0;padding:28px 24px;border-radius:16px;">
-            <p style="margin:0 0 24px;font-size:18px;font-weight:800;color:#fff;">Lost &amp; Found</p>
+            <p style="margin:0 0 24px;font-size:18px;font-weight:800;color:#fff;">BulanVarMı?</p>
             <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;color:#fff;">${title}</h1>
             ${body ? `<p style="color:#94a3b8;line-height:1.6;margin:0;">${body}</p>` : ""}
             ${url ? `<a href="${fullUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:11px 22px;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;margin-top:20px;">Görüntüle →</a>` : ""}
-            <p style="margin-top:32px;font-size:11px;color:#475569;">Bu e-posta Lost &amp; Found platformu tarafından gönderilmiştir. <a href="${APP_URL}" style="color:#60a5fa;text-decoration:none;">Platforma git →</a></p>
+            <p style="margin-top:32px;font-size:11px;color:#475569;">Bu e-posta BulanVarMı? platformu tarafından gönderilmiştir. <a href="${APP_URL}" style="color:#60a5fa;text-decoration:none;">Platforma git →</a></p>
           </div>
         `,
       }).then(() => { emailSent = true; }).catch(() => {});

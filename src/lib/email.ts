@@ -2,15 +2,15 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM = process.env.RESEND_FROM_EMAIL || "Lost & Found <onboarding@resend.dev>";
+const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <onboarding@resend.dev>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 function baseTemplate(content: string): string {
   return `
     <div style="font-family:sans-serif;max-width:580px;margin:0 auto;background:#0f172a;color:#e2e8f0;padding:28px 24px;border-radius:16px;">
-      <p style="margin:0 0 24px;font-size:18px;font-weight:800;color:#fff;">Lost &amp; Found</p>
+      <p style="margin:0 0 24px;font-size:18px;font-weight:800;color:#fff;">BulanVarMı?</p>
       ${content}
-      <p style="margin-top:32px;font-size:11px;color:#475569;">Bu e-posta Lost &amp; Found platformu tarafından gönderilmiştir. <a href="${APP_URL}" style="color:#60a5fa;text-decoration:none;">Platforma git →</a></p>
+      <p style="margin-top:32px;font-size:11px;color:#475569;">Bu e-posta BulanVarMı? platformu tarafından gönderilmiştir. <a href="${APP_URL}" style="color:#60a5fa;text-decoration:none;">Platforma git →</a></p>
     </div>
   `;
 }

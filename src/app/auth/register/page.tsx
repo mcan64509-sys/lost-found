@@ -94,9 +94,9 @@ export default function RegisterPage() {
           <div className="mb-8">
             <div className="flex items-center gap-2 mb-1">
               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-emerald-500 flex items-center justify-center text-slate-950 text-xs font-black">
-                L&F
+                BV
               </div>
-              <span className="text-sm font-semibold text-slate-400">Lost &amp; Found</span>
+              <span className="text-sm font-semibold text-slate-400">BulanVarMı?</span>
             </div>
             <h1 className="mt-3 text-2xl font-black text-white">Hesap Oluştur</h1>
             <p className="mt-1 text-sm text-slate-500">

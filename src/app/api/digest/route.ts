@@ -41,12 +41,12 @@ export async function POST(req: NextRequest) {
     `).join("");
 
     await resend.emails.send({
-      from: "Lost & Found <onboarding@resend.dev>",
+      from: "BulanVarMı? <onboarding@resend.dev>",
       to: userEmail,
       subject: `📋 Haftalık Özet — ${items.length} yeni ilan`,
       html: `
         <div style="font-family:sans-serif;max-width:560px;margin:0 auto;background:#0f172a;color:#e2e8f0;padding:24px;border-radius:16px;">
-          <h1 style="font-size:22px;font-weight:800;margin:0 0 8px;">Lost &amp; Found — Haftalık Özet</h1>
+          <h1 style="font-size:22px;font-weight:800;margin:0 0 8px;">BulanVarMı? — Haftalık Özet</h1>
           <p style="color:#94a3b8;margin:0 0 24px;">Son 7 günde ${items.length} yeni ilan eklendi.</p>
           <table style="width:100%;border-collapse:collapse;">
             ${itemsHtml}

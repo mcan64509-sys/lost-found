@@ -130,7 +130,7 @@ export default function HomePage() {
             <div className="flex justify-center mb-8 animate-fade-in-down">
               <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/25 bg-blue-500/10 px-5 py-2 text-sm text-blue-300">
                 <Zap className="w-3.5 h-3.5 fill-blue-400 text-blue-400" />
-                Türkiye'nin kayıp &amp; buluntu platformu
+                Türkiye'nin kayıp &amp; buluntu platformu — BulanVarMı?
               </div>
             </div>
 
@@ -634,7 +634,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl px-6 py-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <div className="text-sm font-bold text-white">Lost &amp; Found</div>
+                <div className="text-sm font-bold text-white">BulanVarMı?</div>
                 <div className="text-xs text-slate-600 mt-1">
                   © {new Date().getFullYear()} Kayıp eşyaları bul, sahibine kavuştur.
                 </div>

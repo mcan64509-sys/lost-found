@@ -8,12 +8,12 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Lost & Found — Kayıp Eşya Platformu",
-    template: "%s | Lost & Found",
+    default: "BulanVarMı? — Kayıp Eşya Platformu",
+    template: "%s | BulanVarMı?",
   },
   description:
     "Kayıp eşyalarını bul, bulunan eşyaları sahiplerine kavuştur. Yapay zeka destekli eşleştirme sistemi.",
-  keywords: ["kayıp eşya", "bulundu", "lost and found", "kayıp ilanı"],
+  keywords: ["kayıp eşya", "bulundu", "bulanvarmi", "kayıp ilanı", "bulan var mı"],
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -26,19 +26,19 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Lost & Found",
+    title: "BulanVarMı?",
   },
   openGraph: {
     type: "website",
     locale: "tr_TR",
-    siteName: "Lost & Found",
-    title: "Lost & Found — Kayıp Eşya Platformu",
+    siteName: "BulanVarMı?",
+    title: "BulanVarMı? — Kayıp Eşya Platformu",
     description:
       "Kayıp eşyalarını bul, bulunan eşyaları sahiplerine kavuştur.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Lost & Found",
+    title: "BulanVarMı?",
     description: "Kayıp eşyalarını bul, bulunan eşyaları sahiplerine kavuştur.",
   },
 };

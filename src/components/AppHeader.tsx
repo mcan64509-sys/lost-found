@@ -227,9 +227,9 @@ export default function AppHeader() {
             className="flex items-center gap-2 text-white font-black text-lg tracking-tight hover:opacity-80 transition-opacity"
           >
             <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-emerald-500 flex items-center justify-center text-slate-950 text-xs font-black">
-              L&F
+              BV
             </div>
-            <span className="hidden sm:block">Lost &amp; Found</span>
+            <span className="hidden sm:block">BulanVarMı?</span>
           </Link>
 
           {/* DESKTOP NAV */}
