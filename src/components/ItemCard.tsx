@@ -9,12 +9,12 @@ export default function ItemCard({ item }: Props) {
   return (
     <Link
       href={`/items/${item.id}`}
-      className="block overflow-hidden rounded-xl border border-slate-800 bg-slate-900 transition hover:border-slate-700"
+      className="group block overflow-hidden rounded-xl border border-slate-800 bg-slate-900 transition-all duration-200 hover:border-slate-700 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/30"
     >
       <img
         src={item.image}
         alt={item.title}
-        className="h-40 w-full object-cover"
+        className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-105"
       />
 
       <div className="p-4">

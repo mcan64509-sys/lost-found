@@ -218,7 +218,7 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-slate-800/80 bg-slate-950/95 backdrop-blur-md">
+      <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/95 backdrop-blur-xl transition-all">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
 
           {/* LOGO */}
@@ -273,7 +273,7 @@ export default function AppHeader() {
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showIlanMenu ? "rotate-180" : ""}`} />
               </button>
               {showIlanMenu && (
-                <div className="absolute right-0 mt-2 w-60 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden">
+                <div className="absolute right-0 mt-2 w-60 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in">
                   <div className="p-1.5">
                     <button
                       onClick={() => { setShowIlanMenu(false); router.push("/lost/report"); }}
@@ -340,7 +340,7 @@ export default function AppHeader() {
                 </button>
 
                 {notifOpen && (
-                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in">
                     <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
                       <p className="font-bold text-white text-sm">Bildirimler</p>
                       {unreadCount > 0 && (
@@ -396,7 +396,7 @@ export default function AppHeader() {
                 </button>
 
                 {menuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in">
                     {/* Kullanıcı başlığı */}
                     <div className="border-b border-slate-800 px-4 py-3 bg-slate-800/50">
                       <p className="font-semibold text-white text-sm">{user.fullName || "Kullanıcı"}</p>
@@ -478,7 +478,7 @@ export default function AppHeader() {
 
         {/* MOBİL MENÜ */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-slate-800 bg-slate-950 px-4 py-4 space-y-1">
+          <div className="md:hidden border-t border-slate-800 bg-slate-950 px-4 py-4 space-y-1 animate-fade-in-down">
             <Link href="/" onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
               Ana Sayfa

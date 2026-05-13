@@ -127,7 +127,7 @@ export default function HomePage() {
 
           <div className="relative mx-auto max-w-7xl px-6 py-20 md:py-28 w-full">
             {/* Üst etiket */}
-            <div className="flex justify-center mb-8">
+            <div className="flex justify-center mb-8 animate-fade-in-down">
               <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/25 bg-blue-500/10 px-5 py-2 text-sm text-blue-300">
                 <Zap className="w-3.5 h-3.5 fill-blue-400 text-blue-400" />
                 Türkiye'nin kayıp &amp; buluntu platformu
@@ -135,7 +135,7 @@ export default function HomePage() {
             </div>
 
             {/* Ana başlık */}
-            <div className="text-center max-w-5xl mx-auto mb-8">
+            <div className="text-center max-w-5xl mx-auto mb-8 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
               <h1 className="text-5xl font-black leading-[1.1] md:text-7xl lg:text-8xl">
                 <span className="text-amber-400">Kayıp</span> eşyaları bul,{" "}
                 <br className="hidden sm:block" />
@@ -150,7 +150,7 @@ export default function HomePage() {
             </div>
 
             {/* CTA Butonları */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
               <button
                 onClick={() => router.push("/lost/report")}
                 className="group flex items-center justify-center gap-3 rounded-2xl bg-amber-500 px-8 py-4 text-base font-bold text-slate-950 hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20"
@@ -177,7 +177,7 @@ export default function HomePage() {
             </div>
 
             {/* İstatistik bantı */}
-            <div className="flex flex-wrap justify-center gap-6 md:gap-12">
+            <div className="flex flex-wrap justify-center gap-6 md:gap-12 animate-fade-in-up" style={{ animationDelay: "300ms" }}>
               {[
                 { label: "Toplam İlan", value: statsLoaded ? stats.total : "—", color: "text-white" },
                 { label: "Kayıp İlanı", value: statsLoaded ? stats.lost : "—", color: "text-amber-400" },
@@ -217,7 +217,7 @@ export default function HomePage() {
             <div className="grid md:grid-cols-2 gap-8">
 
               {/* KAYIP KARTI */}
-              <div className="group relative rounded-3xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-900 p-8 hover:border-amber-500/40 transition-all">
+              <div className="group relative rounded-3xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-slate-900 to-slate-900 p-8 hover:border-amber-500/40 hover:-translate-y-1 transition-all duration-300 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
                 <div className="absolute top-6 right-6 opacity-20 group-hover:opacity-30 transition-opacity">
                   <AlertCircle className="w-20 h-20 text-amber-500" />
                 </div>
@@ -272,7 +272,7 @@ export default function HomePage() {
               </div>
 
               {/* BULUNDU KARTI */}
-              <div className="group relative rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-slate-900 to-slate-900 p-8 hover:border-emerald-500/40 transition-all">
+              <div className="group relative rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-slate-900 to-slate-900 p-8 hover:border-emerald-500/40 hover:-translate-y-1 transition-all duration-300 animate-fade-in-up" style={{ animationDelay: "200ms" }}>
                 <div className="absolute top-6 right-6 opacity-20 group-hover:opacity-30 transition-opacity">
                   <CheckCircle2 className="w-20 h-20 text-emerald-500" />
                 </div>
@@ -412,7 +412,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 stagger">
               {[
                 {
                   icon: <Zap className="w-5 h-5 text-violet-400" />,
@@ -489,7 +489,7 @@ export default function HomePage() {
               ].map((f) => (
                 <div
                   key={f.title}
-                  className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 hover:border-slate-700 transition-all"
+                  className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 hover:border-slate-700 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/30 transition-all duration-200 animate-fade-in-up"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className={`w-10 h-10 rounded-xl ${f.iconBg} flex items-center justify-center flex-shrink-0`}>

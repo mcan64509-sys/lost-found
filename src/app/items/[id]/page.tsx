@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import AppHeader from "../../../components/AppHeader";
 import ConfirmDialog from "../../../components/ConfirmDialog";
 import QRCodeModal from "../../../components/QRCodeModal";
+import SightingModal from "../../../components/SightingModal";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 import { normalizeEmail, isValidEmail } from "../../../lib/utils";
@@ -73,6 +74,7 @@ export default function ItemDetailPage() {
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [showSightingModal, setShowSightingModal] = useState(false);
 
   // Rating
   const [ratingScore, setRatingScore] = useState(0);
@@ -478,6 +480,15 @@ export default function ItemDetailPage() {
     <>
       <AppHeader />
 
+      {showSightingModal && item && userEmail && (
+        <SightingModal
+          itemId={item.id}
+          itemTitle={item.title}
+          reporterEmail={userEmail}
+          onClose={() => setShowSightingModal(false)}
+        />
+      )}
+
       <ConfirmDialog
         isOpen={confirmClose}
         message={item.type === "lost" ? "Eşyan bulundu mu?" : "Sahibine ulaşıldı mı?"}
@@ -643,6 +654,35 @@ export default function ItemDetailPage() {
                   >
                     Bu eşya benim olabilir
                   </Link>
+                </div>
+              )}
+
+              {/* "Gördüm" butonu — sadece kayıp ilanlarında, sahip olmayan kullanıcılara */}
+              {!isOwner && item.type === "lost" && item.status !== "resolved" && (
+                <div className="mt-8">
+                  {userEmail ? (
+                    <button
+                      onClick={() => setShowSightingModal(true)}
+                      className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 font-bold text-slate-950 transition-all hover:from-amber-400 hover:to-orange-400 shadow-lg shadow-amber-500/20"
+                    >
+                      <span className="relative flex items-center justify-center gap-2">
+                        <span className="text-lg">👁</span>
+                        Bu eşyayı / hayvanı gördüm!
+                      </span>
+                      <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  ) : (
+                    <Link
+                      href="/auth/login"
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-6 py-4 font-semibold text-amber-400 transition hover:bg-amber-500/20"
+                    >
+                      <span>👁</span>
+                      Gördüm bildir — Giriş yap
+                    </Link>
+                  )}
+                  <p className="mt-2 text-center text-xs text-slate-600">
+                    Bu eşyayı veya hayvanı gördüysen haritada işaretle, ilan sahibine bildir.
+                  </p>
                 </div>
               )}
               {!isOwner && item.status === "resolved" && (
