@@ -269,10 +269,11 @@ const tr = {
     ],
   },
   banners: [
-    { title: "Eşyanı Kaybettin Mi?", sub: "Hemen ilan ver, yapay zeka eşleştirsin.", cta: "Kayıp İlanı Ver" },
-    { title: "Bir Eşya Mı Buldun?", sub: "Sahibini bulmak sadece bir ilan uzağında.", cta: "Bulundu İlanı Ver" },
-    { title: "Kaybettiğini Ara", sub: "Binlerce ilan arasından eşyanı bul.", cta: "Aramaya Başla" },
-    { title: "Yapay Zeka ile Bul", sub: "AI kayıp ve bulundu ilanlarını otomatik eşleştirir.", cta: "Ücretsiz Kayıt Ol" },
+    { title: "Yapay Zeka Eşleştirme", sub: "Kayıp ve bulundu ilanlarını saniyeler içinde karşılaştırır. Benzer eşyalar için otomatik bildirim gönderir." },
+    { title: "Güvenli Talep Sistemi", sub: "Eşya sahibi sahiplik talebi gönderir, sen inceler ve onaylarsın. Kişisel bilgin hiç paylaşılmaz." },
+    { title: "Anlık Mesajlaşma", sub: "Talep onaylandıktan sonra güvenli bir mesaj kanalı açılır. Buluşma noktasını mesajla belirle, eşyanı teslim al." },
+    { title: "Harita ile Ara", sub: "Tüm ilanları interaktif harita üzerinde görüntüle. Konumuna yakın ilanları kilometre bazında filtrele." },
+    { title: "Öncelikli İlanlar", sub: "Ödüllü ve acil ilanları öne çıkar. Daha fazla kişiye ulaş, daha hızlı sonuç al." },
   ],
   cats: {
     all: "Tüm Kategoriler",
@@ -551,10 +552,11 @@ const en: typeof tr = {
     ],
   },
   banners: [
-    { title: "Did You Lose Something?", sub: "Post a listing, let AI find the match.", cta: "Report Lost Item" },
-    { title: "Did You Find Something?", sub: "Return it to its owner — one listing away.", cta: "Report Found Item" },
-    { title: "Search Listings", sub: "Browse thousands of listings to find yours.", cta: "Start Searching" },
-    { title: "Find It with AI", sub: "AI automatically matches lost & found listings.", cta: "Register for Free" },
+    { title: "AI Matching", sub: "Compares lost and found listings in seconds. Sends automatic notifications for similar items." },
+    { title: "Secure Claim System", sub: "The owner sends an ownership claim, you review and approve. Your personal info is never shared." },
+    { title: "Instant Messaging", sub: "After claim approval, a secure messaging channel opens. Set a meeting point and receive your item." },
+    { title: "Search by Map", sub: "View all listings on an interactive map. Filter listings near your location by kilometers." },
+    { title: "Featured Listings", sub: "Boost your urgent listings to reach more people faster and get results sooner." },
   ],
   cats: {
     all: "All Categories",
@@ -833,10 +835,11 @@ const nl: typeof tr = {
     ],
   },
   banners: [
-    { title: "Heeft u iets verloren?", sub: "Plaats een advertentie, laat AI het matchen.", cta: "Vermist Melden" },
-    { title: "Heeft u iets gevonden?", sub: "Geef het terug — één advertentie volstaat.", cta: "Gevonden Melden" },
-    { title: "Zoek Advertenties", sub: "Doorzoek duizenden advertenties om uw voorwerp te vinden.", cta: "Begin met Zoeken" },
-    { title: "Vind het met AI", sub: "AI matcht automatisch vermiste & gevonden advertenties.", cta: "Gratis Registreren" },
+    { title: "AI-Matching", sub: "Vergelijkt vermiste en gevonden advertenties in seconden. Stuurt automatisch meldingen voor vergelijkbare voorwerpen." },
+    { title: "Veilig Claimsysteem", sub: "De eigenaar stuurt een eigendomsclaim, u beoordeelt en keurt goed. Uw persoonlijke gegevens worden nooit gedeeld." },
+    { title: "Direct Berichten", sub: "Na goedkeuring van de claim opent een veilig berichtkanaal. Spreek een ontmoetingspunt af en ontvang uw voorwerp." },
+    { title: "Zoeken op Kaart", sub: "Bekijk alle advertenties op een interactieve kaart. Filter advertenties bij u in de buurt op kilometers." },
+    { title: "Uitgelichte Advertenties", sub: "Zet uw dringende advertenties op de voorgrond om meer mensen te bereiken en sneller resultaat te krijgen." },
   ],
   cats: {
     all: "Alle Categorieën",
@@ -1117,10 +1120,11 @@ const de: typeof tr = {
     ],
   },
   banners: [
-    { title: "Haben Sie etwas verloren?", sub: "Inserieren Sie, lassen Sie die KI matchen.", cta: "Verlust Melden" },
-    { title: "Haben Sie etwas gefunden?", sub: "Geben Sie es zurück — eine Anzeige genügt.", cta: "Fund Melden" },
-    { title: "Anzeigen Durchsuchen", sub: "Durchsuchen Sie tausende Anzeigen nach Ihrem Gegenstand.", cta: "Suche Starten" },
-    { title: "Mit KI Finden", sub: "KI matcht automatisch verlorene & gefundene Gegenstände.", cta: "Kostenlos Registrieren" },
+    { title: "KI-Matching", sub: "Vergleicht vermisste und gefundene Anzeigen in Sekunden. Sendet automatische Benachrichtigungen für ähnliche Gegenstände." },
+    { title: "Sicheres Anfragensystem", sub: "Der Eigentümer sendet eine Eigentumsanfrage, Sie prüfen und genehmigen. Ihre persönlichen Daten werden nie geteilt." },
+    { title: "Sofortnachrichten", sub: "Nach der Genehmigung öffnet ein sicherer Nachrichtenkanal. Vereinbaren Sie einen Treffpunkt und erhalten Sie Ihren Gegenstand." },
+    { title: "Suche auf Karte", sub: "Sehen Sie alle Anzeigen auf einer interaktiven Karte. Filtern Sie Anzeigen in Ihrer Nähe nach Kilometern." },
+    { title: "Hervorgehobene Anzeigen", sub: "Heben Sie dringende Anzeigen hervor, um mehr Menschen zu erreichen und schneller Ergebnisse zu erzielen." },
   ],
   cats: {
     all: "Alle Kategorien",

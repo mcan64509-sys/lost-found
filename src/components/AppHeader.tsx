@@ -273,8 +273,8 @@ export default function AppHeader() {
           {/* SAĞ KISIM */}
           <div className="flex items-center gap-2">
 
-            {/* HAKKINDA (3 nokta) */}
-            <div ref={aboutRef} className="relative">
+            {/* HAKKINDA (3 nokta) — masaüstünde görünür */}
+            <div ref={aboutRef} className="relative hidden sm:block">
               <button
                 onClick={(e) => { e.stopPropagation(); setAboutOpen((v) => !v); }}
                 className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition"
@@ -283,12 +283,12 @@ export default function AppHeader() {
                 <MoreHorizontal className="w-5 h-5" />
               </button>
               {aboutOpen && (
-                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in z-50">
+                <div className="fixed top-[65px] left-4 right-4 sm:absolute sm:top-auto sm:left-auto sm:right-0 sm:mt-2 sm:w-80 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in z-50">
                   <div className="flex items-center gap-2.5 border-b border-slate-800 px-4 py-3">
                     <HelpCircle className="w-4 h-4 text-blue-400" />
                     <p className="font-bold text-white text-sm">{t.about.title}</p>
                   </div>
-                  <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
+                  <div className="p-3 space-y-2 max-h-80 overflow-y-auto">
                     {t.about.items.map((item, i) => (
                       <div key={i} className="rounded-xl border border-slate-800 bg-slate-800/50 p-3">
                         <p className="text-xs font-semibold text-white mb-1">{item.q}</p>
@@ -348,10 +348,10 @@ export default function AppHeader() {
               )}
             </div>
 
-            {/* MESAJLAR */}
+            {/* MESAJLAR — mobilde gizli (hamburger menüde var) */}
             <Link
               href="/messages"
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition"
+              className="relative hidden sm:flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition"
               title={t.nav.messages}
             >
               <MessageCircle className="w-5 h-5" />
@@ -384,7 +384,7 @@ export default function AppHeader() {
                 </button>
 
                 {notifOpen && (
-                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in">
+                  <div className="fixed top-[65px] left-4 right-4 sm:absolute sm:top-auto sm:left-auto sm:right-0 sm:mt-2 sm:w-80 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in z-50">
                     <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
                       <p className="font-bold text-white text-sm">{t.nav.notifications}</p>
                       {unreadCount > 0 && (
@@ -440,7 +440,7 @@ export default function AppHeader() {
                 </button>
 
                 {menuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in">
+                  <div className="fixed top-[65px] left-4 right-4 sm:absolute sm:top-auto sm:left-auto sm:right-0 sm:mt-2 sm:w-64 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in z-50">
                     <div className="border-b border-slate-800 px-4 py-3 bg-slate-800/50">
                       <p className="font-semibold text-white text-sm">{user.fullName || "Kullanıcı"}</p>
                       <p className="text-xs text-slate-500 mt-0.5 truncate">{user.email}</p>
@@ -529,6 +529,13 @@ export default function AppHeader() {
         {/* MOBİL MENÜ */}
         {mobileOpen && (
           <div className="md:hidden border-t border-slate-800 bg-slate-950 px-4 py-4 space-y-1 animate-fade-in-down">
+            <button
+              onClick={() => { setMobileOpen(false); setAboutOpen((v) => !v); }}
+              className="w-full flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-white transition"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+              {t.about.title}
+            </button>
             <Link href="/" onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
               {t.nav.home}
