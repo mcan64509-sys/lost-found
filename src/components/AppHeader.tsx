@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
 import { normalizeEmail } from "../lib/utils";
+import { useLanguage } from "../contexts/LanguageContext";
+import LanguageSwitcher from "./LanguageSwitcher";
 import {
   Bell,
   Building2,
@@ -58,6 +60,7 @@ function getInitials(name?: string, email?: string) {
 export default function AppHeader() {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [user, setUser] = useState<HeaderUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -205,7 +208,7 @@ export default function AppHeader() {
       await supabase.auth.signOut();
       window.location.href = "/";
     } catch {
-      toast.error("Çıkış yapılırken bir hata oluştu.");
+      toast.error(t.nav.logoutError);
     }
   }
 
@@ -238,32 +241,35 @@ export default function AppHeader() {
           {/* DESKTOP NAV */}
           <nav className="hidden md:flex items-center gap-1">
             <Link href="/" className={navLinkClass("/") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
-              Ana Sayfa
+              {t.nav.home}
               {isActive("/") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
             </Link>
             <Link href="/search" className={navLinkClass("/search") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
-              İlanlar
+              {t.nav.listings}
               {isActive("/search") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
             </Link>
             <Link href="/map" className={navLinkClass("/map") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
-              🗺️ Harita
+              🗺️ {t.nav.map}
               {isActive("/map") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
             </Link>
             <Link href="/priority" className={navLinkClass("/priority") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
-              ⭐ Öncelikli
+              ⭐ {t.nav.priority}
               {isActive("/priority") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
             </Link>
             <Link href="/pets" className={navLinkClass("/pets") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
-              🐾 Hayvanlar
+              🐾 {t.nav.animals}
               {isActive("/pets") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
             </Link>
             <Link href="/upgrade" className="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition border border-amber-500/20">
-              ⭐ Öne Çıkar
+              ⭐ {t.nav.boost}
             </Link>
           </nav>
 
           {/* SAĞ KISIM */}
           <div className="flex items-center gap-2">
+
+            {/* DİL SEÇİCİ */}
+            <LanguageSwitcher />
 
             {/* İLAN VER dropdown */}
             <div ref={ilanRef} className="relative hidden md:block">
@@ -272,7 +278,7 @@ export default function AppHeader() {
                 className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-950 hover:bg-slate-100 transition-all"
               >
                 <PlusCircle className="w-4 h-4" />
-                İlan Ver
+                {t.nav.postAd}
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showIlanMenu ? "rotate-180" : ""}`} />
               </button>
               {showIlanMenu && (
@@ -286,8 +292,8 @@ export default function AppHeader() {
                         <span className="text-amber-400 text-base">!</span>
                       </div>
                       <div>
-                        <div className="font-semibold text-white group-hover:text-amber-400 transition-colors">Kayıp İlanı</div>
-                        <div className="text-xs text-slate-500">Eşyamı kaybettim</div>
+                        <div className="font-semibold text-white group-hover:text-amber-400 transition-colors">{t.nav.lostAd}</div>
+                        <div className="text-xs text-slate-500">{t.nav.lostAdDesc}</div>
                       </div>
                     </button>
                     <button
@@ -298,8 +304,8 @@ export default function AppHeader() {
                         <span className="text-emerald-400 text-base">✓</span>
                       </div>
                       <div>
-                        <div className="font-semibold text-white group-hover:text-emerald-400 transition-colors">Bulundu İlanı</div>
-                        <div className="text-xs text-slate-500">Bir eşya buldum</div>
+                        <div className="font-semibold text-white group-hover:text-emerald-400 transition-colors">{t.nav.foundAd}</div>
+                        <div className="text-xs text-slate-500">{t.nav.foundAdDesc}</div>
                       </div>
                     </button>
                   </div>
@@ -311,7 +317,7 @@ export default function AppHeader() {
             <Link
               href="/messages"
               className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition"
-              title="Mesajlar"
+              title={t.nav.messages}
             >
               <MessageCircle className="w-5 h-5" />
               {messageCount > 0 && (
@@ -332,7 +338,7 @@ export default function AppHeader() {
                     if (opening && user.email) markAllRead(normalizeEmail(user.email));
                   }}
                   className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition"
-                  title="Bildirimler"
+                  title={t.nav.notifications}
                 >
                   <Bell className="w-5 h-5" />
                   {unreadCount > 0 && (
@@ -345,16 +351,16 @@ export default function AppHeader() {
                 {notifOpen && (
                   <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in">
                     <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-                      <p className="font-bold text-white text-sm">Bildirimler</p>
+                      <p className="font-bold text-white text-sm">{t.nav.notifications}</p>
                       {unreadCount > 0 && (
-                        <span className="text-xs text-slate-500">{unreadCount} okunmamış</span>
+                        <span className="text-xs text-slate-500">{unreadCount} {t.nav.unread}</span>
                       )}
                     </div>
                     <div className="max-h-80 overflow-y-auto">
                       {notifications.length === 0 ? (
                         <div className="px-4 py-8 text-center">
                           <Bell className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-                          <p className="text-sm text-slate-500">Henüz bildirim yok.</p>
+                          <p className="text-sm text-slate-500">{t.nav.noNotifications}</p>
                         </div>
                       ) : (
                         notifications.map((n) => (
@@ -366,7 +372,7 @@ export default function AppHeader() {
                             <p className="text-xs font-semibold text-white">{n.title}</p>
                             <p className="mt-0.5 text-xs leading-5 text-slate-400">{n.message}</p>
                             <p className="mt-1 text-[10px] text-slate-600">
-                              {new Date(n.created_at).toLocaleDateString("tr-TR")}
+                              {new Date(n.created_at).toLocaleDateString()}
                             </p>
                           </button>
                         ))
@@ -400,7 +406,6 @@ export default function AppHeader() {
 
                 {menuOpen && (
                   <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in">
-                    {/* Kullanıcı başlığı */}
                     <div className="border-b border-slate-800 px-4 py-3 bg-slate-800/50">
                       <p className="font-semibold text-white text-sm">{user.fullName || "Kullanıcı"}</p>
                       <p className="text-xs text-slate-500 mt-0.5 truncate">{user.email}</p>
@@ -410,7 +415,7 @@ export default function AppHeader() {
                         className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <div className="flex items-center gap-2.5">
                           <Settings className="w-4 h-4" />
-                          <span>Profil & Ayarlar</span>
+                          <span>{t.nav.profile}</span>
                         </div>
                         {claimCount > 0 && (
                           <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
@@ -421,30 +426,30 @@ export default function AppHeader() {
                       <Link href="/my-items" onClick={() => setMenuOpen(false)}
                         className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <FileText className="w-4 h-4" />
-                        <span>İlanlarım</span>
+                        <span>{t.nav.myListings}</span>
                       </Link>
                       <Link href="/favorites" onClick={() => setMenuOpen(false)}
                         className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <Heart className="w-4 h-4" />
-                        <span>Favorilerim</span>
+                        <span>{t.nav.favorites}</span>
                       </Link>
                       <Link href="/alerts" onClick={() => setMenuOpen(false)}
                         className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <Bell className="w-4 h-4" />
-                        <span>Arama Uyarılarım</span>
+                        <span>{t.nav.alerts}</span>
                       </Link>
                       {user.accountType === "business" && (
                         <Link href="/business" onClick={() => setMenuOpen(false)}
                           className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-blue-400 hover:bg-blue-500/10 hover:text-blue-300 transition">
                           <Building2 className="w-4 h-4" />
-                          <span>Kurumsal Panel</span>
+                          <span>{t.nav.businessPanel}</span>
                         </Link>
                       )}
                       <Link href="/messages" onClick={() => setMenuOpen(false)}
                         className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <div className="flex items-center gap-2.5">
                           <MessageCircle className="w-4 h-4" />
-                          <span>Mesajlar</span>
+                          <span>{t.nav.messages}</span>
                         </div>
                         {messageCount > 0 && (
                           <span className="rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
@@ -456,7 +461,7 @@ export default function AppHeader() {
                         <button onClick={handleLogout}
                           className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition">
                           <LogOut className="w-4 h-4" />
-                          <span>Çıkış Yap</span>
+                          <span>{t.nav.logout}</span>
                         </button>
                       </div>
                     </div>
@@ -467,11 +472,11 @@ export default function AppHeader() {
               <div className="flex items-center gap-2">
                 <Link href="/auth/login"
                   className="rounded-xl px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition">
-                  Giriş Yap
+                  {t.nav.login}
                 </Link>
                 <Link href="/auth/register"
                   className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-950 hover:bg-slate-100 transition">
-                  Kayıt Ol
+                  {t.nav.register}
                 </Link>
               </div>
             )}
@@ -491,30 +496,30 @@ export default function AppHeader() {
           <div className="md:hidden border-t border-slate-800 bg-slate-950 px-4 py-4 space-y-1 animate-fade-in-down">
             <Link href="/" onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
-              Ana Sayfa
+              {t.nav.home}
             </Link>
             <Link href="/search" onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/search") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
               <Search className="w-4 h-4" />
-              İlanlar
+              {t.nav.listings}
             </Link>
             <Link href="/map" onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/map") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
-              🗺️ Harita
+              🗺️ {t.nav.map}
             </Link>
             <Link href="/priority" onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/priority") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
-              ⭐ Öncelikli İlanlar
+              ⭐ {t.nav.priority}
             </Link>
             <Link href="/pets" onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/pets") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
-              🐾 Evcil Hayvanlar
+              🐾 {t.nav.animals}
             </Link>
             <Link href="/messages" onClick={() => setMobileOpen(false)}
               className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/messages") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
               <div className="flex items-center gap-3">
                 <MessageCircle className="w-4 h-4" />
-                Mesajlar
+                {t.nav.messages}
               </div>
               {messageCount > 0 && (
                 <span className="rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{messageCount}</span>
@@ -525,13 +530,13 @@ export default function AppHeader() {
                 onClick={() => { setMobileOpen(false); router.push("/lost/report"); }}
                 className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-3 text-sm font-bold text-slate-950"
               >
-                Kayıp İlanı
+                {t.nav.lostAd}
               </button>
               <button
                 onClick={() => { setMobileOpen(false); router.push("/found/report"); }}
                 className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-bold text-slate-950"
               >
-                Bulundu İlanı
+                {t.nav.foundAd}
               </button>
             </div>
           </div>

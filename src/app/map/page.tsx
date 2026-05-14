@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import AppHeader from "../../components/AppHeader";
+import AuthGuard from "../../components/AuthGuard";
 import { supabase } from "../../lib/supabase";
 import { MapPin, Filter, X } from "lucide-react";
 import type { ItemMarker } from "../../components/SearchMiniMapInner";
@@ -52,7 +53,7 @@ export default function MapPage() {
   });
 
   return (
-    <>
+    <AuthGuard>
       <AppHeader />
       <main className="bg-slate-950 text-white min-h-screen flex flex-col">
 
@@ -145,6 +146,6 @@ export default function MapPage() {
           )}
         </div>
       </main>
-    </>
+    </AuthGuard>
   );
 }

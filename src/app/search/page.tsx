@@ -7,6 +7,7 @@ import LocationPickerModal from "../../components/LocationPickerModal";
 import SearchMiniMap from "../../components/SearchMiniMap";
 import FullMapModal from "../../components/FullMapModal";
 import AppHeader from "../../components/AppHeader";
+import AuthGuard from "../../components/AuthGuard";
 import { supabase } from "../../lib/supabase";
 import type { ItemMarker } from "../../components/SearchMiniMapInner";
 import {
@@ -633,8 +634,10 @@ function SearchPageContent() {
 
 export default function SearchPageWrapper() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
-      <SearchPageContent />
-    </Suspense>
+    <AuthGuard>
+      <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+        <SearchPageContent />
+      </Suspense>
+    </AuthGuard>
   );
 }

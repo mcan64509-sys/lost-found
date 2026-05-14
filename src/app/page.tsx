@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppHeader from "../components/AppHeader";
 import { supabase } from "../lib/supabase";
+import { useLanguage } from "../contexts/LanguageContext";
 import {
   AlertCircle,
   CheckCircle2,
@@ -36,15 +37,27 @@ type PriorityPreview = {
 };
 
 export default function HomePage() {
+  const { t } = useLanguage();
   const [stats, setStats] = useState({ total: 0, lost: 0, found: 0, resolved: 0 });
   const [statsLoaded, setStatsLoaded] = useState(false);
   const [priorityItems, setPriorityItems] = useState<PriorityPreview[]>([]);
   const [showPopup, setShowPopup] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const t = setTimeout(() => setShowPopup(true), 1500);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setShowPopup(true), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setIsAuthed(!!data.session);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setIsAuthed(!!session);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -93,7 +106,7 @@ export default function HomePage() {
           <div className="w-full max-w-sm flex items-start gap-3 rounded-2xl border border-blue-500/30 bg-slate-900/95 backdrop-blur px-4 py-3 shadow-2xl shadow-black/40">
             <Zap className="mt-0.5 w-4 h-4 shrink-0 fill-blue-400 text-blue-400" />
             <p className="text-xs text-slate-300 leading-5">
-              Uygulamamız Hakkında İlgi Çekici Detaylar İçin Lütfen Aşağıya Kaydırın
+              {t.home.scrollHint}
             </p>
             <button
               onClick={() => setShowPopup(false)}
@@ -130,22 +143,21 @@ export default function HomePage() {
             <div className="flex justify-center mb-8 animate-fade-in-down">
               <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/25 bg-blue-500/10 px-5 py-2 text-sm text-blue-300">
                 <Zap className="w-3.5 h-3.5 fill-blue-400 text-blue-400" />
-                Türkiye'nin kayıp &amp; buluntu platformu — BulanVarMı?
+                {t.home.badge}
               </div>
             </div>
 
             {/* Ana başlık */}
             <div className="text-center max-w-5xl mx-auto mb-8 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
               <h1 className="text-5xl font-black leading-[1.1] md:text-7xl lg:text-8xl">
-                <span className="text-amber-400">Kayıp</span> eşyaları bul,{" "}
+                <span className="text-amber-400">{t.home.h1Lost}</span> {t.home.h1After}{" "}
                 <br className="hidden sm:block" />
-                <span className="text-emerald-400">bulunanları</span> sahibine{" "}
+                <span className="text-emerald-400">{t.home.h1Found}</span>{" "}
                 <br className="hidden sm:block" />
-                kavuştur.
+                {t.home.h1End}
               </h1>
               <p className="mt-8 text-lg leading-8 text-slate-400 md:text-xl max-w-2xl mx-auto">
-                İlan oluştur, yapay zeka eşleştirmesiyle sahiplerini bul,
-                güvenli talep sistemiyle teslim et. Hızlı, şeffaf ve güvenilir.
+                {t.home.subtitle}
               </p>
             </div>
 
@@ -156,7 +168,7 @@ export default function HomePage() {
                 className="group flex items-center justify-center gap-3 rounded-2xl bg-amber-500 px-8 py-4 text-base font-bold text-slate-950 hover:bg-amber-400 transition-all shadow-lg shadow-amber-500/20"
               >
                 <AlertCircle className="w-5 h-5" />
-                Kayıp İlanı Ver
+                {t.home.ctaLost}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
               <button
@@ -164,7 +176,7 @@ export default function HomePage() {
                 className="group flex items-center justify-center gap-3 rounded-2xl bg-emerald-500 px-8 py-4 text-base font-bold text-slate-950 hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20"
               >
                 <CheckCircle2 className="w-5 h-5" />
-                Bulundu İlanı Ver
+                {t.home.ctaFound}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
               <Link
@@ -172,17 +184,17 @@ export default function HomePage() {
                 className="flex items-center justify-center gap-3 rounded-2xl border border-slate-700 bg-slate-900 px-8 py-4 text-base font-bold text-white hover:border-slate-600 hover:bg-slate-800 transition-all"
               >
                 <ScanSearch className="w-5 h-5 text-slate-400" />
-                İlanları Ara
+                {t.home.ctaSearch}
               </Link>
             </div>
 
             {/* İstatistik bantı */}
             <div className="flex flex-wrap justify-center gap-6 md:gap-12 animate-fade-in-up" style={{ animationDelay: "300ms" }}>
               {[
-                { label: "Toplam İlan", value: statsLoaded ? stats.total : "—", color: "text-white" },
-                { label: "Kayıp İlanı", value: statsLoaded ? stats.lost : "—", color: "text-amber-400" },
-                { label: "Bulundu İlanı", value: statsLoaded ? stats.found : "—", color: "text-emerald-400" },
-                { label: "Çözüme Kavuştu", value: statsLoaded ? stats.resolved : "—", color: "text-blue-400" },
+                { label: t.home.statTotal, value: statsLoaded ? stats.total : "—", color: "text-white" },
+                { label: t.home.statLost, value: statsLoaded ? stats.lost : "—", color: "text-amber-400" },
+                { label: t.home.statFound, value: statsLoaded ? stats.found : "—", color: "text-emerald-400" },
+                { label: t.home.statResolved, value: statsLoaded ? stats.resolved : "—", color: "text-blue-400" },
               ].map((s) => (
                 <div key={s.label} className="text-center">
                   <div className={`text-3xl font-black ${s.color}`}>{s.value}</div>
@@ -535,48 +547,66 @@ export default function HomePage() {
             </div>
 
             {/* Öncelikli İlanlar Bölümü */}
-            {priorityItems.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                      <Star className="w-5 h-5 text-amber-400" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-black text-white">Öncelikli İlanlar</h2>
-                      <p className="text-xs text-slate-500">Öne çıkarılmış en güncel ilanlar</p>
-                    </div>
-                  </div>
-                  <Link href="/priority" className="text-sm font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition">
-                    Tümünü Gör <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                  {priorityItems.map((item) => (
-                    <Link key={item.id} href={`/items/${item.id}`} className="group rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden hover:border-amber-500/30 transition">
-                      <div className="h-28 bg-slate-800 overflow-hidden relative">
-                        {item.image_url ? (
-                          <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-3xl">
-                            {item.category === "Evcil Hayvan" ? "🐾" : "📦"}
-                          </div>
-                        )}
-                        <div className="absolute top-1 left-1">
-                          <span className="text-[10px] font-bold bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded-full">
-                            {item.priority_level === 3 ? "🥇" : item.priority_level === 2 ? "🥈" : "🥉"}
-                          </span>
-                        </div>
+            {isAuthed ? (
+              priorityItems.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                        <Star className="w-5 h-5 text-amber-400" />
                       </div>
-                      <div className="p-2">
-                        <p className="text-xs font-semibold text-white line-clamp-2 leading-tight">{item.title}</p>
-                        <p className="text-[10px] text-slate-500 mt-1">{item.type === "lost" ? "Kayıp" : "Bulundu"}</p>
-                        {item.reward_amount && item.reward_amount > 0 && (
-                          <p className="text-[10px] font-bold text-emerald-400 mt-0.5">💰 {item.reward_amount.toLocaleString("tr-TR")} TL</p>
-                        )}
+                      <div>
+                        <h2 className="text-xl font-black text-white">{t.home.prioritySection}</h2>
+                        <p className="text-xs text-slate-500">{t.home.prioritySectionSub}</p>
                       </div>
+                    </div>
+                    <Link href="/priority" className="text-sm font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition">
+                      {t.common.viewAll} <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
-                  ))}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                    {priorityItems.map((item) => (
+                      <Link key={item.id} href={`/items/${item.id}`} className="group rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden hover:border-amber-500/30 transition">
+                        <div className="h-28 bg-slate-800 overflow-hidden relative">
+                          {item.image_url ? (
+                            <img src={item.image_url} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-3xl">
+                              {item.category === "Evcil Hayvan" ? "🐾" : "📦"}
+                            </div>
+                          )}
+                          <div className="absolute top-1 left-1">
+                            <span className="text-[10px] font-bold bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded-full">
+                              {item.priority_level === 3 ? "🥇" : item.priority_level === 2 ? "🥈" : "🥉"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="p-2">
+                          <p className="text-xs font-semibold text-white line-clamp-2 leading-tight">{item.title}</p>
+                          <p className="text-[10px] text-slate-500 mt-1">{item.type === "lost" ? t.common.lost : t.common.found}</p>
+                          {item.reward_amount && item.reward_amount > 0 && (
+                            <p className="text-[10px] font-bold text-emerald-400 mt-0.5">💰 {item.reward_amount.toLocaleString()} TL</p>
+                          )}
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 border border-amber-500/20">
+                  <Star className="h-5 w-5 text-amber-400" />
+                </div>
+                <h3 className="text-base font-bold text-white mb-2">{t.home.loginToSee}</h3>
+                <p className="text-sm text-slate-500 mb-5">{t.home.loginToSeeDesc}</p>
+                <div className="flex justify-center gap-3">
+                  <Link href="/auth/login" className="rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-slate-950 hover:bg-slate-100 transition">
+                    {t.auth.login}
+                  </Link>
+                  <Link href="/auth/register" className="rounded-xl border border-slate-700 bg-slate-800 px-5 py-2.5 text-sm font-bold text-white hover:bg-slate-700 transition">
+                    {t.auth.register}
+                  </Link>
                 </div>
               </div>
             )}

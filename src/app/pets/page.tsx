@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppHeader from "../../components/AppHeader";
+import AuthGuard from "../../components/AuthGuard";
 import { supabase } from "../../lib/supabase";
 import { MapPin, Eye, Search, Filter, ArrowRight, Heart } from "lucide-react";
 
@@ -154,7 +155,7 @@ export default function PetsPage() {
   const foundCount = items.filter((i) => i.type === "found").length;
 
   return (
-    <>
+    <AuthGuard>
       <AppHeader />
       <main className="min-h-screen bg-slate-950 text-white">
         <div className="mx-auto max-w-7xl px-4 py-10">
@@ -266,6 +267,6 @@ export default function PetsPage() {
           </div>
         </div>
       </main>
-    </>
+    </AuthGuard>
   );
 }

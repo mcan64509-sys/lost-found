@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import AppHeader from "../../../components/AppHeader";
+import AuthGuard from "../../../components/AuthGuard";
 import ConfirmDialog from "../../../components/ConfirmDialog";
 import QRCodeModal from "../../../components/QRCodeModal";
 import SightingModal from "../../../components/SightingModal";
@@ -492,7 +493,7 @@ export default function ItemDetailPage() {
       : "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
 
   return (
-    <>
+    <AuthGuard>
       <AppHeader />
 
       {showSightingModal && item && userEmail && (
@@ -1043,6 +1044,6 @@ export default function ItemDetailPage() {
           </div>
         </div>
       </main>
-    </>
+    </AuthGuard>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import AppHeader from "../../components/AppHeader";
+import AuthGuard from "../../components/AuthGuard";
 import { supabase } from "../../lib/supabase";
 import { Star, Flame, ArrowRight, MapPin, Eye, Trophy, Zap } from "lucide-react";
 
@@ -135,7 +136,7 @@ export default function PriorityPage() {
   const bronzeCount = items.filter((i) => i.priority_level === 1).length;
 
   return (
-    <>
+    <AuthGuard>
       <AppHeader />
       <main className="min-h-screen bg-slate-950 text-white">
         <div className="mx-auto max-w-7xl px-4 py-10">
@@ -247,6 +248,6 @@ export default function PriorityPage() {
           </div>
         </div>
       </main>
-    </>
+    </AuthGuard>
   );
 }

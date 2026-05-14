@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Toaster } from "sonner";
 import type { Metadata, Viewport } from "next";
+import { LanguageProvider } from "../contexts/LanguageContext";
 
 export const viewport: Viewport = {
   themeColor: "#020617",
@@ -51,10 +52,10 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body>
-        {children}
-
-      <Toaster position="top-center" expand={true} />
-
+        <LanguageProvider>
+          {children}
+          <Toaster position="top-center" expand={true} />
+        </LanguageProvider>
       </body>
     </html>
   );
