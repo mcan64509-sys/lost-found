@@ -179,9 +179,6 @@ export default function AppHeader() {
 
   useEffect(() => {
     if (!userEmail) return;
-    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
     const notifChannel = supabase
       .channel(`browser-notif-${userEmail}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_email=eq.${userEmail}` },

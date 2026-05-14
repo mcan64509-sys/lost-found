@@ -122,7 +122,7 @@ export default function HomePage() {
           <h2 className="text-lg font-bold text-slate-300 mb-5 text-center tracking-wide uppercase text-xs">
             {t.cats.all}
           </h2>
-          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3">
+          <div className="hidden sm:grid sm:grid-cols-5 lg:grid-cols-9 gap-3">
             {CATEGORY_ITEMS.map((cat) => (
               <Link
                 key={cat.dbKey}

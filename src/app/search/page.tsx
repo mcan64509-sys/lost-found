@@ -46,7 +46,7 @@ type SelectedLocation = {
 };
 
 const defaultLocation: SelectedLocation = {
-  name: "Bursa, Türkiye",
+  name: "",
   lat: 40.1885,
   lng: 29.061,
   radiusKm: 40,
@@ -94,6 +94,7 @@ function SearchPageContent() {
   const [dateTo, setDateTo] = useState(() => searchParams.get("to") || "");
   const [hideResolved, setHideResolved] = useState(() => searchParams.get("hide_resolved") === "1");
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation>(defaultLocation);
+  const [locationEnabled, setLocationEnabled] = useState(false);
   const [allItems, setAllItems] = useState<SearchItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(12);
@@ -141,9 +142,7 @@ function SearchPageContent() {
       setLoading(true);
       const { data, error } = await supabase
         .from("items")
-        .select("id, type, title, description, category, location, lat, lng, image_url, created_at, view_count, status, reward_amount, is_urgent, is_featured, priority_level")
-        .not("lat", "is", null)
-        .not("lng", "is", null);
+        .select("id, type, title, description, category, location, lat, lng, image_url, created_at, view_count, status, reward_amount, is_urgent, is_featured, priority_level");
       if (!error) setAllItems(data as SearchItem[]);
       setLoading(false);
     }
@@ -168,8 +167,12 @@ function SearchPageContent() {
     const toMs = dateTo ? new Date(dateTo + "T23:59:59").getTime() : null;
 
     const filtered = allItems.filter((item) => {
-      const dist = getDistanceKm(selectedLocation.lat, selectedLocation.lng, item.lat, item.lng);
-      if (dist > selectedLocation.radiusKm) return false;
+      if (locationEnabled && item.lat && item.lng) {
+        const dist = getDistanceKm(selectedLocation.lat, selectedLocation.lng, item.lat, item.lng);
+        if (dist > selectedLocation.radiusKm) return false;
+      } else if (locationEnabled && (!item.lat || !item.lng)) {
+        return false;
+      }
       if (activeTab === "lost" && item.type !== "lost") return false;
       if (activeTab === "found" && item.type !== "found") return false;
       if (category !== "Tüm kategoriler" && item.category !== category) return false;
@@ -201,7 +204,7 @@ function SearchPageContent() {
       if (sortBy === "most_viewed") return (b.view_count ?? 0) - (a.view_count ?? 0);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [allItems, selectedLocation, activeTab, category, keyword, sortBy, dateFrom, dateTo, hideResolved]);
+  }, [allItems, selectedLocation, locationEnabled, activeTab, category, keyword, sortBy, dateFrom, dateTo, hideResolved]);
 
   const lostItems = filteredItems.filter((i) => i.type === "lost");
   const foundItems = filteredItems.filter((i) => i.type === "found");
@@ -218,6 +221,7 @@ function SearchPageContent() {
     setDateTo("");
     setHideResolved(false);
     setSelectedLocation(defaultLocation);
+    setLocationEnabled(false);
     router.replace("/search", { scroll: false });
   };
 
@@ -234,7 +238,7 @@ function SearchPageContent() {
                 <h1 className="text-2xl font-black text-white">İlan Ara</h1>
                 <p className="text-sm text-slate-500 mt-1">
                   {loading ? "Yükleniyor..." : `${filteredItems.length} ilan bulundu`}
-                  {selectedLocation.name && (
+                  {locationEnabled && selectedLocation.name && (
                     <span className="ml-2 text-slate-600">— {selectedLocation.name} ({selectedLocation.radiusKm} km)</span>
                   )}
                 </p>
@@ -370,14 +374,26 @@ function SearchPageContent() {
 
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800">
                   {/* Konum */}
-                  <button
-                    onClick={() => setIsLocationModalOpen(true)}
-                    className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 text-sm text-slate-300 hover:text-white transition"
-                  >
-                    <MapPin className="w-4 h-4 text-blue-400" />
-                    <span className="font-medium text-white">{selectedLocation.name}</span>
-                    <span className="text-slate-500">({selectedLocation.radiusKm} km)</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setIsLocationModalOpen(true)}
+                      className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${locationEnabled ? "border-blue-500/40 bg-blue-500/10 text-blue-300" : "border-slate-700 bg-slate-800 text-slate-300 hover:text-white"}`}
+                    >
+                      <MapPin className={`w-4 h-4 ${locationEnabled ? "text-blue-400" : "text-slate-500"}`} />
+                      {locationEnabled && selectedLocation.name
+                        ? <><span className="font-medium">{selectedLocation.name}</span><span className="text-slate-500">({selectedLocation.radiusKm} km)</span></>
+                        : <span>Konuma Göre Filtrele</span>
+                      }
+                    </button>
+                    {locationEnabled && (
+                      <button
+                        onClick={() => { setLocationEnabled(false); setSelectedLocation(defaultLocation); }}
+                        className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-400 hover:text-white transition"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
 
                   <div className="flex items-center gap-4">
                     {/* Çözüldü gizle toggle */}
@@ -617,7 +633,7 @@ function SearchPageContent() {
         isOpen={isLocationModalOpen}
         initialLocation={selectedLocation}
         onClose={() => setIsLocationModalOpen(false)}
-        onApply={(loc) => { setSelectedLocation(loc); setIsLocationModalOpen(false); }}
+        onApply={(loc) => { setSelectedLocation(loc); setLocationEnabled(true); setIsLocationModalOpen(false); }}
       />
 
       <FullMapModal
