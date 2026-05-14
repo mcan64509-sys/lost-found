@@ -250,21 +250,6 @@ export default function AppHeader() {
               {t.nav.listings}
               {isActive("/search") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
             </Link>
-            <Link href="/map" className={navLinkClass("/map") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
-              🗺️ {t.nav.map}
-              {isActive("/map") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
-            </Link>
-            <Link href="/priority" className={navLinkClass("/priority") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
-              ⭐ {t.nav.priority}
-              {isActive("/priority") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
-            </Link>
-            <Link href="/pets" className={navLinkClass("/pets") + " px-4 py-2 rounded-xl hover:bg-white/5"}>
-              🐾 {t.nav.animals}
-              {isActive("/pets") && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-white" />}
-            </Link>
-            <Link href="/upgrade" className="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition border border-amber-500/20">
-              ⭐ {t.nav.boost}
-            </Link>
           </nav>
 
           {/* SAĞ KISIM */}
@@ -541,18 +526,6 @@ export default function AppHeader() {
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/search") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
               <Search className="w-4 h-4" />
               {t.nav.listings}
-            </Link>
-            <Link href="/map" onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/map") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
-              🗺️ {t.nav.map}
-            </Link>
-            <Link href="/priority" onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/priority") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
-              ⭐ {t.nav.priority}
-            </Link>
-            <Link href="/pets" onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/pets") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
-              🐾 {t.nav.animals}
             </Link>
             <Link href="/hikayeler" onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/hikayeler") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>

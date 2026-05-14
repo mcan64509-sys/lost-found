@@ -448,8 +448,8 @@ function SearchPageContent() {
             ))}
           </div>
 
-          {/* ── MİNİ HARİTA ── */}
-          {filteredItems.filter(i => i.lat && i.lng).length > 0 && (
+          {/* ── MİNİ HARİTA — sadece konum filtresi aktifken ── */}
+          {locationEnabled && filteredItems.filter(i => i.lat && i.lng).length > 0 && (
             <div className="mb-6 rounded-2xl border border-slate-800 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/40">
                 <div className="flex items-center gap-3">
@@ -475,7 +475,7 @@ function SearchPageContent() {
                   lat={selectedLocation.lat}
                   lng={selectedLocation.lng}
                   radiusKm={selectedLocation.radiusKm}
-                  items={filteredItems}
+                  items={filteredItems.filter(i => i.lat && i.lng) as ItemMarker[]}
                 />
               </div>
             </div>
