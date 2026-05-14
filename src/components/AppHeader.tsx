@@ -15,12 +15,14 @@ import {
   Heart,
   LogOut,
   MessageCircle,
+  MoreHorizontal,
   PlusCircle,
   Search,
   Settings,
   FileText,
   Menu,
   X,
+  HelpCircle,
 } from "lucide-react";
 
 type HeaderUser = {
@@ -74,6 +76,8 @@ export default function AppHeader() {
   const notifRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const ilanRef = useRef<HTMLDivElement | null>(null);
+  const aboutRef = useRef<HTMLDivElement | null>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const unreadCount = notifications.filter((n) => !n.is_read).length;
   const [userEmail, setUserEmail] = useState("");
 
@@ -198,6 +202,7 @@ export default function AppHeader() {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
       if (ilanRef.current && !ilanRef.current.contains(e.target as Node)) setShowIlanMenu(false);
+      if (aboutRef.current && !aboutRef.current.contains(e.target as Node)) setAboutOpen(false);
     };
     window.addEventListener("click", handleClickOutside);
     return () => window.removeEventListener("click", handleClickOutside);
@@ -267,6 +272,36 @@ export default function AppHeader() {
 
           {/* SAĞ KISIM */}
           <div className="flex items-center gap-2">
+
+            {/* HAKKINDA (3 nokta) */}
+            <div ref={aboutRef} className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setAboutOpen((v) => !v); }}
+                className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-white/5 hover:text-white transition"
+                title={t.about.title}
+              >
+                <MoreHorizontal className="w-5 h-5" />
+              </button>
+              {aboutOpen && (
+                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden animate-scale-in z-50">
+                  <div className="flex items-center gap-2.5 border-b border-slate-800 px-4 py-3">
+                    <HelpCircle className="w-4 h-4 text-blue-400" />
+                    <p className="font-bold text-white text-sm">{t.about.title}</p>
+                  </div>
+                  <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
+                    {t.about.items.map((item, i) => (
+                      <div key={i} className="rounded-xl border border-slate-800 bg-slate-800/50 p-3">
+                        <p className="text-xs font-semibold text-white mb-1">{item.q}</p>
+                        <p className="text-xs text-slate-400 leading-5">{item.a}</p>
+                      </div>
+                    ))}
+                    <div className="pt-1 border-t border-slate-800 text-center">
+                      <p className="text-[10px] text-slate-600">bulanvarmi1@gmail.com</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* DİL SEÇİCİ */}
             <LanguageSwitcher />

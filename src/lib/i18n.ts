@@ -268,6 +268,33 @@ const tr = {
       { value: "most_viewed", label: "En çok görüntülenen" },
     ],
   },
+  banners: [
+    { title: "Eşyanı Kaybettin Mi?", sub: "Hemen ilan ver, yapay zeka eşleştirsin.", cta: "Kayıp İlanı Ver" },
+    { title: "Bir Eşya Mı Buldun?", sub: "Sahibini bulmak sadece bir ilan uzağında.", cta: "Bulundu İlanı Ver" },
+    { title: "Kaybettiğini Ara", sub: "Binlerce ilan arasından eşyanı bul.", cta: "Aramaya Başla" },
+    { title: "Yapay Zeka ile Bul", sub: "AI kayıp ve bulundu ilanlarını otomatik eşleştirir.", cta: "Ücretsiz Kayıt Ol" },
+  ],
+  cats: {
+    all: "Tüm Kategoriler",
+    phone: "Telefon",
+    wallet: "Cüzdan",
+    key: "Anahtar",
+    bag: "Çanta",
+    laptop: "Laptop",
+    watch: "Saat / Takı",
+    id: "Kimlik / Evrak",
+    pet: "Evcil Hayvan",
+    other: "Diğer",
+  },
+  about: {
+    title: "BulanVarMı? Hakkında",
+    items: [
+      { q: "Bu platform ne işe yarar?", a: "Kayıp eşyaları sahiplerine kavuşturmak için tamamen ücretsiz bir platformdur." },
+      { q: "Nasıl çalışır?", a: "İlan ver → Yapay zeka eşleştirir → Talep gönder → Eşyanı teslim al." },
+      { q: "Güvenli mi?", a: "Mesajlaşma yalnızca talep onaylandıktan sonra açılır. Kişisel bilgin paylaşılmaz." },
+      { q: "Ücretli mi?", a: "Temel özellikler tamamen ücretsizdir. İsteğe bağlı premium paketler mevcuttur." },
+    ],
+  },
 };
 
 const en: typeof tr = {
@@ -521,6 +548,33 @@ const en: typeof tr = {
       { value: "newest", label: "Newest" },
       { value: "oldest", label: "Oldest" },
       { value: "most_viewed", label: "Most viewed" },
+    ],
+  },
+  banners: [
+    { title: "Did You Lose Something?", sub: "Post a listing, let AI find the match.", cta: "Report Lost Item" },
+    { title: "Did You Find Something?", sub: "Return it to its owner — one listing away.", cta: "Report Found Item" },
+    { title: "Search Listings", sub: "Browse thousands of listings to find yours.", cta: "Start Searching" },
+    { title: "Find It with AI", sub: "AI automatically matches lost & found listings.", cta: "Register for Free" },
+  ],
+  cats: {
+    all: "All Categories",
+    phone: "Phone",
+    wallet: "Wallet",
+    key: "Keys",
+    bag: "Bag",
+    laptop: "Laptop",
+    watch: "Watch / Jewelry",
+    id: "ID / Documents",
+    pet: "Pet",
+    other: "Other",
+  },
+  about: {
+    title: "About BulanVarMı?",
+    items: [
+      { q: "What is this platform?", a: "A completely free platform designed to reunite lost items with their owners." },
+      { q: "How does it work?", a: "Post a listing → AI matches → Send a claim → Receive your item." },
+      { q: "Is it safe?", a: "Messaging only opens after a claim is approved. Your personal info is never shared." },
+      { q: "Is it free?", a: "Core features are completely free. Optional premium packages are available." },
     ],
   },
 };
@@ -778,6 +832,33 @@ const nl: typeof tr = {
       { value: "most_viewed", label: "Meest bekeken" },
     ],
   },
+  banners: [
+    { title: "Heeft u iets verloren?", sub: "Plaats een advertentie, laat AI het matchen.", cta: "Vermist Melden" },
+    { title: "Heeft u iets gevonden?", sub: "Geef het terug — één advertentie volstaat.", cta: "Gevonden Melden" },
+    { title: "Zoek Advertenties", sub: "Doorzoek duizenden advertenties om uw voorwerp te vinden.", cta: "Begin met Zoeken" },
+    { title: "Vind het met AI", sub: "AI matcht automatisch vermiste & gevonden advertenties.", cta: "Gratis Registreren" },
+  ],
+  cats: {
+    all: "Alle Categorieën",
+    phone: "Telefoon",
+    wallet: "Portemonnee",
+    key: "Sleutels",
+    bag: "Tas",
+    laptop: "Laptop",
+    watch: "Horloge / Sieraden",
+    id: "ID / Documenten",
+    pet: "Huisdier",
+    other: "Overige",
+  },
+  about: {
+    title: "Over BulanVarMı?",
+    items: [
+      { q: "Wat doet dit platform?", a: "Een volledig gratis platform om verloren voorwerpen terug te geven aan hun eigenaar." },
+      { q: "Hoe werkt het?", a: "Advertentie plaatsen → AI matcht → Claim sturen → Voorwerp ontvangen." },
+      { q: "Is het veilig?", a: "Berichten worden pas geopend na goedkeuring van een claim. Uw persoonlijke gegevens worden niet gedeeld." },
+      { q: "Is het gratis?", a: "Basisfuncties zijn volledig gratis. Optionele premium pakketten beschikbaar." },
+    ],
+  },
 };
 
 const de: typeof tr = {
@@ -1033,6 +1114,33 @@ const de: typeof tr = {
       { value: "newest", label: "Neueste" },
       { value: "oldest", label: "Älteste" },
       { value: "most_viewed", label: "Meistgesehen" },
+    ],
+  },
+  banners: [
+    { title: "Haben Sie etwas verloren?", sub: "Inserieren Sie, lassen Sie die KI matchen.", cta: "Verlust Melden" },
+    { title: "Haben Sie etwas gefunden?", sub: "Geben Sie es zurück — eine Anzeige genügt.", cta: "Fund Melden" },
+    { title: "Anzeigen Durchsuchen", sub: "Durchsuchen Sie tausende Anzeigen nach Ihrem Gegenstand.", cta: "Suche Starten" },
+    { title: "Mit KI Finden", sub: "KI matcht automatisch verlorene & gefundene Gegenstände.", cta: "Kostenlos Registrieren" },
+  ],
+  cats: {
+    all: "Alle Kategorien",
+    phone: "Telefon",
+    wallet: "Geldbörse",
+    key: "Schlüssel",
+    bag: "Tasche",
+    laptop: "Laptop",
+    watch: "Uhr / Schmuck",
+    id: "Ausweis / Dokumente",
+    pet: "Haustier",
+    other: "Sonstiges",
+  },
+  about: {
+    title: "Über BulanVarMı?",
+    items: [
+      { q: "Was macht diese Plattform?", a: "Eine völlig kostenlose Plattform, die verlorene Gegenstände mit ihren Eigentümern vereint." },
+      { q: "Wie funktioniert es?", a: "Anzeige aufgeben → KI matcht → Anfrage senden → Gegenstand erhalten." },
+      { q: "Ist es sicher?", a: "Nachrichten öffnen erst nach Genehmigung einer Anfrage. Persönliche Daten werden nicht geteilt." },
+      { q: "Ist es kostenlos?", a: "Grundfunktionen sind völlig kostenlos. Optionale Premium-Pakete verfügbar." },
     ],
   },
 };
