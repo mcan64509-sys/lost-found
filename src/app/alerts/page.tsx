@@ -33,6 +33,8 @@ type Alert = {
   is_active: boolean;
   last_notified_at: string | null;
   created_at: string;
+  lat: number | null;
+  lng: number | null;
 };
 
 const CATEGORIES = [
@@ -54,6 +56,12 @@ export default function AlertsPage() {
   const [locationName, setLocationName] = useState("");
   const [radiusKm, setRadiusKm] = useState(50);
   const [creating, setCreating] = useState(false);
+
+  // Geolocation state
+  const [useMyLocation, setUseMyLocation] = useState(false);
+  const [formLat, setFormLat] = useState<number | null>(null);
+  const [formLng, setFormLng] = useState<number | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -77,6 +85,37 @@ export default function AlertsPage() {
     setLoading(false);
   }
 
+  async function handleToggleMyLocation() {
+    const next = !useMyLocation;
+    setUseMyLocation(next);
+    if (next) {
+      if (!navigator.geolocation) {
+        toast.error("Tarayıcınız konum özelliğini desteklemiyor.");
+        setUseMyLocation(false);
+        return;
+      }
+      setGeoLoading(true);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setFormLat(pos.coords.latitude);
+          setFormLng(pos.coords.longitude);
+          setGeoLoading(false);
+          toast.success("Konumunuz alındı.");
+        },
+        () => {
+          toast.error("Konum alınamadı. İzin verdiğinizden emin olun.");
+          setUseMyLocation(false);
+          setFormLat(null);
+          setFormLng(null);
+          setGeoLoading(false);
+        }
+      );
+    } else {
+      setFormLat(null);
+      setFormLng(null);
+    }
+  }
+
   async function handleCreate() {
     if (!keyword.trim() && category === "Tüm kategoriler" && itemType === "all") {
       toast.error("En az bir filtre seçmelisin (anahtar kelime, kategori veya tür).");
@@ -94,6 +133,8 @@ export default function AlertsPage() {
           item_type: itemType,
           location_name: locationName,
           radius_km: radiusKm,
+          lat: formLat,
+          lng: formLng,
         }),
       });
       const data = await res.json();
@@ -108,6 +149,9 @@ export default function AlertsPage() {
       setCategory("Tüm kategoriler");
       setItemType("all");
       setLocationName("");
+      setUseMyLocation(false);
+      setFormLat(null);
+      setFormLng(null);
     } finally {
       setCreating(false);
     }
@@ -253,6 +297,37 @@ export default function AlertsPage() {
                 </div>
               </div>
 
+              {/* Konumuma Göre Bildir */}
+              <div className="pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={handleToggleMyLocation}
+                  disabled={geoLoading}
+                  className={`w-full flex items-center justify-between rounded-xl border p-3.5 text-sm transition ${
+                    useMyLocation
+                      ? "border-blue-500/40 bg-blue-500/10 text-blue-300"
+                      : "border-slate-700 bg-slate-800/50 text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <MapPin className="w-4 h-4" />
+                    <div className="text-left">
+                      <p className="font-semibold">Konumuma Göre Bildir</p>
+                      <p className="text-xs opacity-70 mt-0.5">
+                        {geoLoading
+                          ? "Konum alınıyor..."
+                          : formLat !== null
+                          ? `📍 Konumum kaydedildi (${formLat.toFixed(3)}, ${formLng?.toFixed(3)})`
+                          : "Yakınımdaki ilanlar için bildirim al"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`h-6 w-11 shrink-0 rounded-full transition-colors ${useMyLocation ? "bg-blue-600" : "bg-slate-700"}`}>
+                    <div className={`mt-0.5 ml-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${useMyLocation ? "translate-x-5" : "translate-x-0"}`} />
+                  </div>
+                </button>
+              </div>
+
               <div className="flex justify-end pt-2 border-t border-slate-800">
                 <button
                   onClick={handleCreate}
@@ -323,6 +398,12 @@ export default function AlertsPage() {
                             <span className="flex items-center gap-1 rounded-full border border-slate-700 bg-slate-800 px-2.5 py-1 text-xs text-slate-300">
                               <MapPin className="w-3 h-3" />
                               {alert.location_name}
+                            </span>
+                          )}
+                          {alert.lat !== null && alert.lng !== null && (
+                            <span className="flex items-center gap-1 rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs text-blue-300">
+                              <MapPin className="w-3 h-3" />
+                              📍 Konuma göre
                             </span>
                           )}
                         </div>

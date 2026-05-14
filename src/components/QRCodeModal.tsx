@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { X, Download, Share2 } from "lucide-react";
+import { X, Download, Share2, Printer } from "lucide-react";
 import QRCode from "qrcode";
 
 type Props = {
@@ -41,6 +41,44 @@ export default function QRCodeModal({ url, title, onClose }: Props) {
     }
   }
 
+  function handlePrint() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL("image/png");
+    const printWindow = window.open("", "_blank", "width=600,height=500");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>QR Etiket — ${title}</title>
+          <style>
+            body { margin: 0; background: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: sans-serif; }
+            .label { border: 2px solid #000; border-radius: 12px; padding: 24px 32px; text-align: center; max-width: 360px; }
+            .brand { font-size: 13px; font-weight: 700; color: #64748b; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+            .title { font-size: 20px; font-weight: 900; color: #0f172a; margin-bottom: 6px; }
+            .tagline { font-size: 13px; color: #475569; margin-bottom: 18px; }
+            .qr img { width: 200px; height: 200px; }
+            .url { font-size: 10px; color: #94a3b8; margin-top: 12px; word-break: break-all; }
+            @media print { body { print-color-adjust: exact; } }
+          </style>
+        </head>
+        <body>
+          <div class="label">
+            <div class="brand">BulanVarMı?</div>
+            <div class="title">${title}</div>
+            <div class="tagline">Bu eşyam — lütfen iletişime geçin</div>
+            <div class="qr"><img src="${dataUrl}" alt="QR Kod" /></div>
+            <div class="url">${url}</div>
+          </div>
+          <script>window.onload = function() { window.print(); window.onafterprint = function() { window.close(); }; }<\/script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="w-full max-w-sm rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
@@ -65,20 +103,27 @@ export default function QRCodeModal({ url, title, onClose }: Props) {
 
         <p className="text-center text-xs text-slate-500 mb-5 break-all px-2">{url}</p>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           <button
             onClick={handleDownload}
-            className="flex items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 px-3 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
           >
             <Download className="w-4 h-4" />
             İndir
           </button>
           <button
             onClick={handleShare}
-            className="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-amber-400 transition"
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-500 px-3 py-2.5 text-sm font-semibold text-slate-950 hover:bg-amber-400 transition"
           >
             <Share2 className="w-4 h-4" />
             Paylaş
+          </button>
+          <button
+            onClick={handlePrint}
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-800 px-3 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition"
+          >
+            <Printer className="w-4 h-4" />
+            Yazdır
           </button>
         </div>
 

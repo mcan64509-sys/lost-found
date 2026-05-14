@@ -8,6 +8,7 @@ import AppHeader from "../../../components/AppHeader";
 import ConfirmDialog from "../../../components/ConfirmDialog";
 import QRCodeModal from "../../../components/QRCodeModal";
 import SightingModal from "../../../components/SightingModal";
+import SocialShareImageModal from "../../../components/SocialShareImageModal";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 import { normalizeEmail, isValidEmail } from "../../../lib/utils";
@@ -70,11 +71,13 @@ export default function ItemDetailPage() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isFavorited, setIsFavorited] = useState(false);
   const [togglingFav, setTogglingFav] = useState(false);
+  const [ownerPrivacyMode, setOwnerPrivacyMode] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
   const [showSightingModal, setShowSightingModal] = useState(false);
+  const [showSocialImageModal, setShowSocialImageModal] = useState(false);
 
   // Rating
   const [ratingScore, setRatingScore] = useState(0);
@@ -135,6 +138,18 @@ export default function ItemDetailPage() {
             if (d.count != null) setRatingCount(d.count);
           })
           .catch(() => {});
+
+        // Load owner privacy_mode
+        if (itemData.created_by_email) {
+          supabase
+            .from("profiles")
+            .select("privacy_mode")
+            .eq("email", itemData.created_by_email)
+            .maybeSingle()
+            .then(({ data: ownerProfile }) => {
+              if (ownerProfile?.privacy_mode) setOwnerPrivacyMode(true);
+            });
+        }
 
         fetch("/api/items/view", {
           method: "POST",
@@ -606,6 +621,11 @@ export default function ItemDetailPage() {
                     Çözüldü
                   </span>
                 )}
+                {ownerPrivacyMode && !isOwner && (
+                  <span className="rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-semibold text-purple-300">
+                    🔒 Profil gizli
+                  </span>
+                )}
               </div>
 
               {item.reward_amount && item.reward_amount > 0 && (
@@ -736,7 +756,7 @@ export default function ItemDetailPage() {
                 </div>
               )}
 
-              <div className="mt-4 flex gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   onClick={handleToggleFavorite}
                   disabled={togglingFav}
@@ -759,6 +779,20 @@ export default function ItemDetailPage() {
                   className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-800 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white"
                 >
                   ▦ QR Kod
+                </button>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`🔍 ${item.title} — BulanVarMı? üzerinde bir ilan var, sen misin? ${typeof window !== "undefined" ? window.location.origin : ""}/items/${id}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-green-600/40 bg-green-600/10 py-2.5 text-sm font-medium text-green-400 transition hover:bg-green-600/20"
+                >
+                  💬 WhatsApp
+                </a>
+                <button
+                  onClick={() => setShowSocialImageModal(true)}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-800 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white"
+                >
+                  📸 Görsel
                 </button>
               </div>
 
@@ -816,6 +850,18 @@ export default function ItemDetailPage() {
                   url={`${window.location.origin}/items/${id}`}
                   title={item.title}
                   onClose={() => setShowQR(false)}
+                />
+              )}
+
+              {/* Sosyal Medya Görseli Modalı */}
+              {showSocialImageModal && item && (
+                <SocialShareImageModal
+                  title={item.title}
+                  type={item.type || "lost"}
+                  category={item.category || ""}
+                  location={item.location || ""}
+                  imageUrl={item.image_url || ""}
+                  onClose={() => setShowSocialImageModal(false)}
                 />
               )}
 

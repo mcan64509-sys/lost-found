@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { normalizeEmail } from "../lib/utils";
 import {
   Bell,
+  Building2,
   ChevronDown,
   Heart,
   LogOut,
@@ -25,6 +26,7 @@ type HeaderUser = {
   email?: string;
   fullName?: string;
   avatarUrl?: string | null;
+  accountType?: string | null;
 };
 
 type ConversationRow = {
@@ -114,7 +116,7 @@ export default function AppHeader() {
           { count: pendingClaims },
           { data: conversations },
         ] = await Promise.all([
-          supabase.from("profiles").select("id,email,full_name,avatar_url").eq("id", sessionUser.id).maybeSingle(),
+          supabase.from("profiles").select("id,email,full_name,avatar_url,account_type").eq("id", sessionUser.id).maybeSingle(),
           supabase.from("claims").select("*", { count: "exact", head: true }).eq("owner_email", currentEmail).eq("status", "pending"),
           supabase.from("conversations").select("id, owner_email, claimant_email").or(`owner_email.eq.${currentEmail},claimant_email.eq.${currentEmail}`),
         ]);
@@ -123,6 +125,7 @@ export default function AppHeader() {
           email: sessionUser.email,
           fullName: profile?.full_name || sessionUser.user_metadata?.full_name || "",
           avatarUrl: profile?.avatar_url || null,
+          accountType: profile?.account_type || null,
         });
         setClaimCount(pendingClaims || 0);
         const conversationIds = ((conversations ?? []) as ConversationRow[]).map((c) => c.id);
@@ -430,6 +433,13 @@ export default function AppHeader() {
                         <Bell className="w-4 h-4" />
                         <span>Arama Uyarılarım</span>
                       </Link>
+                      {user.accountType === "business" && (
+                        <Link href="/business" onClick={() => setMenuOpen(false)}
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-blue-400 hover:bg-blue-500/10 hover:text-blue-300 transition">
+                          <Building2 className="w-4 h-4" />
+                          <span>Kurumsal Panel</span>
+                        </Link>
+                      )}
                       <Link href="/messages" onClick={() => setMenuOpen(false)}
                         className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition">
                         <div className="flex items-center gap-2.5">

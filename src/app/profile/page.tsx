@@ -118,6 +118,10 @@ export default function ProfilePage() {
   const [emailPrefsLoading, setEmailPrefsLoading] = useState(false);
   const [savingEmailPrefs, setSavingEmailPrefs] = useState(false);
 
+  // Privacy mode
+  const [privacyMode, setPrivacyMode] = useState(false);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+
   const initials = useMemo(
     () => getInitials(user?.fullName, user?.email),
     [user?.fullName, user?.email]
@@ -198,6 +202,9 @@ export default function ProfilePage() {
       const avatarUrl = profileRow?.avatar_url ?? null;
       const fullName =
         profileRow?.full_name ?? sessionUser.user_metadata?.full_name ?? "";
+
+      // Load privacy mode from profile
+      setPrivacyMode(profileRow?.privacy_mode ?? false);
 
       setUser({
         id: sessionUser.id,
@@ -441,6 +448,27 @@ export default function ProfilePage() {
       toast.error("Profil güncellenirken bir hata oluştu.");
     } finally {
       setSavingProfile(false);
+    }
+  }
+
+  async function handleSavePrivacyMode(newValue: boolean) {
+    if (!user) return;
+    setSavingPrivacy(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ privacy_mode: newValue })
+        .eq("id", user.id);
+      if (error) {
+        toast.error("Kaydedilemedi: " + error.message);
+        return;
+      }
+      setPrivacyMode(newValue);
+      toast.success(newValue ? "Gizlilik modu etkinleştirildi." : "Gizlilik modu devre dışı bırakıldı.");
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSavingPrivacy(false);
     }
   }
 
@@ -889,6 +917,34 @@ export default function ProfilePage() {
           {/* Bildirim Tercihleri tab */}
           {activeTab === "email_prefs" && (
             <section className="mt-6 max-w-lg">
+              {/* Gizlilik Modu */}
+              <div className="mb-6 p-5 rounded-2xl border border-slate-800 bg-slate-900/60">
+                <h3 className="text-sm font-bold text-white mb-1">🔒 Gizlilik Modu</h3>
+                <p className="text-xs text-slate-500 mb-4">Etkinleştirildiğinde, profilinizde kişisel bilgileriniz gizlenir.</p>
+                <button
+                  onClick={() => handleSavePrivacyMode(!privacyMode)}
+                  disabled={savingPrivacy}
+                  className={`flex w-full items-center justify-between rounded-2xl border p-4 text-left transition ${
+                    privacyMode
+                      ? "border-purple-500/30 bg-purple-500/10"
+                      : "border-slate-700 bg-slate-900 hover:border-slate-600"
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      {privacyMode ? "🔒 Gizlilik Modu Aktif" : "🔓 Gizlilik Modu Kapalı"}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {privacyMode ? "E-posta adresiniz diğer kullanıcılardan gizleniyor." : "Profil bilgileriniz görünür."}
+                    </p>
+                  </div>
+                  <div className={`ml-4 h-6 w-11 shrink-0 rounded-full transition-colors ${privacyMode ? "bg-purple-600" : "bg-slate-700"}`}>
+                    <div className={`mt-0.5 ml-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${privacyMode ? "translate-x-5" : "translate-x-0"}`} />
+                  </div>
+                </button>
+                {savingPrivacy && <p className="mt-2 text-xs text-slate-500">Kaydediliyor...</p>}
+              </div>
+
               <div className="mb-6 p-4 rounded-2xl border border-slate-800 bg-slate-900/60">
                 <h3 className="text-sm font-bold text-white mb-2">🔔 Anlık Bildirimler (Push)</h3>
                 <p className="text-xs text-slate-500 mb-3">Tarayıcı bildirimleri ile yeni eşleşmeler, mesajlar ve talep güncellemelerinden anında haberdar ol.</p>

@@ -96,6 +96,7 @@ export default function AdminPage() {
     total: 0, lost: 0, found: 0, resolved: 0, views: 0,
     pendingReports: 0,
   });
+  const [sendingReminders, setSendingReminders] = useState(false);
   const [chartData, setChartData] = useState<DayCount[]>([]);
 
   useEffect(() => {
@@ -225,6 +226,27 @@ export default function AdminPage() {
     }
   }
 
+  async function handleSendExpiryReminders() {
+    setSendingReminders(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/items/expiry-reminder", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token || ""}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Hatırlatıcılar gönderildi: ${data.sent ?? 0} / ${data.total ?? 0} ilan`);
+      } else {
+        toast.error(data.error || "Gönderilemedi.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSendingReminders(false);
+    }
+  }
+
   async function handleReportAction(reportId: string, action: "reviewed" | "dismissed") {
     setUpdatingReport(reportId);
     const { error } = await supabase
@@ -322,6 +344,20 @@ export default function AdminPage() {
                     <Bar dataKey="bulundu" name="Bulundu" fill="#10b981" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+
+              {/* Admin Araçları */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
+                <h2 className="mb-4 text-lg font-bold">Admin Araçları</h2>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={handleSendExpiryReminders}
+                    disabled={sendingReminders}
+                    className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition disabled:opacity-50"
+                  >
+                    {sendingReminders ? "Gönderiliyor..." : "⏰ Bitiş Hatırlatmalarını Gönder"}
+                  </button>
+                </div>
               </div>
 
               {/* Kategori dağılımı */}
