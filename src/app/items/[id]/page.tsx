@@ -789,6 +789,14 @@ export default function ItemDetailPage() {
                 >
                   💬 WhatsApp
                 </a>
+                <a
+                  href={`/items/${id}/poster`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-800 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white"
+                >
+                  🖨️ Afiş
+                </a>
                 <button
                   onClick={() => setShowSocialImageModal(true)}
                   className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-600 bg-slate-800 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white"

@@ -74,7 +74,7 @@ function getInitials(name?: string, email?: string) {
   return "?";
 }
 
-type ActiveTab = "items" | "incoming" | "outgoing" | "favorites" | "email_prefs";
+type ActiveTab = "items" | "incoming" | "outgoing" | "favorites" | "email_prefs" | "account";
 
 type EmailPrefs = {
   notify_claims: boolean;
@@ -121,6 +121,14 @@ export default function ProfilePage() {
   // Privacy mode
   const [privacyMode, setPrivacyMode] = useState(false);
   const [savingPrivacy, setSavingPrivacy] = useState(false);
+
+  // Phone & referral
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [smsEnabled, setSmsEnabled] = useState(false);
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [referrals, setReferrals] = useState<{ referred_email: string; created_at: string }[]>([]);
+  const [referralsLoading, setReferralsLoading] = useState(false);
 
   const initials = useMemo(
     () => getInitials(user?.fullName, user?.email),
@@ -205,6 +213,9 @@ export default function ProfilePage() {
 
       // Load privacy mode from profile
       setPrivacyMode(profileRow?.privacy_mode ?? false);
+      setPhoneNumber(profileRow?.phone_number ?? "");
+      setSmsEnabled(profileRow?.sms_notifications ?? false);
+      setReferralCode(profileRow?.referral_code ?? "");
 
       setUser({
         id: sessionUser.id,
@@ -472,6 +483,41 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleSavePhone() {
+    if (!user) return;
+    setSavingPhone(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ phone_number: phoneNumber.trim() || null, sms_notifications: smsEnabled })
+        .eq("id", user.id);
+      if (error) { toast.error("Kaydedilemedi: " + error.message); return; }
+      toast.success("Telefon bilgileri kaydedildi.");
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSavingPhone(false);
+    }
+  }
+
+  async function handleGenerateReferralCode() {
+    if (!user) return;
+    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const { error } = await supabase.from("profiles").update({ referral_code: code }).eq("id", user.id);
+    if (!error) { setReferralCode(code); toast.success("Referans kodunuz oluşturuldu!"); }
+  }
+
+  async function loadReferrals(email: string) {
+    setReferralsLoading(true);
+    const { data } = await supabase
+      .from("referrals")
+      .select("referred_email, created_at")
+      .eq("referrer_email", email)
+      .order("created_at", { ascending: false });
+    setReferrals((data || []) as { referred_email: string; created_at: string }[]);
+    setReferralsLoading(false);
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut();
     window.location.href = "/";
@@ -702,6 +748,19 @@ export default function ProfilePage() {
               }`}
             >
               Bildirimler
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("account");
+                if (user?.email && referrals.length === 0 && !referralsLoading) {
+                  loadReferrals(user.email);
+                }
+              }}
+              className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                activeTab === "account" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Hesap
             </button>
           </div>
 
@@ -1008,6 +1067,94 @@ export default function ProfilePage() {
                   </button>
                 </div>
               )}
+            </section>
+          )}
+
+          {/* Hesap tab */}
+          {activeTab === "account" && (
+            <section className="mt-6 max-w-lg space-y-6">
+              {/* Telefon Numarası */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+                <h3 className="text-sm font-bold text-white mb-1">📱 Telefon Numarası</h3>
+                <p className="text-xs text-slate-500 mb-4">SMS bildirimleri için telefon numaranızı ekleyin.</p>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="+90 5xx xxx xx xx"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-slate-600 transition mb-3"
+                />
+                <button
+                  onClick={() => setSmsEnabled((v) => !v)}
+                  className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition mb-3 ${
+                    smsEnabled ? "border-blue-500/30 bg-blue-500/10" : "border-slate-700 bg-slate-900 hover:border-slate-600"
+                  }`}
+                >
+                  <span className="text-sm text-white">SMS Bildirimleri</span>
+                  <div className={`h-6 w-11 shrink-0 rounded-full transition-colors ${smsEnabled ? "bg-blue-600" : "bg-slate-700"}`}>
+                    <div className={`mt-0.5 ml-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${smsEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                  </div>
+                </button>
+                <button
+                  onClick={handleSavePhone}
+                  disabled={savingPhone}
+                  className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
+                >
+                  {savingPhone ? "Kaydediliyor..." : "Kaydet"}
+                </button>
+                {smsEnabled && (
+                  <p className="mt-2 text-xs text-amber-400">⚠️ SMS bildirimleri yakında aktif edilecek.</p>
+                )}
+              </div>
+
+              {/* Referral Code */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+                <h3 className="text-sm font-bold text-white mb-1">🎁 Referans Programı</h3>
+                <p className="text-xs text-slate-500 mb-4">Arkadaşlarınızı davet edin ve her kayıt için avantaj kazanın.</p>
+                {referralCode ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+                      <span className="flex-1 font-mono text-lg font-bold text-emerald-400 tracking-widest">{referralCode}</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(`https://bulanvarmi.vercel.app/auth/register?ref=${referralCode}`);
+                          toast.success("Link kopyalandı!");
+                        }}
+                        className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/30 transition"
+                      >
+                        Kopyala
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Paylaş: <span className="text-slate-400 font-mono">bulanvarmi.vercel.app/auth/register?ref={referralCode}</span>
+                    </p>
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold text-slate-400 mb-2">Davet Edilenler ({referrals.length})</p>
+                      {referralsLoading ? (
+                        <p className="text-xs text-slate-600">Yükleniyor...</p>
+                      ) : referrals.length === 0 ? (
+                        <p className="text-xs text-slate-600">Henüz davet edilen yok.</p>
+                      ) : (
+                        <div className="space-y-1">
+                          {referrals.map((r, i) => (
+                            <div key={i} className="flex items-center justify-between text-xs">
+                              <span className="text-slate-400">{r.referred_email.replace(/(.{2}).*@/, "$1***@")}</span>
+                              <span className="text-slate-600">{new Date(r.created_at).toLocaleDateString("tr-TR")}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleGenerateReferralCode}
+                    className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition"
+                  >
+                    Referans Kodu Oluştur
+                  </button>
+                )}
+              </div>
             </section>
           )}
 

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Building2, User, ArrowRight, CheckCircle2 } from "lucide-react";
 
 type AccountType = "personal" | "business";
@@ -20,8 +20,9 @@ const BUSINESS_TYPES = [
   "Diğer İşletme",
 ];
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<1 | 2>(1);
   const [accountType, setAccountType] = useState<AccountType>("personal");
 
@@ -31,6 +32,12 @@ export default function RegisterPage() {
   const [companyName, setCompanyName] = useState("");
   const [companyType, setCompanyType] = useState("");
   const [loading, setLoading] = useState(false);
+  const [refCode, setRefCode] = useState("");
+
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) setRefCode(ref.toUpperCase());
+  }, [searchParams]);
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -65,6 +72,21 @@ export default function RegisterPage() {
         company_name: accountType === "business" ? companyName : null,
         company_type: accountType === "business" ? companyType : null,
       }, { onConflict: "id" });
+
+      // Handle referral code
+      if (refCode) {
+        const { data: referrer } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("referral_code", refCode)
+          .maybeSingle();
+        if (referrer?.email) {
+          await supabase.from("referrals").insert({
+            referrer_email: referrer.email,
+            referred_email: email,
+          });
+        }
+      }
     }
 
     setLoading(false);
@@ -311,5 +333,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
   );
 }

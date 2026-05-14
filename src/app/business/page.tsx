@@ -143,6 +143,28 @@ export default function BusinessPage() {
   const resolvedItems = items.filter((i) => i.status === "resolved").length;
   const totalSightings = Object.values(sightingCounts).reduce((a, b) => a + b, 0);
 
+  function exportCSV() {
+    const header = ["ID", "Başlık", "Tür", "Kategori", "Konum", "Durum", "Görüntülenme", "Tarih"];
+    const rows = items.map((item) => [
+      item.id,
+      `"${item.title.replace(/"/g, '""')}"`,
+      item.type === "lost" ? "Kayıp" : "Bulundu",
+      item.category || "",
+      `"${(item.location || "").replace(/"/g, '""')}"`,
+      item.status || "active",
+      String(item.view_count || 0),
+      new Date(item.created_at).toLocaleDateString("tr-TR"),
+    ]);
+    const csv = [header, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bulanvarmi-ilanlar-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   const companyTypeLabels: Record<string, string> = {
     sirket: "Şirket",
     belediye: "Belediye",
@@ -256,14 +278,22 @@ export default function BusinessPage() {
 
               {/* İlan listesi */}
               <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-                <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
                   <h2 className="text-lg font-bold">İlanlarım</h2>
-                  <Link
-                    href="/my-items"
-                    className="rounded-xl border border-slate-700 px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 transition"
-                  >
-                    Tümünü Gör →
-                  </Link>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={exportCSV}
+                      className="rounded-xl border border-slate-700 px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 transition"
+                    >
+                      ⬇️ CSV İndir
+                    </button>
+                    <Link
+                      href="/my-items"
+                      className="rounded-xl border border-slate-700 px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 transition"
+                    >
+                      Tümünü Gör →
+                    </Link>
+                  </div>
                 </div>
 
                 {items.length === 0 ? (

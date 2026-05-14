@@ -557,6 +557,14 @@ export default function AppHeader() {
               className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/pets") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
               🐾 {t.nav.animals}
             </Link>
+            <Link href="/hikayeler" onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/hikayeler") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+              🎉 {t.nav.stories}
+            </Link>
+            <Link href="/kayip-buro" onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/kayip-buro") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+              🏢 {t.nav.bureaus}
+            </Link>
             <Link href="/messages" onClick={() => setMobileOpen(false)}
               className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/messages") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
               <div className="flex items-center gap-3">
