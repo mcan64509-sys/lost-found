@@ -32,6 +32,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sadece çözülmüş ilanlarda değerlendirme yapılabilir" }, { status: 400 });
   }
 
+  // Only allow rating if the rater submitted a claim or sighting for this item
+  const [{ data: claim }, { data: sighting }] = await Promise.all([
+    supabase.from("claims").select("id").eq("item_id", item_id).eq("claimant_email", rater_email).maybeSingle(),
+    supabase.from("sightings").select("id").eq("item_id", item_id).eq("reporter_email", rater_email).maybeSingle(),
+  ]);
+
+  if (!claim && !sighting) {
+    return NextResponse.json({ error: "Sadece talep veya görme bildirimi gönderenler değerlendirme yapabilir" }, { status: 403 });
+  }
+
   const { error } = await supabase.from("ratings").insert({
     rater_email,
     rated_email,

@@ -99,6 +99,7 @@ export default function ItemDetailPage() {
   const [ratingComment, setRatingComment] = useState("");
   const [submittingRating, setSubmittingRating] = useState(false);
   const [alreadyRated, setAlreadyRated] = useState(false);
+  const [canRate, setCanRate] = useState(false);
   const [ratingAvg, setRatingAvg] = useState<number | null>(null);
   const [ratingCount, setRatingCount] = useState(0);
 
@@ -151,6 +152,14 @@ export default function ItemDetailPage() {
             .eq("rater_email", email)
             .maybeSingle()
             .then(({ data }) => { if (data) setAlreadyRated(true); });
+
+          // Check if viewer has a claim or sighting — only they can rate
+          Promise.all([
+            supabase.from("claims").select("id").eq("item_id", id).eq("claimant_email", email).maybeSingle(),
+            supabase.from("sightings").select("id").eq("item_id", id).eq("reporter_email", email).maybeSingle(),
+          ]).then(([{ data: claim }, { data: sighting }]) => {
+            if (claim || sighting) setCanRate(true);
+          });
         }
 
         // Load rating stats for this item's owner
@@ -361,6 +370,30 @@ export default function ItemDetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itemId: item.id, content: systemContent }),
       }).catch(() => {});
+
+      // Send rating notification to the claimant who helped
+      supabase
+        .from("claims")
+        .select("claimant_email")
+        .eq("item_id", item.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data: latestClaim }) => {
+          if (latestClaim?.claimant_email) {
+            fetch("/api/push/send", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userEmail: latestClaim.claimant_email,
+                title: "Teşekkür edin! Değerlendirme zamanı",
+                body: `"${item.title}" ilanı çözüme kavuştu. İlan sahibini değerlendirerek güvenilirliğini belgele.`,
+                url: `/items/${item.id}`,
+                sendEmail: false,
+              }),
+            }).catch(() => {});
+          }
+        });
     } catch {
       toast.error("İlan kapatılırken bir hata oluştu.");
     } finally {
@@ -852,8 +885,8 @@ export default function ItemDetailPage() {
                     <p className="text-sm text-green-200">Bu ilan çözüme kavuştu, artık talep gönderilemiyor.</p>
                   </div>
 
-                  {/* Rating section */}
-                  {userEmail && (
+                  {/* Rating section — only claimants/sighters can rate */}
+                  {userEmail && canRate && (
                     alreadyRated ? (
                       <div className="rounded-2xl border border-slate-700 bg-slate-800/50 p-4 text-center">
                         <p className="text-sm text-slate-400">✓ Bu ilan için değerlendirmenizi yaptınız.</p>

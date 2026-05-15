@@ -41,12 +41,6 @@ const CATEGORIES = [
   { value: "Diğer", label: "📦 Diğer (manuel giriş)" },
 ];
 
-const PRIORITY_LEVELS = [
-  { value: 0, label: "Standart", desc: "Normal sırada listelenir", color: "border-slate-700 bg-slate-800/50 text-slate-400", icon: "📋" },
-  { value: 1, label: "Bronz", desc: "Listede biraz öne çıkar", color: "border-amber-800/50 bg-amber-900/20 text-amber-600", icon: "🥉" },
-  { value: 2, label: "Gümüş", desc: "Üst sıralarda gösterilir", color: "border-slate-500/50 bg-slate-700/30 text-slate-300", icon: "🥈" },
-  { value: 3, label: "Altın", desc: "En üst sırada, maksimum görünürlük", color: "border-yellow-500/50 bg-yellow-500/10 text-yellow-400", icon: "🥇" },
-];
 
 const PET_SPECIES = ["Kedi", "Köpek", "Kuş", "Tavşan", "Hamster", "Diğer"];
 
@@ -60,8 +54,6 @@ export default function LostReportPage() {
   const [customCategory, setCustomCategory] = useState("");
   const [description, setDescription] = useState("");
   const [rewardAmount, setRewardAmount] = useState("");
-  const [isUrgent, setIsUrgent] = useState(false);
-  const [priorityLevel, setPriorityLevel] = useState(0);
 
   // Evcil hayvan alanları
   const [petSpecies, setPetSpecies] = useState("");
@@ -98,8 +90,6 @@ export default function LostReportPage() {
       if (d.customCategory) setCustomCategory(d.customCategory);
       if (d.description) setDescription(d.description);
       if (d.rewardAmount) setRewardAmount(d.rewardAmount);
-      if (d.isUrgent) setIsUrgent(d.isUrgent);
-      if (d.priorityLevel) setPriorityLevel(d.priorityLevel);
       if (d.location) setLocation(d.location);
       if (d.date) setDate(d.date);
       if (d.time) setTime(d.time);
@@ -111,10 +101,10 @@ export default function LostReportPage() {
     if (!title && !category && !description && !location) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
-        title, category, customCategory, description, rewardAmount, isUrgent, priorityLevel, location, date, time,
+        title, category, customCategory, description, rewardAmount, location, date, time,
       }));
     } catch { /* ignore */ }
-  }, [title, category, customCategory, description, rewardAmount, isUrgent, priorityLevel, location, date, time]);
+  }, [title, category, customCategory, description, rewardAmount, location, date, time]);
 
   function canGoNext() {
     if (step === 1) return title.trim() !== "" && category !== "" && description.trim() !== "";
@@ -197,8 +187,8 @@ export default function LostReportPage() {
           lat,
           lng,
           reward_amount: rewardAmount ? parseInt(rewardAmount) : null,
-          is_urgent: isUrgent,
-          priority_level: priorityLevel,
+          is_urgent: false,
+          priority_level: 0,
           pet_species: finalCategory === "Evcil Hayvan" ? petSpecies || null : null,
           pet_breed: finalCategory === "Evcil Hayvan" ? petBreed || null : null,
           pet_color: finalCategory === "Evcil Hayvan" ? petColor || null : null,
@@ -383,42 +373,9 @@ export default function LostReportPage() {
                   <p className="mt-1.5 text-xs text-slate-600">Eşyayı bulana ödül teklif edebilirsin. İlanda ödül rozeti gösterilir.</p>
                 </div>
 
-                {/* Acil */}
-                <label className="flex items-center gap-4 cursor-pointer rounded-2xl border border-slate-700 bg-slate-800/40 p-4 hover:border-red-500/30 transition group">
-                  <div
-                    onClick={() => setIsUrgent(!isUrgent)}
-                    className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors ${isUrgent ? "bg-red-500" : "bg-slate-700"}`}
-                  >
-                    <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${isUrgent ? "translate-x-5" : ""}`} />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-white">🔴 Acil İlan</div>
-                    <div className="text-xs text-slate-500 mt-0.5">İlan listesinde kırmızı "Acil" rozeti gösterilir, daha fazla dikkat çeker</div>
-                  </div>
-                </label>
-
-                {/* Öncelik Seviyesi */}
-                <div>
-                  <label className="text-sm font-semibold text-slate-300 mb-2 block">⭐ Öncelik Seviyesi</label>
-                  <p className="text-xs text-slate-600 mb-3">İlanın listelerde ne kadar öne çıkacağını belirler. Eşyanın değerine veya aciliyetine göre seç.</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {PRIORITY_LEVELS.map((lvl) => (
-                      <button
-                        key={lvl.value}
-                        type="button"
-                        onClick={() => setPriorityLevel(lvl.value)}
-                        className={`rounded-xl border p-3 text-left transition ${
-                          priorityLevel === lvl.value
-                            ? lvl.color + " ring-1 ring-current"
-                            : "border-slate-700 bg-slate-800/30 text-slate-500 hover:border-slate-600"
-                        }`}
-                      >
-                        <div className="text-base mb-1">{lvl.icon}</div>
-                        <div className="text-sm font-bold">{lvl.label}</div>
-                        <div className="text-xs opacity-80 mt-0.5">{lvl.desc}</div>
-                      </button>
-                    ))}
-                  </div>
+                {/* Öncelik bilgi notu */}
+                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">
+                  ⭐ İlanı oluşturduktan sonra <strong>Acil İlan</strong> veya <strong>Altın İlan</strong> paketi satın alarak listelerde öne çıkarabilirsin.
                 </div>
               </div>
 

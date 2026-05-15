@@ -40,12 +40,6 @@ const CATEGORIES = [
   { value: "Diğer", label: "📦 Diğer (manuel giriş)" },
 ];
 
-const PRIORITY_LEVELS = [
-  { value: 0, label: "Standart", desc: "Normal sırada listelenir", color: "border-slate-700 bg-slate-800/50 text-slate-400", icon: "📋" },
-  { value: 1, label: "Bronz", desc: "Listede biraz öne çıkar", color: "border-amber-800/50 bg-amber-900/20 text-amber-600", icon: "🥉" },
-  { value: 2, label: "Gümüş", desc: "Üst sıralarda gösterilir", color: "border-slate-500/50 bg-slate-700/30 text-slate-300", icon: "🥈" },
-  { value: 3, label: "Altın", desc: "En üst sırada, maksimum görünürlük", color: "border-yellow-500/50 bg-yellow-500/10 text-yellow-400", icon: "🥇" },
-];
 
 const PET_SPECIES = ["Kedi", "Köpek", "Kuş", "Tavşan", "Hamster", "Diğer"];
 
@@ -58,8 +52,6 @@ export default function FoundReportPage() {
   const [category, setCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
   const [description, setDescription] = useState("");
-  const [isUrgent, setIsUrgent] = useState(false);
-  const [priorityLevel, setPriorityLevel] = useState(0);
 
   // Evcil hayvan alanları
   const [petSpecies, setPetSpecies] = useState("");
@@ -94,8 +86,6 @@ export default function FoundReportPage() {
       if (d.category) setCategory(d.category);
       if (d.customCategory) setCustomCategory(d.customCategory);
       if (d.description) setDescription(d.description);
-      if (d.isUrgent) setIsUrgent(d.isUrgent);
-      if (d.priorityLevel) setPriorityLevel(d.priorityLevel);
       if (d.location) setLocation(d.location);
       if (d.date) setDate(d.date);
       if (d.time) setTime(d.time);
@@ -106,10 +96,10 @@ export default function FoundReportPage() {
     if (!title && !category && !description && !location) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
-        title, category, customCategory, description, isUrgent, priorityLevel, location, date, time,
+        title, category, customCategory, description, location, date, time,
       }));
     } catch { /* ignore */ }
-  }, [title, category, customCategory, description, isUrgent, priorityLevel, location, date, time]);
+  }, [title, category, customCategory, description, location, date, time]);
 
   function canGoNext() {
     if (step === 1) return title.trim() !== "" && category !== "" && description.trim() !== "";
@@ -190,8 +180,8 @@ export default function FoundReportPage() {
           image_urls: restUrls,
           lat,
           lng,
-          is_urgent: isUrgent,
-          priority_level: priorityLevel,
+          is_urgent: false,
+          priority_level: 0,
           pet_species: finalCategory === "Evcil Hayvan" ? petSpecies || null : null,
           pet_breed: finalCategory === "Evcil Hayvan" ? petBreed || null : null,
           pet_color: finalCategory === "Evcil Hayvan" ? petColor || null : null,
@@ -351,46 +341,6 @@ export default function FoundReportPage() {
                 />
               </div>
 
-              {/* Acil */}
-              <div className="pt-2 border-t border-slate-800">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Ekstra Seçenekler</p>
-                <label className="flex items-center gap-4 cursor-pointer rounded-2xl border border-slate-700 bg-slate-800/40 p-4 hover:border-red-500/30 transition">
-                  <div
-                    onClick={() => setIsUrgent(!isUrgent)}
-                    className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors ${isUrgent ? "bg-red-500" : "bg-slate-700"}`}
-                  >
-                    <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${isUrgent ? "translate-x-5" : ""}`} />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-white">🔴 Acil İlan</div>
-                    <div className="text-xs text-slate-500 mt-0.5">İlan listesinde kırmızı "Acil" rozeti gösterilir, sahibi daha kolay bulunur</div>
-                  </div>
-                </label>
-
-                {/* Öncelik Seviyesi */}
-                <div>
-                  <label className="text-sm font-semibold text-slate-300 mb-2 block">⭐ Öncelik Seviyesi</label>
-                  <p className="text-xs text-slate-600 mb-3">İlanın listelerde ne kadar öne çıkacağını belirler. Sahibine daha hızlı ulaşmak için daha yüksek öncelik seç.</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {PRIORITY_LEVELS.map((lvl) => (
-                      <button
-                        key={lvl.value}
-                        type="button"
-                        onClick={() => setPriorityLevel(lvl.value)}
-                        className={`rounded-xl border p-3 text-left transition ${
-                          priorityLevel === lvl.value
-                            ? lvl.color + " ring-1 ring-current"
-                            : "border-slate-700 bg-slate-800/30 text-slate-500 hover:border-slate-600"
-                        }`}
-                      >
-                        <div className="text-base mb-1">{lvl.icon}</div>
-                        <div className="text-sm font-bold">{lvl.label}</div>
-                        <div className="text-xs opacity-80 mt-0.5">{lvl.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
 
               {/* Evcil Hayvan Alanları */}
               {category === "Evcil Hayvan" && (
