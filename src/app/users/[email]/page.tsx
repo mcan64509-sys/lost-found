@@ -7,7 +7,6 @@ import Image from "next/image";
 import AppHeader from "../../../components/AppHeader";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
-import { MapPin } from "lucide-react";
 
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
   .split(",")
@@ -39,6 +38,17 @@ type Rating = {
   created_at: string;
 };
 
+function StarRow({ score, size = "base" }: { score: number; size?: "sm" | "base" | "lg" }) {
+  const sz = size === "lg" ? "text-xl" : size === "sm" ? "text-xs" : "text-sm";
+  return (
+    <span className={sz}>
+      {[1, 2, 3, 4, 5].map((s) => (
+        <span key={s} className={s <= score ? "text-amber-400" : "text-slate-600"}>★</span>
+      ))}
+    </span>
+  );
+}
+
 export default function UserProfilePage() {
   const params = useParams();
   const emailParam = decodeURIComponent(params.email as string);
@@ -62,7 +72,6 @@ export default function UserProfilePage() {
     async function load() {
       setLoading(true);
       try {
-        // Get current viewer
         const { data: { session } } = await supabase.auth.getSession();
         const vEmail = session?.user?.email?.toLowerCase().trim() || "";
         setViewerEmail(vEmail);
@@ -74,7 +83,6 @@ export default function UserProfilePage() {
           .maybeSingle();
 
         if (!profileData) {
-          // Profil satırı olmasa da ilanları varsa göster
           const { data: anyItem } = await supabase
             .from("items")
             .select("id")
@@ -82,11 +90,7 @@ export default function UserProfilePage() {
             .limit(1)
             .maybeSingle();
 
-          if (!anyItem) {
-            setNotFound(true);
-            return;
-          }
-          // Profil bilgisi olmayan kullanıcı için varsayılan değerler
+          if (!anyItem) { setNotFound(true); return; }
           setProfile({ full_name: null, avatar_url: null, created_at: new Date().toISOString() });
           setIsBanned(false);
         } else {
@@ -100,11 +104,10 @@ export default function UserProfilePage() {
           .eq("created_by_email", emailParam)
           .neq("status", "expired")
           .order("created_at", { ascending: false })
-          .limit(24);
+          .limit(48);
 
         setItems((itemsData ?? []) as PublicItem[]);
 
-        // Load ratings
         const ratingsRes = await fetch(`/api/ratings/list?email=${encodeURIComponent(emailParam)}`);
         if (ratingsRes.ok) {
           const ratingsData = await ratingsRes.json();
@@ -127,10 +130,7 @@ export default function UserProfilePage() {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/admin/ban", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token || ""}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
         body: JSON.stringify({ targetEmail: emailParam, ban: !isBanned }),
       });
       const data = await res.json();
@@ -154,16 +154,11 @@ export default function UserProfilePage() {
       const res = await fetch("/api/report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          reportedUserEmail: emailParam,
-          reporterEmail: viewerEmail,
-          reason: profileReportReason,
-          details: profileReportDetails,
-        }),
+        body: JSON.stringify({ reportedUserEmail: emailParam, reporterEmail: viewerEmail, reason: profileReportReason, details: profileReportDetails }),
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success("Şikayetiniz alındı, incelenecek.");
+        toast.success("Şikayetiniz alındı.");
         setShowProfileReport(false);
         setProfileReportReason("");
         setProfileReportDetails("");
@@ -190,19 +185,20 @@ export default function UserProfilePage() {
     return (
       <>
         <AppHeader />
-        <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
-          <div className="mx-auto max-w-4xl animate-pulse space-y-6">
-            <div className="flex items-center gap-6">
-              <div className="h-24 w-24 rounded-full bg-slate-800" />
-              <div className="space-y-2">
+        <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+          <div className="mx-auto max-w-5xl space-y-6 animate-pulse">
+            <div className="flex items-center gap-5">
+              <div className="h-20 w-20 rounded-full bg-slate-800" />
+              <div className="space-y-2 flex-1">
                 <div className="h-6 w-48 rounded bg-slate-800" />
                 <div className="h-4 w-32 rounded bg-slate-800" />
+                <div className="flex gap-4 mt-3">
+                  {[1,2,3,4].map(i => <div key={i} className="h-10 w-14 rounded-xl bg-slate-800" />)}
+                </div>
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-48 rounded-2xl bg-slate-800" />
-              ))}
+              {[1,2,3,4,5,6].map(i => <div key={i} className="h-52 rounded-2xl bg-slate-800" />)}
             </div>
           </div>
         </main>
@@ -230,274 +226,336 @@ export default function UserProfilePage() {
   return (
     <>
       <AppHeader />
-      <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
-        <div className="mx-auto max-w-4xl">
+      <main className="min-h-screen bg-slate-950 px-4 py-10 text-white">
+        <div className="mx-auto max-w-5xl">
+
           {/* Profile Card */}
-          <div className="mb-8 flex flex-col gap-6 rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:flex-row sm:items-center">
-            <div className="flex-shrink-0">
-              {profile?.avatar_url ? (
-                <Image
-                  src={profile.avatar_url}
-                  alt={profile.full_name || emailParam}
-                  width={96}
-                  height={96}
-                  className="h-24 w-24 rounded-full object-cover ring-2 ring-slate-700"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-slate-700 text-3xl font-black text-white ring-2 ring-slate-600">
-                  {initials}
-                </div>
-              )}
-            </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold">{profile?.full_name || "İsimsiz Kullanıcı"}</h1>
-              <p className="mt-1 text-sm text-slate-400">
-                Üye: {new Date(profile!.created_at).toLocaleDateString("tr-TR", { year: "numeric", month: "long" })}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-6">
-                <div className="text-center">
-                  <p className="text-xl font-black text-white">{items.length}</p>
-                  <p className="text-xs text-slate-500">Toplam</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-black text-amber-400">{lostCount}</p>
-                  <p className="text-xs text-slate-500">Kayıp</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-black text-emerald-400">{foundCount}</p>
-                  <p className="text-xs text-slate-500">Bulundu</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-xl font-black text-green-400">{resolvedCount}</p>
-                  <p className="text-xs text-slate-500">Çözüldü</p>
-                </div>
-                {helpedCount > 0 && (
-                  <div className="text-center">
-                    <p className="text-xl font-black text-teal-400">{helpedCount}</p>
-                    <p className="text-xs text-slate-500">Yardım Etti</p>
+          <div className="mb-6 rounded-3xl border border-slate-800 bg-slate-900 p-6">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+              {/* Avatar */}
+              <div className="flex-shrink-0">
+                {profile?.avatar_url ? (
+                  <Image
+                    src={profile.avatar_url}
+                    alt={profile.full_name || emailParam}
+                    width={80}
+                    height={80}
+                    className="h-20 w-20 rounded-full object-cover ring-2 ring-slate-700"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 text-2xl font-black text-white ring-2 ring-slate-700">
+                    {initials}
                   </div>
                 )}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-black text-white">
+                    {profile?.full_name || "İsimsiz Kullanıcı"}
+                  </h1>
+                  {isBanned && (
+                    <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs font-semibold text-red-400">Engellendi</span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-sm text-slate-500">
+                  Üye: {new Date(profile!.created_at).toLocaleDateString("tr-TR", { year: "numeric", month: "long" })}
+                </p>
+
+                {/* Rating summary */}
                 {ratingAvg != null && (
-                  <div className="text-center">
-                    <p className="text-xl font-black text-amber-300 flex items-center gap-1">
-                      ★ {ratingAvg.toFixed(1)}
-                    </p>
-                    <p className="text-xs text-slate-500">{ratings.length} yorum</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <StarRow score={Math.round(ratingAvg)} size="base" />
+                    <span className="font-bold text-white">{ratingAvg.toFixed(1)}</span>
+                    <span className="text-xs text-slate-500">({ratings.length} değerlendirme)</span>
                   </div>
+                )}
+
+                {/* Stats */}
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {[
+                    { label: "Toplam", value: items.length, color: "text-white" },
+                    { label: "Kayıp İlan", value: lostCount, color: "text-amber-400" },
+                    { label: "Bulundu İlan", value: foundCount, color: "text-emerald-400" },
+                    { label: "Çözüldü", value: resolvedCount, color: "text-green-400" },
+                    ...(helpedCount > 0 ? [{ label: "Yardım Etti", value: helpedCount, color: "text-teal-400" }] : []),
+                  ].map((s) => (
+                    <div key={s.label} className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-center min-w-[60px]">
+                      <p className={`text-lg font-black ${s.color}`}>{s.value}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-col gap-2 items-end">
+                {viewerEmail && !isOwnProfile && !isAdmin && (
+                  <button
+                    onClick={() => setShowProfileReport(true)}
+                    className="rounded-xl border border-slate-700 px-3 py-1.5 text-xs text-slate-500 hover:border-red-500/40 hover:text-red-400 transition"
+                  >
+                    ⚑ Şikayet Et
+                  </button>
+                )}
+                {isAdmin && !isOwnProfile && (
+                  <button
+                    onClick={handleToggleBan}
+                    disabled={togglingBan}
+                    className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
+                      isBanned
+                        ? "border-green-500/30 bg-green-500/10 text-green-400"
+                        : "border-red-500/30 bg-red-500/10 text-red-400"
+                    }`}
+                  >
+                    {togglingBan ? "..." : isBanned ? "Engeli Kaldır" : "Engelle"}
+                  </button>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Profile report button — for non-admin logged-in users viewing others */}
-          {viewerEmail && !isOwnProfile && !isAdmin && (
-            <div className="mb-4 flex justify-end">
-              <button
-                onClick={() => setShowProfileReport(true)}
-                className="rounded-xl border border-slate-700 px-3 py-1.5 text-xs text-slate-500 hover:border-red-500/40 hover:text-red-400 transition"
-              >
-                ⚑ Profili Şikayet Et
-              </button>
-            </div>
-          )}
-
-          {/* Profile report modal */}
-          {showProfileReport && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
-              <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6">
-                <h3 className="text-lg font-bold text-white mb-4">Profili Şikayet Et</h3>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-slate-400 mb-1 block">Şikayet sebebi *</label>
-                    <select
-                      value={profileReportReason}
-                      onChange={(e) => setProfileReportReason(e.target.value)}
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white focus:outline-none"
-                    >
-                      <option value="">Seçin...</option>
-                      <option value="spam">Spam / Reklam</option>
-                      <option value="yaniltici">Yanıltıcı Profil</option>
-                      <option value="uygunsuz">Uygunsuz Davranış</option>
-                      <option value="duplicate">Sahte / Kopya Hesap</option>
-                      <option value="diger">Diğer</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-400 mb-1 block">Detay (opsiyonel)</label>
-                    <textarea
-                      value={profileReportDetails}
-                      onChange={(e) => setProfileReportDetails(e.target.value)}
-                      rows={3}
-                      maxLength={500}
-                      placeholder="Şikayetinizi açıklayın..."
-                      className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none resize-none"
-                    />
-                  </div>
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={() => setShowProfileReport(false)}
-                      className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 hover:bg-slate-800 transition"
-                    >
-                      İptal
-                    </button>
-                    <button
-                      onClick={handleProfileReport}
-                      disabled={submittingProfileReport || !profileReportReason}
-                      className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-50"
-                    >
-                      {submittingProfileReport ? "Gönderiliyor..." : "Şikayet Gönder"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Admin actions */}
-          {isAdmin && !isOwnProfile && (
-            <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl border border-blue-500/20 bg-blue-500/5 px-5 py-4">
-              <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">Admin Eylemler</span>
-              <div className="flex flex-wrap gap-2 ml-auto">
-                <Link
-                  href={`/messages?compose=${encodeURIComponent(emailParam)}`}
-                  className="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700 transition"
-                >
-                  Mesaj Gönder
-                </Link>
-                <button
-                  onClick={handleToggleBan}
-                  disabled={togglingBan}
-                  className={`rounded-xl border px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${
-                    isBanned
-                      ? "border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20"
-                      : "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                  }`}
-                >
-                  {togglingBan ? "..." : isBanned ? "Engeli Kaldır" : "Kullanıcıyı Engelle"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Banned notice */}
-          {isBanned && (
-            <div className="mb-6 rounded-2xl border border-red-500/20 bg-red-500/10 px-5 py-3">
-              <p className="text-sm text-red-300">Bu kullanıcı engellendi.</p>
-            </div>
-          )}
-
           {/* Tabs */}
-          <div className="mb-6 flex gap-2 border-b border-slate-800 pb-0">
+          <div className="mb-6 flex gap-1 rounded-2xl border border-slate-800 bg-slate-900/60 p-1">
             <button
               onClick={() => setActiveTab("items")}
-              className={`px-4 py-2 text-sm font-semibold border-b-2 transition -mb-px ${
-                activeTab === "items"
-                  ? "border-blue-500 text-white"
-                  : "border-transparent text-slate-500 hover:text-slate-300"
+              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                activeTab === "items" ? "bg-slate-700 text-white shadow" : "text-slate-500 hover:text-slate-300"
               }`}
             >
-              İlanlar ({items.length})
+              📋 İlanlar ({items.length})
             </button>
             <button
               onClick={() => setActiveTab("ratings")}
-              className={`px-4 py-2 text-sm font-semibold border-b-2 transition -mb-px ${
-                activeTab === "ratings"
-                  ? "border-amber-500 text-white"
-                  : "border-transparent text-slate-500 hover:text-slate-300"
+              className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                activeTab === "ratings" ? "bg-slate-700 text-white shadow" : "text-slate-500 hover:text-slate-300"
               }`}
             >
-              Değerlendirmeler ({ratings.length})
+              ★ Değerlendirmeler ({ratings.length})
             </button>
           </div>
 
+          {/* Items Tab */}
+          {activeTab === "items" && (
+            <>
+              {items.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-700 p-12 text-center">
+                  <p className="text-4xl mb-3">📭</p>
+                  <p className="font-semibold text-slate-300">Henüz ilan yok</p>
+                  <p className="mt-1 text-sm text-slate-500">Bu kullanıcının aktif ilanı bulunmuyor.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {items.map((item) => {
+                    const isLost = item.type === "lost";
+                    const imageSrc = item.image_url || "https://placehold.co/600x400/0f172a/334155?text=+";
+                    return (
+                      <Link
+                        key={item.id}
+                        href={`/items/${item.id}`}
+                        className="group overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 transition hover:-translate-y-0.5 hover:border-slate-700 hover:shadow-xl hover:shadow-black/20"
+                      >
+                        {/* Image */}
+                        <div className="relative h-44 overflow-hidden bg-slate-800">
+                          <Image
+                            src={imageSrc}
+                            alt={item.title}
+                            fill
+                            className="object-cover transition duration-300 group-hover:scale-105"
+                            unoptimized
+                          />
+                          {/* Type badge */}
+                          <div className="absolute left-3 top-3">
+                            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${
+                              isLost
+                                ? "border-amber-500/30 bg-amber-500/20 text-amber-300"
+                                : "border-emerald-500/30 bg-emerald-500/20 text-emerald-300"
+                            }`}>
+                              {isLost ? "Kayıp" : "Bulundu"}
+                            </span>
+                          </div>
+                          {/* Resolved badge */}
+                          {item.status === "resolved" && (
+                            <div className="absolute right-3 top-3">
+                              <span className="rounded-full border border-green-500/30 bg-green-500/20 px-2.5 py-1 text-[11px] font-bold text-green-300">
+                                ✓ Çözüldü
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        {/* Content */}
+                        <div className="p-4">
+                          {item.category && (
+                            <p className="mb-1 text-[11px] font-medium uppercase tracking-wide text-slate-500">{item.category}</p>
+                          )}
+                          <h3 className="line-clamp-1 font-bold text-white">{item.title}</h3>
+                          {item.location && (
+                            <p className="mt-1.5 flex items-center gap-1 text-xs text-slate-500">
+                              <span>📍</span> {item.location}
+                            </p>
+                          )}
+                          <p className="mt-2 text-[11px] text-slate-600">
+                            {new Date(item.created_at).toLocaleDateString("tr-TR")}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Ratings Tab */}
           {activeTab === "ratings" && (
-            <div>
+            <>
               {ratings.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center">
-                  <p className="text-slate-400">Henüz değerlendirme yok.</p>
+                <div className="rounded-3xl border border-dashed border-slate-700 p-12 text-center">
+                  <p className="text-4xl mb-3">⭐</p>
+                  <p className="font-semibold text-slate-300">Henüz değerlendirme yok</p>
+                  <p className="mt-1 text-sm text-slate-500">Bu kullanıcı henüz değerlendirilmemiş.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {/* Summary bar */}
+                  {ratingAvg != null && (
+                    <div className="flex items-center gap-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-5 py-4 mb-5">
+                      <div className="text-center">
+                        <p className="text-4xl font-black text-amber-400">{ratingAvg.toFixed(1)}</p>
+                        <StarRow score={Math.round(ratingAvg)} size="base" />
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        {[5, 4, 3, 2, 1].map((star) => {
+                          const count = ratings.filter((r) => r.score === star).length;
+                          const pct = ratings.length > 0 ? (count / ratings.length) * 100 : 0;
+                          return (
+                            <div key={star} className="flex items-center gap-2 text-xs">
+                              <span className="w-2 text-right text-slate-400">{star}</span>
+                              <span className="text-amber-400">★</span>
+                              <div className="flex-1 h-1.5 rounded-full bg-slate-700 overflow-hidden">
+                                <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${pct}%` }} />
+                              </div>
+                              <span className="w-4 text-right text-slate-500">{count}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-black text-white">{ratings.length}</p>
+                        <p className="text-xs text-slate-500">değerlendirme</p>
+                      </div>
+                    </div>
+                  )}
+
                   {ratings.map((r) => (
                     <div key={r.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-                      <div className="flex items-center justify-between gap-3 mb-2">
-                        <span className="text-amber-400 text-base">
-                          {"★".repeat(r.score)}{"☆".repeat(5 - r.score)}
-                        </span>
-                        <span className="text-xs text-slate-500">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-white flex-shrink-0">
+                            {r.rater_email[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-300">
+                              {r.rater_email.split("@")[0]}
+                            </p>
+                            <StarRow score={r.score} size="sm" />
+                          </div>
+                        </div>
+                        <span className="text-xs text-slate-600 flex-shrink-0">
                           {new Date(r.created_at).toLocaleDateString("tr-TR")}
                         </span>
                       </div>
                       {r.comment && (
-                        <p className="text-sm text-slate-300 leading-relaxed">{r.comment}</p>
+                        <p className="mt-3 text-sm text-slate-300 leading-relaxed border-t border-slate-800 pt-3">
+                          "{r.comment}"
+                        </p>
                       )}
                     </div>
                   ))}
                 </div>
               )}
-            </div>
-          )}
-
-          {activeTab === "items" && items.length === 0 && (
-            <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center">
-              <p className="text-slate-400">Bu kullanıcının aktif ilanı yok.</p>
-            </div>
-          )}
-          {activeTab === "items" && items.length > 0 && (
-            <div className="space-y-2">
-              {items.map((item) => {
-                const isLost = item.type === "lost";
-                const badgeClasses = isLost
-                  ? "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30"
-                  : "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30";
-                const imageSrc = item.image_url || "https://placehold.co/800x600/0f172a/ffffff?text=Gorsel";
-
-                return (
-                  <Link
-                    key={item.id}
-                    href={`/items/${item.id}`}
-                    className="group flex items-center gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-3 transition hover:border-slate-700 hover:bg-slate-800/60"
-                  >
-                    <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl">
-                      <Image
-                        src={imageSrc}
-                        alt={item.title}
-                        className="object-cover transition duration-300 group-hover:scale-105"
-                        fill
-                        unoptimized
-                      />
-                    </div>
-                    <div className="flex min-w-0 flex-1 flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${badgeClasses}`}>
-                          {isLost ? "Kayıp" : "Bulundu"}
-                        </span>
-                        {item.status === "resolved" && (
-                          <span className="rounded-md bg-green-500/20 px-1.5 py-0.5 text-[11px] font-semibold text-green-300 ring-1 ring-green-500/30">
-                            Çözüldü
-                          </span>
-                        )}
-                        {item.category && (
-                          <span className="text-[11px] text-slate-600">{item.category}</span>
-                        )}
-                      </div>
-                      <h3 className="line-clamp-1 text-sm font-semibold text-white">{item.title}</h3>
-                      <p className="flex items-center gap-1 text-xs text-slate-500">
-                        <MapPin className="h-3 w-3 flex-shrink-0" />
-                        {item.location || "Konum belirtilmedi"}
-                      </p>
-                    </div>
-                    <span className="ml-auto shrink-0 text-xs text-blue-500 transition group-hover:text-blue-400">
-                      Detay →
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
+            </>
           )}
         </div>
       </main>
+
+      {/* Profile Report Modal */}
+      {showProfileReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6">
+            <h3 className="text-lg font-bold text-white mb-4">Profili Şikayet Et</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Şikayet sebebi *</label>
+                <select
+                  value={profileReportReason}
+                  onChange={(e) => setProfileReportReason(e.target.value)}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white focus:outline-none"
+                >
+                  <option value="">Seçin...</option>
+                  <option value="spam">Spam / Reklam</option>
+                  <option value="yaniltici">Yanıltıcı Profil</option>
+                  <option value="uygunsuz">Uygunsuz Davranış</option>
+                  <option value="duplicate">Sahte / Kopya Hesap</option>
+                  <option value="diger">Diğer</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Detay (opsiyonel)</label>
+                <textarea
+                  value={profileReportDetails}
+                  onChange={(e) => setProfileReportDetails(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Açıklayın..."
+                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none resize-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setShowProfileReport(false)}
+                  className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 hover:bg-slate-800 transition"
+                >
+                  İptal
+                </button>
+                <button
+                  onClick={handleProfileReport}
+                  disabled={submittingProfileReport || !profileReportReason}
+                  className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-50"
+                >
+                  {submittingProfileReport ? "Gönderiliyor..." : "Şikayet Gönder"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Actions Panel */}
+      {isAdmin && !isOwnProfile && (
+        <div className="fixed bottom-4 right-4 z-40 rounded-2xl border border-blue-500/30 bg-blue-950/90 backdrop-blur-sm px-4 py-3 shadow-xl flex items-center gap-3">
+          <span className="text-xs font-semibold text-blue-400">Admin</span>
+          <Link
+            href={`/messages?compose=${encodeURIComponent(emailParam)}`}
+            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white hover:bg-slate-700 transition"
+          >
+            Mesaj Gönder
+          </Link>
+          <button
+            onClick={handleToggleBan}
+            disabled={togglingBan}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
+              isBanned
+                ? "border-green-500/30 bg-green-500/10 text-green-400"
+                : "border-red-500/30 bg-red-500/10 text-red-400"
+            }`}
+          >
+            {togglingBan ? "..." : isBanned ? "Engeli Kaldır" : "Engelle"}
+          </button>
+        </div>
+      )}
     </>
   );
 }
