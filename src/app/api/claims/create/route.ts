@@ -105,21 +105,79 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Talep oluşturulamadı." }, { status: 500 });
     }
 
-    // İlan sahibine email bildir
-    if (normalizedOwnerEmail) {
-      const { data: item } = await supabase
-        .from("items")
-        .select("title")
-        .eq("id", item_id)
-        .maybeSingle();
+    // Fetch item title for notifications
+    const { data: itemData } = await supabase
+      .from("items")
+      .select("title")
+      .eq("id", item_id)
+      .maybeSingle();
 
-      if (item?.title) {
-        sendClaimReceivedEmail({
-          ownerEmail: normalizedOwnerEmail,
-          claimantName: claimant_name.trim(),
-          itemTitle: item.title,
-          itemId: item_id,
-        }).catch(() => {});
+    const itemTitle = itemData?.title || "İlan";
+
+    if (normalizedOwnerEmail) {
+      // Email notification
+      sendClaimReceivedEmail({
+        ownerEmail: normalizedOwnerEmail,
+        claimantName: claimant_name.trim(),
+        itemTitle,
+        itemId: item_id,
+      }).catch(() => {});
+
+      // Push notification to owner (non-critical)
+      supabase.from("notifications").insert({
+        user_email: normalizedOwnerEmail,
+        type: "new_claim",
+        title: `🎉 Yeni buluntu talebi: ${itemTitle}`,
+        message: `${claimant_name.trim()} bu eşyayı bulduğunu bildirdi. Mesajlar bölümünden iletişime geçin.`,
+        item_id,
+        is_read: false,
+      }).then(null, () => {});
+    }
+
+    // Create conversation + send claim details as first message
+    if (normalizedOwnerEmail && claimer_email && normalizedOwnerEmail !== claimer_email) {
+      const { data: existingConvs } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("item_id", item_id)
+        .or(
+          `and(owner_email.eq.${normalizedOwnerEmail},claimant_email.eq.${claimer_email}),and(owner_email.eq.${claimer_email},claimant_email.eq.${normalizedOwnerEmail})`
+        );
+
+      let conversationId = existingConvs?.[0]?.id;
+
+      if (!conversationId) {
+        const { data: newConv } = await supabase
+          .from("conversations")
+          .insert({
+            item_id,
+            item_title: itemTitle,
+            owner_email: normalizedOwnerEmail,
+            claimant_email: claimer_email,
+          })
+          .select("id")
+          .single();
+        conversationId = newConv?.id;
+      }
+
+      if (conversationId) {
+        const msgLines = [
+          `🎉 Bu eşyayı bulduğumu bildirmek istiyorum!`,
+          ``,
+          `👤 İsim: ${claimant_name.trim()}`,
+          `📍 Konum: ${lost_location.trim()}`,
+        ];
+        if (brand_model?.trim()) msgLines.push(`🏷️ Marka/Model: ${brand_model.trim()}`);
+        msgLines.push(`🔍 Ayırt edici özellik: ${distinctive_feature.trim()}`);
+        if (extra_note?.trim()) msgLines.push(``, `📝 Ek not: ${extra_note.trim()}`);
+
+        await supabase.from("messages").insert({
+          conversation_id: conversationId,
+          sender_email: claimer_email,
+          content: msgLines.join("\n"),
+          is_read: false,
+          is_system: false,
+        });
       }
     }
 

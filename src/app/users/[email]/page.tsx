@@ -167,6 +167,7 @@ export default function UserProfilePage() {
   const lostCount = items.filter((i) => i.type === "lost").length;
   const foundCount = items.filter((i) => i.type === "found").length;
   const resolvedCount = items.filter((i) => i.status === "resolved").length;
+  const helpedCount = items.filter((i) => i.type === "found" && i.status === "resolved").length;
 
   const initials = profile?.full_name
     ? profile.full_name.trim().split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
@@ -258,6 +259,12 @@ export default function UserProfilePage() {
                   <p className="text-xl font-black text-green-400">{resolvedCount}</p>
                   <p className="text-xs text-slate-500">Çözüldü</p>
                 </div>
+                {helpedCount > 0 && (
+                  <div className="text-center">
+                    <p className="text-xl font-black text-teal-400">{helpedCount}</p>
+                    <p className="text-xs text-slate-500">Yardım Etti</p>
+                  </div>
+                )}
                 {ratingAvg != null && (
                   <div className="text-center">
                     <p className="text-xl font-black text-amber-300 flex items-center gap-1">

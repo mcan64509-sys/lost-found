@@ -83,6 +83,16 @@ export default function ItemDetailPage() {
   const [showStoryInvite, setShowStoryInvite] = useState(false);
   const [similarItems, setSimilarItems] = useState<{ id: string; title: string; type: string; image_url: string | null; location: string | null }[]>([]);
 
+  // Claim modal
+  const [showClaimModal, setShowClaimModal] = useState(false);
+  const [claimContext, setClaimContext] = useState<"lost" | "found">("lost");
+  const [claimantName, setClaimantName] = useState("");
+  const [claimLostLocation, setClaimLostLocation] = useState("");
+  const [claimBrandModel, setClaimBrandModel] = useState("");
+  const [claimDistinctiveFeature, setClaimDistinctiveFeature] = useState("");
+  const [claimExtraNote, setClaimExtraNote] = useState("");
+  const [submittingClaim, setSubmittingClaim] = useState(false);
+
   // Rating
   const [ratingScore, setRatingScore] = useState(0);
   const [ratingHover, setRatingHover] = useState(0);
@@ -416,6 +426,51 @@ export default function ItemDetailPage() {
     }
   }
 
+  async function handleSubmitClaim() {
+    if (!userEmail || !item) return;
+    if (!claimantName.trim()) { toast.error("Adınızı girin."); return; }
+    if (!claimLostLocation.trim()) { toast.error("Konum bilgisini girin."); return; }
+    if (!claimDistinctiveFeature.trim()) { toast.error("Ayırt edici özelliği girin."); return; }
+
+    try {
+      setSubmittingClaim(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/claims/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({
+          item_id: item.id,
+          claimant_name: claimantName,
+          owner_email: item.created_by_email,
+          lost_location: claimLostLocation,
+          brand_model: claimBrandModel || null,
+          distinctive_feature: claimDistinctiveFeature,
+          extra_note: claimExtraNote || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Talep gönderilemedi.");
+        return;
+      }
+      toast.success("Talebiniz gönderildi! Konuşmalar bölümünden devam edebilirsiniz.");
+      setShowClaimModal(false);
+      setClaimantName("");
+      setClaimLostLocation("");
+      setClaimBrandModel("");
+      setClaimDistinctiveFeature("");
+      setClaimExtraNote("");
+      router.push("/messages");
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSubmittingClaim(false);
+    }
+  }
+
   async function handleSubmitRating() {
     if (!userEmail || !item) return;
     if (ratingScore < 1) { toast.error("Lütfen bir puan seçin."); return; }
@@ -713,18 +768,35 @@ export default function ItemDetailPage() {
 
               {!isOwner && item.type === "found" && item.status !== "resolved" && (
                 <div className="mt-8">
-                  <Link
-                    href={`/items/${item.id}/claim`}
-                    className="inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-6 py-3 text-center font-semibold text-white transition hover:bg-blue-700"
-                  >
-                    Bu eşya benim olabilir
-                  </Link>
+                  {userEmail ? (
+                    <button
+                      onClick={() => { setClaimContext("found"); setShowClaimModal(true); }}
+                      className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 font-bold text-white transition-all hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/20"
+                    >
+                      <span className="relative flex items-center justify-center gap-2">
+                        <span className="text-lg">🙋</span>
+                        Bu eşya benim!
+                      </span>
+                      <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  ) : (
+                    <Link
+                      href="/auth/login"
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-500/40 bg-blue-500/10 px-6 py-4 font-semibold text-blue-400 transition hover:bg-blue-500/20"
+                    >
+                      <span>🙋</span>
+                      Bu eşya benim — Giriş yap
+                    </Link>
+                  )}
+                  <p className="mt-2 text-center text-xs text-slate-600">
+                    Bu eşyanın size ait olduğunu düşünüyorsanız sahiplik talebinde bulunun.
+                  </p>
                 </div>
               )}
 
-              {/* "Gördüm" butonu — sadece kayıp ilanlarında, sahip olmayan kullanıcılara */}
+              {/* Kayıp ilanları için Gördüm + Buldum butonları */}
               {!isOwner && item.type === "lost" && item.status !== "resolved" && (
-                <div className="mt-8">
+                <div className="mt-8 flex flex-col gap-3">
                   {userEmail ? (
                     <button
                       onClick={() => setShowSightingModal(true)}
@@ -732,7 +804,7 @@ export default function ItemDetailPage() {
                     >
                       <span className="relative flex items-center justify-center gap-2">
                         <span className="text-lg">👁</span>
-                        Bu eşyayı / hayvanı gördüm!
+                        Bu eşyayı / hayvanı gördüm
                       </span>
                       <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
@@ -745,8 +817,32 @@ export default function ItemDetailPage() {
                       Gördüm bildir — Giriş yap
                     </Link>
                   )}
-                  <p className="mt-2 text-center text-xs text-slate-600">
-                    Bu eşyayı veya hayvanı gördüysen haritada işaretle, ilan sahibine bildir.
+                  <p className="text-center text-xs text-slate-600">
+                    Gördüysen haritada işaretle, ilan sahibine bildir.
+                  </p>
+
+                  {userEmail ? (
+                    <button
+                      onClick={() => { setClaimContext("lost"); setShowClaimModal(true); }}
+                      className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-4 font-bold text-slate-950 transition-all hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-500/20"
+                    >
+                      <span className="relative flex items-center justify-center gap-2">
+                        <span className="text-lg">🎉</span>
+                        Buldum! — Sahibine iade etmek istiyorum
+                      </span>
+                      <span className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  ) : (
+                    <Link
+                      href="/auth/login"
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-6 py-4 font-semibold text-emerald-400 transition hover:bg-emerald-500/20"
+                    >
+                      <span>🎉</span>
+                      Buldum — Giriş yap
+                    </Link>
+                  )}
+                  <p className="text-center text-xs text-slate-600">
+                    Eşyayı/hayvanı bulduysan sahiple bağlantı kur.
                   </p>
                 </div>
               )}
@@ -916,6 +1012,111 @@ export default function ItemDetailPage() {
                   imageUrl={item.image_url || ""}
                   onClose={() => setShowSocialImageModal(false)}
                 />
+              )}
+
+              {/* Sahiplik / Buluntu Talep Modalı */}
+              {showClaimModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+                  <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+                    <h2 className="mb-1 text-lg font-bold text-white">
+                      {claimContext === "lost" ? "🎉 Eşyayı Buldum!" : "🙋 Bu Eşya Benim!"}
+                    </h2>
+                    <p className="mb-5 text-sm text-slate-400">
+                      {claimContext === "lost"
+                        ? "Eşyayı/hayvanı sahibine iade etmek için bilgilerinizi girin. Mesajlaşma otomatik başlayacak."
+                        : "Bu eşyanın size ait olduğunu doğrulamak için bilgilerinizi girin. Mesajlaşma otomatik başlayacak."}
+                    </p>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-400">
+                          Adınız / Takma adınız <span className="text-red-400">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={claimantName}
+                          onChange={(e) => setClaimantName(e.target.value)}
+                          placeholder="Örn: Ahmet K."
+                          maxLength={80}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-400">
+                          {claimContext === "lost" ? "Eşyayı nerede buldunuz?" : "Bu eşyayı nerede kaybettiniz?"}
+                          <span className="text-red-400"> *</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={claimLostLocation}
+                          onChange={(e) => setClaimLostLocation(e.target.value)}
+                          placeholder="Örn: Kadıköy metro girişi"
+                          maxLength={200}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-400">
+                          Marka / Model <span className="text-slate-600">(opsiyonel)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={claimBrandModel}
+                          onChange={(e) => setClaimBrandModel(e.target.value)}
+                          placeholder="Örn: Apple AirPods Pro"
+                          maxLength={120}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-400">
+                          Ayırt edici özellik <span className="text-red-400">*</span>
+                        </label>
+                        <textarea
+                          value={claimDistinctiveFeature}
+                          onChange={(e) => setClaimDistinctiveFeature(e.target.value)}
+                          placeholder="Örn: Sağ tarafında küçük çizik var, içinde özel not var"
+                          rows={3}
+                          maxLength={400}
+                          className="w-full resize-none rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-400">
+                          Ek not <span className="text-slate-600">(opsiyonel)</span>
+                        </label>
+                        <textarea
+                          value={claimExtraNote}
+                          onChange={(e) => setClaimExtraNote(e.target.value)}
+                          placeholder="Eklemek istediğiniz başka bir bilgi..."
+                          rows={2}
+                          maxLength={300}
+                          className="w-full resize-none rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex gap-3">
+                      <button
+                        onClick={handleSubmitClaim}
+                        disabled={submittingClaim}
+                        className="flex-1 rounded-xl bg-emerald-600 px-4 py-2.5 font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+                      >
+                        {submittingClaim ? "Gönderiliyor..." : "Talebi Gönder ve Mesajlaş"}
+                      </button>
+                      <button
+                        onClick={() => { setShowClaimModal(false); setClaimantName(""); setClaimLostLocation(""); setClaimBrandModel(""); setClaimDistinctiveFeature(""); setClaimExtraNote(""); }}
+                        className="flex-1 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 font-medium text-white transition hover:bg-slate-700"
+                      >
+                        İptal
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* Şikayet Modalı */}
