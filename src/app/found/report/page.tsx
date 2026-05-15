@@ -164,6 +164,12 @@ export default function FoundReportPage() {
       const { data: profile } = await supabase.from("profiles").select("is_banned").eq("email", createdByEmail).maybeSingle();
       if (profile?.is_banned) { toast.error("Hesabınız engellendi. İlan oluşturamazsınız."); return; }
 
+      const { count: itemCount } = await supabase
+        .from("items")
+        .select("id", { count: "exact", head: true })
+        .eq("created_by_email", createdByEmail)
+        .neq("status", "expired");
+
       const uploadResults = await Promise.all(selectedImages.map((img) => uploadItemImage(img, createdByEmail)));
       const [firstUrl, ...restUrls] = uploadResults.map((r) => r.publicUrl);
 
@@ -213,7 +219,11 @@ export default function FoundReportPage() {
       }).catch(() => {});
 
       toast.success("Bulundu ilanınız alındı! Admin onayından sonra yayınlanacak.");
-      router.push("/my-items");
+      if (newItem && (itemCount ?? 0) >= 3) {
+        router.push(`/upgrade?item=${newItem.id}`);
+      } else {
+        router.push("/my-items");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "İlan oluşturulurken bir hata oluştu.");
     } finally {

@@ -975,12 +975,22 @@ export default function ItemDetailPage() {
               )}
 
               {/* Rating stats for this item's owner */}
-              {ratingCount > 0 && (
+              {/* İlan Sahibi — her zaman göster */}
+              {item.created_by_email && !isOwner && (
                 <div className="mt-4 flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 px-4 py-3">
-                  <span className="text-amber-400 text-base">{"★".repeat(Math.round(ratingAvg ?? 0))}{"☆".repeat(5 - Math.round(ratingAvg ?? 0))}</span>
-                  <span className="text-sm font-semibold text-white">{(ratingAvg ?? 0).toFixed(1)}</span>
-                  <span className="text-xs text-slate-500">({ratingCount} değerlendirme)</span>
-                  <Link href={`/users/${encodeURIComponent(item.created_by_email || "")}`} className="ml-auto text-xs text-blue-400 hover:text-blue-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-white shrink-0">
+                    {item.created_by_email.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-500">İlan Sahibi</p>
+                    {ratingCount > 0 && (
+                      <span className="flex items-center gap-1 text-xs text-amber-400">
+                        {"★".repeat(Math.round(ratingAvg ?? 0))}{"☆".repeat(5 - Math.round(ratingAvg ?? 0))}
+                        <span className="text-slate-400">{(ratingAvg ?? 0).toFixed(1)} ({ratingCount})</span>
+                      </span>
+                    )}
+                  </div>
+                  <Link href={`/users/${encodeURIComponent(item.created_by_email)}`} className="ml-auto text-xs text-blue-400 hover:text-blue-300 whitespace-nowrap">
                     Profile git →
                   </Link>
                 </div>

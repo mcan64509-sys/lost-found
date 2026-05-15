@@ -43,29 +43,9 @@ function UpgradeContent() {
     load();
   }, [itemId, router]);
 
-  // Bulunan ilanlar ücretli özellik kullanamaz
-  if (itemType === "found") {
-    return (
-      <>
-        <AppHeader />
-        <main className="flex min-h-screen items-center justify-center bg-slate-950 text-white px-4">
-          <div className="text-center max-w-md">
-            <p className="text-5xl mb-4">✅</p>
-            <h1 className="text-2xl font-black mb-2">Bulundu ilanları ücretsiz!</h1>
-            <p className="text-slate-400 mb-6">
-              Bulundu ilanları tamamen ücretsizdir. Ücretli özellikler yalnızca kayıp ilanları için geçerlidir.
-            </p>
-            <button
-              onClick={() => router.back()}
-              className="rounded-2xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 transition"
-            >
-              Geri Dön
-            </button>
-          </div>
-        </main>
-      </>
-    );
-  }
+  const products = (Object.entries(PRODUCTS) as [ProductType, typeof PRODUCTS[ProductType]][]).filter(
+    ([key]) => itemType === "found" ? key === "standart_ilan" : true
+  );
 
   async function handleCheckout(productType: ProductType) {
     if (!userEmail) { router.push("/auth/login"); return; }
@@ -84,13 +64,11 @@ function UpgradeContent() {
     }
   }
 
-  const products = Object.entries(PRODUCTS) as [ProductType, typeof PRODUCTS[ProductType]][];
-
   return (
     <>
       <AppHeader />
       <main className="min-h-screen bg-slate-950 text-white">
-        <div className="mx-auto max-w-3xl px-4 py-12">
+        <div className="mx-auto max-w-5xl px-4 py-12">
 
           <div className="text-center mb-12">
             <h1 className="text-4xl font-black text-white mb-3">İlanını Öne Çıkar</h1>
@@ -103,28 +81,35 @@ function UpgradeContent() {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+          {/* Free tier info */}
+          <div className="mb-6 rounded-2xl border border-blue-500/20 bg-blue-500/5 px-5 py-4 text-sm text-slate-300">
+            <span className="font-semibold text-white">İlk 3 ilanın ücretsiz!</span>{" "}
+            4. ilanından itibaren Standart, Acil veya Altın paket seçmelisin.
+            Acil ilanlar en üst sıraya, Altın ilanlar hemen altına çıkar.
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
             {products.map(([key, product]) => (
               <div
                 key={key}
-                className={`relative rounded-3xl border p-7 flex flex-col gap-4 transition hover:scale-[1.02] ${product.color}`}
+                className={`relative rounded-3xl border p-6 flex flex-col gap-4 transition hover:scale-[1.02] ${product.color}`}
               >
                 <div>
-                  <div className="text-4xl mb-2">{product.label.split(" ")[0]}</div>
-                  <h3 className="font-black text-white text-xl">
+                  <div className="text-3xl mb-2">{product.label.split(" ")[0]}</div>
+                  <h3 className="font-black text-white text-lg">
                     {product.label.split(" ").slice(1).join(" ")}
                   </h3>
-                  <p className="text-sm text-slate-400 mt-1">{product.desc}</p>
+                  <p className="text-xs text-slate-400 mt-1">{product.desc}</p>
                 </div>
 
                 <div className="py-3 border-t border-b border-white/10">
-                  <span className="text-4xl font-black text-white">{formatTL(product.price_cents)}</span>
+                  <span className="text-3xl font-black text-white">{formatTL(product.price_cents)}</span>
                   <span className="text-slate-500 text-sm ml-1">/ 30 gün</span>
                 </div>
 
                 <ul className="space-y-2 flex-1">
                   {product.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
+                    <li key={f} className="flex items-center gap-2 text-xs text-slate-300">
                       <span className="text-green-400">✓</span> {f}
                     </li>
                   ))}
@@ -136,7 +121,9 @@ function UpgradeContent() {
                   className={`w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold transition disabled:opacity-50 ${
                     key === "altin_ilan"
                       ? "bg-yellow-500 text-slate-900 hover:bg-yellow-400"
-                      : "bg-red-600 text-white hover:bg-red-500"
+                      : key === "acil_ilan"
+                      ? "bg-red-600 text-white hover:bg-red-500"
+                      : "bg-slate-600 text-white hover:bg-slate-500"
                   }`}
                 >
                   {loading === key ? (
