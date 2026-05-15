@@ -102,6 +102,46 @@ export default function MessagesPage() {
     loadPage();
   }, []);
 
+  // Realtime: yeni mesaj → okunmamış sayacı güncelle, yeni konuşma → listeye ekle
+  useEffect(() => {
+    if (!userEmail) return;
+
+    const channel = supabase
+      .channel("messages-page-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const msg = payload.new as { conversation_id: string; sender_email: string };
+          if (normalizeEmail(msg.sender_email) !== normalizeEmail(userEmail)) {
+            setUnreadMap((prev) => ({
+              ...prev,
+              [msg.conversation_id]: (prev[msg.conversation_id] || 0) + 1,
+            }));
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "conversations" },
+        async (payload) => {
+          const conv = payload.new as { owner_email: string; claimant_email: string };
+          if (
+            normalizeEmail(conv.owner_email) === normalizeEmail(userEmail) ||
+            normalizeEmail(conv.claimant_email) === normalizeEmail(userEmail)
+          ) {
+            const data = await getUserConversations(userEmail);
+            setConversations(data);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userEmail]);
+
   async function handleDeleteConversation(conversationId: string) {
     try {
       setDeletingId(conversationId);
