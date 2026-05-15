@@ -40,6 +40,7 @@ type Report = {
   status: string;
   created_at: string;
   item_title?: string;
+  item_owner_email?: string | null;
 };
 
 type DayCount = { day: string; kayip: number; bulundu: number };
@@ -97,6 +98,8 @@ export default function AdminPage() {
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
   const [blacklisting, setBlacklisting] = useState<string | null>(null);
   const [updatingReport, setUpdatingReport] = useState<string | null>(null);
+  const [evaluatingReport, setEvaluatingReport] = useState<string | null>(null);
+  const [reportMessage, setReportMessage] = useState("");
   const [stats, setStats] = useState({
     total: 0, lost: 0, found: 0, resolved: 0, views: 0,
     pendingReports: 0,
@@ -338,7 +341,7 @@ export default function AdminPage() {
     }
   }
 
-  async function handleReportAction(reportId: string, action: "reviewed" | "dismissed") {
+  async function handleReportAction(reportId: string, action: "remove_item" | "warn_user" | "dismiss", message?: string) {
     setUpdatingReport(reportId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -348,14 +351,21 @@ export default function AdminPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token || ""}`,
         },
-        body: JSON.stringify({ reportId, status: action }),
+        body: JSON.stringify({ reportId, action, adminMessage: message || "" }),
       });
       if (res.ok) {
-        toast.success(action === "reviewed" ? "Raporlandı olarak işaretlendi." : "Reddedildi.");
+        const successMsg =
+          action === "remove_item" ? "İlan kaldırıldı, kullanıcıya bildirim gönderildi." :
+          action === "warn_user" ? "Uyarı mesajı kullanıcıya gönderildi." :
+          "Şikayet reddedildi (asılsız).";
+        toast.success(successMsg);
+        const newStatus = action === "dismiss" ? "dismissed" : "reviewed";
         setReports((prev) =>
-          prev.map((r) => r.id === reportId ? { ...r, status: action } : r)
+          prev.map((r) => r.id === reportId ? { ...r, status: newStatus } : r)
         );
         setStats((prev) => ({ ...prev, pendingReports: Math.max(0, prev.pendingReports - 1) }));
+        setEvaluatingReport(null);
+        setReportMessage("");
       } else {
         const d = await res.json();
         toast.error(d.error || "Güncellenemedi.");
@@ -772,52 +782,101 @@ export default function AdminPage() {
                   Henüz şikayet yok.
                 </div>
               ) : (
-                reports.map((report) => (
-                  <div key={report.id} className={`rounded-2xl border p-4 ${report.status === "pending" ? "border-red-500/20 bg-red-500/5" : "border-slate-800 bg-slate-900 opacity-60"}`}>
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-                            report.status === "pending" ? "bg-red-500/20 text-red-300" :
-                            report.status === "reviewed" ? "bg-green-500/20 text-green-300" :
-                            "bg-slate-700 text-slate-400"
-                          }`}>
-                            {report.status === "pending" ? "Bekliyor" : report.status === "reviewed" ? "İncelendi" : "Reddedildi"}
-                          </span>
-                          <span className="text-xs text-slate-400 font-medium">{REASON_LABELS[report.reason] || report.reason}</span>
+                reports.map((report) => {
+                  const isEvaluating = evaluatingReport === report.id;
+                  const isPending = report.status === "pending";
+                  return (
+                    <div key={report.id} className={`rounded-2xl border transition-all ${isPending ? "border-red-500/20 bg-red-500/5" : "border-slate-800 bg-slate-900 opacity-60"}`}>
+                      {/* Report summary */}
+                      <div className="flex items-start justify-between gap-4 p-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                              report.status === "pending" ? "bg-red-500/20 text-red-300" :
+                              report.status === "reviewed" ? "bg-green-500/20 text-green-300" :
+                              "bg-slate-700 text-slate-400"
+                            }`}>
+                              {report.status === "pending" ? "⏳ Bekliyor" : report.status === "reviewed" ? "✅ İncelendi" : "❌ Reddedildi"}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-300">{REASON_LABELS[report.reason] || report.reason}</span>
+                          </div>
+                          <Link href={`/items/${report.item_id}`} target="_blank" className="text-sm font-semibold text-white hover:text-blue-300">
+                            {report.item_title} ↗
+                          </Link>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            Şikayet eden: <span className="text-slate-400">{report.reporter_email}</span>
+                            {report.item_owner_email && (
+                              <> · İlan sahibi: <span className="text-slate-400">{report.item_owner_email}</span></>
+                            )}
+                            {" · "}{new Date(report.created_at).toLocaleDateString("tr-TR")}
+                          </p>
+                          {report.details && (
+                            <p className="mt-2 rounded-lg border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-xs text-slate-300 italic">
+                              &quot;{report.details}&quot;
+                            </p>
+                          )}
                         </div>
-                        <Link href={`/items/${report.item_id}`} className="text-sm font-semibold text-white hover:text-blue-300">
-                          {report.item_title}
-                        </Link>
-                        <p className="mt-0.5 text-xs text-slate-500">
-                          {report.reporter_email} · {new Date(report.created_at).toLocaleDateString("tr-TR")}
-                        </p>
-                        {report.details && (
-                          <p className="mt-2 text-xs text-slate-400 italic">"{report.details}"</p>
+                        {isPending && (
+                          <button
+                            onClick={() => {
+                              if (isEvaluating) {
+                                setEvaluatingReport(null);
+                                setReportMessage("");
+                              } else {
+                                setEvaluatingReport(report.id);
+                                setReportMessage(`"${report.item_title}" ilanı hakkında aldığımız şikayeti inceledik. `);
+                              }
+                            }}
+                            className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${isEvaluating ? "border-slate-600 bg-slate-800 text-slate-400" : "border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"}`}
+                          >
+                            {isEvaluating ? "İptal" : "Değerlendir ▾"}
+                          </button>
                         )}
                       </div>
 
-                      {report.status === "pending" && (
-                        <div className="flex shrink-0 gap-2">
-                          <button
-                            onClick={() => handleReportAction(report.id, "reviewed")}
-                            disabled={updatingReport === report.id}
-                            className="rounded-xl border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs text-green-400 hover:bg-green-500/20 disabled:opacity-50"
-                          >
-                            İncelendi
-                          </button>
-                          <button
-                            onClick={() => handleReportAction(report.id, "dismissed")}
-                            disabled={updatingReport === report.id}
-                            className="rounded-xl border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-700 disabled:opacity-50"
-                          >
-                            Reddet
-                          </button>
+                      {/* Evaluation panel */}
+                      {isEvaluating && isPending && (
+                        <div className="border-t border-slate-700/50 px-4 pb-4 pt-3 space-y-3">
+                          <div>
+                            <label className="mb-1.5 block text-xs font-semibold text-slate-400">
+                              Kullanıcıya gönderilecek admin mesajı <span className="text-slate-600">(opsiyonel — reddetmede gönderilmez)</span>
+                            </label>
+                            <textarea
+                              value={reportMessage}
+                              onChange={(e) => setReportMessage(e.target.value)}
+                              rows={3}
+                              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
+                              placeholder="Admin mesajı yazın..."
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => handleReportAction(report.id, "remove_item", reportMessage)}
+                              disabled={updatingReport === report.id}
+                              className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition disabled:opacity-50"
+                            >
+                              {updatingReport === report.id ? "..." : "🗑 İlanı Kaldır + Bildirim Gönder"}
+                            </button>
+                            <button
+                              onClick={() => handleReportAction(report.id, "warn_user", reportMessage)}
+                              disabled={updatingReport === report.id}
+                              className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition disabled:opacity-50"
+                            >
+                              {updatingReport === report.id ? "..." : "⚠️ İlanı Bırak + Uyarı Gönder"}
+                            </button>
+                            <button
+                              onClick={() => handleReportAction(report.id, "dismiss")}
+                              disabled={updatingReport === report.id}
+                              className="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-700 transition disabled:opacity-50"
+                            >
+                              {updatingReport === report.id ? "..." : "✗ Asılsız / Reddet"}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}
