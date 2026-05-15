@@ -111,7 +111,23 @@ export default function AppHeader() {
   }
 
   useEffect(() => {
+    // Close menus on route change — no DB queries needed here
+    setMenuOpen(false);
+    setNotifOpen(false);
+    setShowIlanMenu(false);
+    setAboutOpen(false);
+    setMobileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    let lastFetchTime = 0;
+
     const loadHeaderData = async () => {
+      const now = Date.now();
+      // Throttle: at most once every 30 seconds
+      if (now - lastFetchTime < 30_000) return;
+      lastFetchTime = now;
+
       try {
         const { data: sessionData, error: sessionError } =
           await supabase.auth.getSession();
@@ -149,20 +165,27 @@ export default function AppHeader() {
             .select("id")
             .in("conversation_id", conversationIds)
             .eq("is_read", false)
-            .neq("sender_email", currentEmail);
+            .neq("sender_email", currentEmail)
+            .limit(100);
           setMessageCount((unreadMessages || []).length);
         }
       } catch { /* ignore */ }
     };
 
-    loadHeaderData();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => { loadHeaderData(); });
+    // Bypass throttle for auth changes
+    const loadHeaderDataForced = async () => {
+      lastFetchTime = 0;
+      await loadHeaderData();
+    };
+
+    loadHeaderDataForced();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => { loadHeaderDataForced(); });
     window.addEventListener("focus", loadHeaderData);
     return () => {
       subscription.unsubscribe();
       window.removeEventListener("focus", loadHeaderData);
     };
-  }, [pathname]);
+  }, []);
 
   useEffect(() => {
     async function init() {

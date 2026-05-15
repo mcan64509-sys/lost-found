@@ -80,14 +80,18 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    Promise.all([
-      supabase.from("items").select("*", { count: "exact", head: true }).eq("moderation_status", "approved"),
-      supabase.from("items").select("*", { count: "exact", head: true }).eq("type", "lost").eq("moderation_status", "approved"),
-      supabase.from("items").select("*", { count: "exact", head: true }).eq("type", "found").eq("moderation_status", "approved"),
-      supabase.from("items").select("*", { count: "exact", head: true }).eq("status", "resolved").eq("moderation_status", "approved"),
-    ]).then(([{ count: total }, { count: lost }, { count: found }, { count: resolved }]) => {
-      setStats({ total: total ?? 0, lost: lost ?? 0, found: found ?? 0, resolved: resolved ?? 0 });
-    });
+    supabase
+      .from("items")
+      .select("type, status")
+      .eq("moderation_status", "approved")
+      .then(({ data }) => {
+        if (!data) return;
+        const total = data.length;
+        const lost = data.filter((i) => i.type === "lost").length;
+        const found = data.filter((i) => i.type === "found").length;
+        const resolved = data.filter((i) => i.status === "resolved").length;
+        setStats({ total, lost, found, resolved });
+      });
   }, []);
 
   return (

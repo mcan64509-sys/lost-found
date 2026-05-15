@@ -140,7 +140,10 @@ function SearchPageContent() {
       const { data, error } = await supabase
         .from("items")
         .select("id, type, title, description, category, location, lat, lng, image_url, created_at, view_count, status, reward_amount, is_urgent, is_featured, priority_level")
-        .eq("moderation_status", "approved");
+        .eq("moderation_status", "approved")
+        .order("priority_level", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(600);
       if (!error) setAllItems(data as SearchItem[]);
       setLoading(false);
     }
