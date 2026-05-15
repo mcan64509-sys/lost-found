@@ -99,17 +99,17 @@ export default function HomePage() {
         <HomeBanner />
 
         {/* ── İSTATİSTİKLER ── */}
-        <div className="border-b border-slate-800/60 bg-slate-900/30">
+        <div className="border-b border-slate-800/60 bg-gradient-to-b from-slate-900/60 to-slate-950">
           <div className="mx-auto max-w-7xl px-4 py-5">
-            <div className="grid grid-cols-4 divide-x divide-slate-800">
+            <div className="grid grid-cols-4 divide-x divide-slate-800/60">
               {[
-                { label: t.home.statTotal,    value: stats.total,    color: "text-white" },
-                { label: t.home.statLost,     value: stats.lost,     color: "text-amber-400" },
-                { label: t.home.statFound,    value: stats.found,    color: "text-emerald-400" },
-                { label: t.home.statResolved, value: stats.resolved, color: "text-blue-400" },
+                { label: t.home.statTotal,    value: stats.total,    color: "text-white",       glow: "" },
+                { label: t.home.statLost,     value: stats.lost,     color: "text-amber-400",   glow: "drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]" },
+                { label: t.home.statFound,    value: stats.found,    color: "text-emerald-400", glow: "drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]" },
+                { label: t.home.statResolved, value: stats.resolved, color: "text-blue-400",    glow: "drop-shadow-[0_0_8px_rgba(96,165,250,0.3)]" },
               ].map((s) => (
-                <div key={s.label} className="text-center px-3 py-1">
-                  <div className={`text-xl md:text-2xl font-black ${s.color}`}>{s.value}</div>
+                <div key={s.label} className="text-center px-3 py-2 group">
+                  <div className={`text-xl md:text-2xl font-black transition-all duration-300 group-hover:scale-110 ${s.color} ${s.glow}`}>{s.value.toLocaleString()}</div>
                   <div className="text-[10px] md:text-xs text-slate-500 mt-0.5 leading-tight">{s.label}</div>
                 </div>
               ))}
@@ -118,18 +118,18 @@ export default function HomePage() {
         </div>
 
         {/* ── KATEGORİLER ── */}
-        <section className="mx-auto max-w-7xl px-4 py-8 md:py-12">
-          <h2 className="text-lg font-bold text-slate-300 mb-5 text-center tracking-wide uppercase text-xs">
+        <section className="mx-auto max-w-7xl px-4 py-8 md:py-12 animate-fade-in-up">
+          <h2 className="text-[11px] font-bold text-slate-500 mb-5 text-center tracking-widest uppercase">
             {t.cats.all}
           </h2>
-          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 stagger">
             {CATEGORY_ITEMS.map((cat) => (
               <Link
                 key={cat.dbKey}
                 href={isAuthed ? `/search?cat=${encodeURIComponent(cat.dbKey)}` : `/auth/login?redirect=/search?cat=${encodeURIComponent(cat.dbKey)}`}
-                className="group flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 hover:border-slate-600 hover:bg-slate-800 hover:-translate-y-0.5 transition-all duration-150"
+                className="group flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 hover:border-slate-600 hover:bg-slate-800 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30 transition-all duration-200 animate-fade-in-up"
               >
-                <span className="text-3xl">{cat.emoji}</span>
+                <span className="text-3xl group-hover:scale-110 transition-transform duration-200">{cat.emoji}</span>
                 <span className="text-[11px] font-semibold text-slate-400 group-hover:text-white transition-colors text-center leading-tight">
                   {t.cats[cat.i18n]}
                 </span>
@@ -139,8 +139,8 @@ export default function HomePage() {
         </section>
 
         {/* ── YAKINIMDAKI İLANLAR ── */}
-        <section className="mx-auto max-w-7xl px-4 pb-8">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+        <section className="mx-auto max-w-7xl px-4 pb-8 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+          <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/80 to-slate-900/40 p-5 backdrop-blur-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-base font-bold text-white">{t.home.nearbyTitle}</h2>
@@ -149,7 +149,7 @@ export default function HomePage() {
               {!geoAsked && (
                 <button
                   onClick={requestNearby}
-                  className="flex-shrink-0 flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-400 hover:bg-blue-500/20 transition"
+                  className="flex-shrink-0 flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-400 hover:bg-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-150"
                 >
                   📍 {t.home.nearbyEnable}
                 </button>
@@ -166,7 +166,7 @@ export default function HomePage() {
                   <Link
                     key={item.id}
                     href={isAuthed ? `/items/${item.id}` : `/auth/login?redirect=/items/${item.id}`}
-                    className="group rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden hover:border-slate-600 transition"
+                    className="group rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden hover:border-slate-600 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30 transition-all duration-200"
                   >
                     <div className="relative aspect-square bg-slate-800">
                       {item.image_url ? (
@@ -190,25 +190,35 @@ export default function HomePage() {
         </section>
 
         {/* ── FOOTER ── */}
-        <footer className="border-t border-slate-800/60 mt-6">
-          <div className="mx-auto max-w-7xl px-4 py-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
+        <footer className="border-t border-slate-800/40 mt-8 bg-gradient-to-b from-slate-950 to-slate-950">
+          <div className="mx-auto max-w-7xl px-4 py-8">
+            <div className="flex flex-wrap items-center justify-between gap-6">
               <div>
-                <div className="text-sm font-bold text-white">BulanVarMı?</div>
-                <div className="text-xs text-slate-600 mt-0.5">
+                <div className="text-base font-black text-white tracking-tight">BulanVarMı?</div>
+                <div className="text-xs text-slate-600 mt-1">
                   © {new Date().getFullYear()} {t.home.footerTagline}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-4 text-xs text-slate-600">
-                <Link href="/gizlilik"         className="hover:text-slate-400 transition">{t.home.footerPrivacy}</Link>
-                <Link href="/kullanim-sartlari" className="hover:text-slate-400 transition">{t.home.footerTerms}</Link>
-                <Link href="/iade-politikasi"   className="hover:text-slate-400 transition">{t.home.footerRefund}</Link>
-                <Link href="/hikayeler"         className="hover:text-slate-400 transition">{t.home.footerStories}</Link>
-                <Link href="/kayip-buro"        className="hover:text-slate-400 transition">{t.home.footerBureaus}</Link>
+              <div className="flex flex-wrap gap-5 text-xs text-slate-500">
+                {[
+                  { href: "/gizlilik",          label: t.home.footerPrivacy },
+                  { href: "/kullanim-sartlari", label: t.home.footerTerms },
+                  { href: "/iade-politikasi",   label: t.home.footerRefund },
+                  { href: "/hikayeler",         label: t.home.footerStories },
+                  { href: "/kayip-buro",        label: t.home.footerBureaus },
+                ].map((link) => (
+                  <Link key={link.href} href={link.href}
+                    className="hover:text-slate-300 transition-colors duration-150 hover:underline underline-offset-2">
+                    {link.label}
+                  </Link>
+                ))}
                 {isAuthed && (
-                  <Link href="/favorites" className="hover:text-slate-400 transition">{t.home.footerFavorites}</Link>
+                  <Link href="/favorites" className="hover:text-slate-300 transition-colors duration-150 hover:underline underline-offset-2">
+                    {t.home.footerFavorites}
+                  </Link>
                 )}
-                <Link href={isAuthed ? "/search" : "/auth/login"} className="hover:text-slate-400 transition">
+                <Link href={isAuthed ? "/search" : "/auth/login"}
+                  className="hover:text-slate-300 transition-colors duration-150 hover:underline underline-offset-2">
                   {t.home.footerAllListings}
                 </Link>
               </div>

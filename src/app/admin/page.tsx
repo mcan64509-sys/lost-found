@@ -123,14 +123,17 @@ export default function AdminPage() {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = token || session?.access_token || "";
-    const [{ data: itemData }, { data: reportData }, { data: sightingData }, usersRes] = await Promise.all([
+    const [{ data: itemData }, { data: sightingData }, usersRes, reportsRes] = await Promise.all([
       supabase.from("items").select("*").order("created_at", { ascending: false }),
-      supabase.from("reports").select("*, items(title)").order("created_at", { ascending: false }),
       supabase.from("sightings").select("*, items(title)").order("created_at", { ascending: false }).limit(200),
       fetch("/api/admin/users", {
         headers: { Authorization: `Bearer ${accessToken}` },
       }).then((r) => r.json()),
+      fetch("/api/admin/reports", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }).then((r) => r.json()),
     ]);
+    const reportData = reportsRes.reports ?? [];
 
     const all = (itemData || []) as AdminItem[];
     setItems(all);
@@ -140,7 +143,7 @@ export default function AdminPage() {
       found: all.filter((i) => i.type === "found").length,
       resolved: all.filter((i) => i.status === "resolved").length,
       views: all.reduce((acc, i) => acc + (i.view_count || 0), 0),
-      pendingReports: (reportData || []).filter((r: Report) => r.status === "pending").length,
+      pendingReports: (reportData as Report[]).filter((r) => r.status === "pending").length,
     });
 
     // Recharts için son 14 günlük günlük veri
@@ -158,11 +161,7 @@ export default function AdminPage() {
     }
     setChartData(days);
 
-    const reportsWithTitle = (reportData || []).map((r: Record<string, unknown>) => ({
-      ...(r as Report),
-      item_title: (r.items as { title?: string } | null)?.title || "—",
-    }));
-    setReports(reportsWithTitle);
+    setReports(reportData as Report[]);
 
     const sightingsWithTitle = (sightingData || []).map((s: Record<string, unknown>) => ({
       ...(s as Sighting),
@@ -341,17 +340,28 @@ export default function AdminPage() {
 
   async function handleReportAction(reportId: string, action: "reviewed" | "dismissed") {
     setUpdatingReport(reportId);
-    const { error } = await supabase
-      .from("reports")
-      .update({ status: action })
-      .eq("id", reportId);
-    if (error) { toast.error("Güncellenemedi."); }
-    else {
-      toast.success(action === "reviewed" ? "Raporlandı olarak işaretlendi." : "Reddedildi.");
-      setReports((prev) =>
-        prev.map((r) => r.id === reportId ? { ...r, status: action } : r)
-      );
-      setStats((prev) => ({ ...prev, pendingReports: Math.max(0, prev.pendingReports - 1) }));
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/reports", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token || ""}`,
+        },
+        body: JSON.stringify({ reportId, status: action }),
+      });
+      if (res.ok) {
+        toast.success(action === "reviewed" ? "Raporlandı olarak işaretlendi." : "Reddedildi.");
+        setReports((prev) =>
+          prev.map((r) => r.id === reportId ? { ...r, status: action } : r)
+        );
+        setStats((prev) => ({ ...prev, pendingReports: Math.max(0, prev.pendingReports - 1) }));
+      } else {
+        const d = await res.json();
+        toast.error(d.error || "Güncellenemedi.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
     }
     setUpdatingReport(null);
   }
@@ -374,29 +384,37 @@ export default function AdminPage() {
   return (
     <>
       <AppHeader />
-      <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
+      <main className="min-h-screen bg-slate-950 px-6 py-10 text-white animate-fade-in">
         <div className="mx-auto max-w-6xl">
           <div className="mb-8 flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Admin Paneli</h1>
-              <p className="mt-1 text-slate-400">Site yönetimi</p>
+              <h1 className="text-3xl font-bold text-white">Admin Paneli</h1>
+              <p className="mt-1 text-slate-500">Site yönetimi · {adminEmail}</p>
             </div>
-            <Link href="/" className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-white hover:bg-slate-900">← Ana Sayfa</Link>
+            <Link href="/" className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-white hover:bg-slate-800 transition">← Ana Sayfa</Link>
           </div>
 
           {/* Tab bar */}
-          <div className="mb-6 flex flex-wrap gap-1 rounded-2xl border border-slate-800 bg-slate-900 p-1">
+          <div className="mb-6 flex flex-wrap gap-1 rounded-2xl border border-slate-800 bg-slate-900/60 p-1 backdrop-blur-sm">
             {([
-              ["stats", "İstatistikler"],
-              ["items", "İlanlar"],
-              ["reports", stats.pendingReports > 0 ? `Şikayetler (${stats.pendingReports})` : "Şikayetler"],
-              ["users", `Kullanıcılar (${adminUsers.length})`],
-              ["sightings", sightings.length > 0 ? `👁 Gördüm (${sightings.length})` : "👁 Gördüm"],
-              ["moderation", pendingItems.length > 0 ? `🛡 Moderasyon (${pendingItems.length})` : "🛡 Moderasyon"],
-            ] as const).map(([tab, label]) => (
+              ["stats", "📊 İstatistikler", 0],
+              ["items", "📋 İlanlar", items.length],
+              ["reports", "⚑ Şikayetler", stats.pendingReports],
+              ["users", "👥 Kullanıcılar", adminUsers.length],
+              ["sightings", "👁 Gördüm", sightings.length],
+              ["moderation", "🛡 Moderasyon", pendingItems.length],
+            ] as const).map(([tab, label, count]) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition ${activeTab === tab ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"}`}>
+                className={`relative flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === tab ? "bg-slate-700 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-slate-800/50"}`}>
                 {label}
+                {count > 0 && (
+                  <span className={`ml-1.5 inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                    tab === "reports" && count > 0 ? "bg-red-500 text-white animate-pulse" :
+                    "bg-slate-700 text-slate-300"
+                  }`}>
+                    {count}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -406,17 +424,17 @@ export default function AdminPage() {
           ) : activeTab === "stats" ? (
             <div className="space-y-8">
               {/* Stat kartları */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 stagger">
                 {[
-                  { label: "Toplam İlan", value: stats.total, color: "text-white" },
-                  { label: "Kayıp", value: stats.lost, color: "text-amber-300" },
-                  { label: "Bulundu", value: stats.found, color: "text-emerald-300" },
-                  { label: "Çözüldü", value: stats.resolved, color: "text-green-300" },
-                  { label: "Görüntülenme", value: stats.views, color: "text-blue-300" },
+                  { label: "Toplam İlan", value: stats.total, color: "text-white", border: "border-slate-800" },
+                  { label: "Kayıp", value: stats.lost, color: "text-amber-300", border: "border-amber-500/20" },
+                  { label: "Bulundu", value: stats.found, color: "text-emerald-300", border: "border-emerald-500/20" },
+                  { label: "Çözüldü", value: stats.resolved, color: "text-green-300", border: "border-green-500/20" },
+                  { label: "Görüntülenme", value: stats.views, color: "text-blue-300", border: "border-blue-500/20" },
                 ].map((s) => (
-                  <div key={s.label} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+                  <div key={s.label} className={`group rounded-2xl border ${s.border} bg-slate-900 p-5 hover:bg-slate-800/50 transition-all duration-200 animate-fade-in-up`}>
                     <p className="text-xs text-slate-500">{s.label}</p>
-                    <p className={`mt-2 text-3xl font-black ${s.color}`}>{s.value.toLocaleString("tr-TR")}</p>
+                    <p className={`mt-2 text-3xl font-black transition-transform duration-200 group-hover:scale-105 ${s.color}`}>{s.value.toLocaleString("tr-TR")}</p>
                   </div>
                 ))}
               </div>
@@ -748,7 +766,7 @@ export default function AdminPage() {
             </div>
           ) : (
             /* Reports tab */
-            <div className="space-y-3">
+            <div className="space-y-3 animate-fade-in-up">
               {reports.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
                   Henüz şikayet yok.

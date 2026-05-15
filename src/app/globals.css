@@ -95,6 +95,52 @@
   animation: shimmer 1.6s infinite;
 }
 
+/* ── Card hover glow ─────────────────────────────────────────── */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* ── Gradient text ───────────────────────────────────────────── */
+.text-gradient {
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Focus ring ──────────────────────────────────────────────── */
+.focus-ring:focus-visible {
+  outline: 2px solid rgba(59,130,246,0.7);
+  outline-offset: 2px;
+}
+
+/* ── Glow border on hover ────────────────────────────────────── */
+@keyframes border-glow {
+  0%, 100% { border-color: rgba(59,130,246,0.15); }
+  50%       { border-color: rgba(59,130,246,0.4); }
+}
+.animate-border-glow {
+  animation: border-glow 2s ease-in-out infinite;
+}
+
+/* ── Spin animation ──────────────────────────────────────────── */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.animate-spin-slow { animation: spin-slow 8s linear infinite; }
+
+/* ── Bounce in ───────────────────────────────────────────────── */
+@keyframes bounce-in {
+  0%   { opacity: 0; transform: scale(0.7); }
+  60%  { opacity: 1; transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.animate-bounce-in { animation: bounce-in 0.4s cubic-bezier(0.34,1.56,0.64,1) both; }
+
 /* ── Base ─────────────────────────────────────────────────────── */
 :root {
   --background: #020617;

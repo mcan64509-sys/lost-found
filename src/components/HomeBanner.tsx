@@ -125,22 +125,26 @@ export default function HomeBanner() {
         className="relative flex flex-col items-center justify-center text-center px-6 py-14 md:py-20 min-h-[52vh] animate-fade-in-up"
       >
         {/* Icon bubble */}
-        <div className={`mb-5 w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-3xl border ${cfg.iconBg} flex items-center justify-center`}>
-          <Icon className={`w-8 h-8 md:w-10 md:h-10 ${cfg.iconColor}`} />
+        <div className={`mb-5 w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-3xl border ${cfg.iconBg} flex items-center justify-center animate-bounce-in shadow-lg`}
+          style={{ animationDelay: "80ms" }}>
+          <Icon className={`w-8 h-8 md:w-10 md:h-10 ${cfg.iconColor} animate-float`} />
         </div>
 
         {/* Slide number badge */}
-        <div className={`mb-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold tracking-widest uppercase ${cfg.badge}`}>
+        <div className={`mb-4 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold tracking-widest uppercase ${cfg.badge}`}
+          style={{ animationDelay: "120ms" }}>
           {current + 1} / {total}
         </div>
 
         {/* Title */}
-        <h2 className={`text-3xl md:text-5xl font-black mb-4 ${cfg.accent} leading-tight max-w-xl`}>
+        <h2 className={`text-3xl md:text-5xl font-black mb-4 ${cfg.accent} leading-tight max-w-xl animate-fade-in-up`}
+          style={{ animationDelay: "160ms" }}>
           {slide.title}
         </h2>
 
         {/* Description */}
-        <p className="text-slate-300 text-sm md:text-base leading-relaxed max-w-md">
+        <p className="text-slate-300 text-sm md:text-base leading-relaxed max-w-md animate-fade-in"
+          style={{ animationDelay: "240ms" }}>
           {slide.sub}
         </p>
       </div>
