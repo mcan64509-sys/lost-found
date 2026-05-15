@@ -3,12 +3,6 @@ import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -20,6 +14,15 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export async function POST(req: NextRequest) {
   try {
+    // Lazy init — env yoksa build patlamaz, sadece runtime'da hata verir
+    if (process.env.VAPID_EMAIL && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+      webpush.setVapidDetails(
+        process.env.VAPID_EMAIL,
+        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY
+      );
+    }
+
     const { userEmail, title, body, url, sendEmail = false } = await req.json();
     if (!userEmail || !title) {
       return NextResponse.json({ error: "Eksik bilgi" }, { status: 400 });
