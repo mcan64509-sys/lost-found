@@ -20,51 +20,26 @@ export async function POST(req: NextRequest) {
     const product = PRODUCTS[productType];
     if (!product) return NextResponse.json({ error: "Geçersiz ürün" }, { status: 400 });
 
-    const isSubscription = productType === "subscription_monthly";
-
-    let session;
-
-    if (isSubscription) {
-      // Abonelik için recurring price oluştur
-      const stripePrice = await stripe.prices.create({
-        currency: product.currency,
-        unit_amount: product.price_cents,
-        recurring: { interval: "month" },
-        product_data: { name: product.label },
-      });
-
-      session = await stripe.checkout.sessions.create({
-        mode: "subscription",
-        payment_method_types: ["card"],
-        line_items: [{ price: stripePrice.id, quantity: 1 }],
-        success_url: `${APP_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${APP_URL}/payment/cancel`,
-        customer_email: userEmail,
-        metadata: { productType, itemId: itemId || "", userEmail },
-      });
-    } else {
-      session = await stripe.checkout.sessions.create({
-        mode: "payment",
-        payment_method_types: ["card"],
-        line_items: [{
-          quantity: 1,
-          price_data: {
-            currency: product.currency,
-            unit_amount: product.price_cents,
-            product_data: {
-              name: product.label,
-              description: product.desc,
-            },
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: product.currency,
+          unit_amount: product.price_cents,
+          product_data: {
+            name: product.label,
+            description: product.desc,
           },
-        }],
-        success_url: `${APP_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${APP_URL}/payment/cancel`,
-        customer_email: userEmail,
-        metadata: { productType, itemId: itemId || "", userEmail },
-      });
-    }
+        },
+      }],
+      success_url: `${APP_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${APP_URL}/payment/cancel`,
+      customer_email: userEmail,
+      metadata: { productType, itemId: itemId || "", userEmail },
+    });
 
-    // Pending ödeme kaydı oluştur
     await supabase.from("payments").insert({
       user_email: userEmail,
       item_id: itemId || null,

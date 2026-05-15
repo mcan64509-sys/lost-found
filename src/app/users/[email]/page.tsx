@@ -74,12 +74,25 @@ export default function UserProfilePage() {
           .maybeSingle();
 
         if (!profileData) {
-          setNotFound(true);
-          return;
-        }
+          // Profil satırı olmasa da ilanları varsa göster
+          const { data: anyItem } = await supabase
+            .from("items")
+            .select("id")
+            .eq("created_by_email", emailParam)
+            .limit(1)
+            .maybeSingle();
 
-        setProfile(profileData);
-        setIsBanned(!!(profileData as { is_banned?: boolean }).is_banned);
+          if (!anyItem) {
+            setNotFound(true);
+            return;
+          }
+          // Profil bilgisi olmayan kullanıcı için varsayılan değerler
+          setProfile({ full_name: null, avatar_url: null, created_at: new Date().toISOString() });
+          setIsBanned(false);
+        } else {
+          setProfile(profileData);
+          setIsBanned(!!(profileData as { is_banned?: boolean }).is_banned);
+        }
 
         const { data: itemsData } = await supabase
           .from("items")

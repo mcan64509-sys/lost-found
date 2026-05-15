@@ -46,21 +46,19 @@ export async function POST(req: NextRequest) {
       })
       .eq("stripe_session_id", session.id);
 
-    // İlan varsa priority_level güncelle
+    // İlan varsa priority_level ve is_urgent güncelle
     if (itemId) {
+      const updateFields: Record<string, unknown> = {
+        priority_level: product.priority_level,
+      };
+      if ("is_urgent" in product) {
+        updateFields.is_urgent = product.is_urgent;
+      }
       await supabase.from("items")
-        .update({ priority_level: product.priority_level })
+        .update(updateFields)
         .eq("id", itemId)
         .eq("created_by_email", userEmail);
     }
-  }
-
-  if (event.type === "customer.subscription.deleted") {
-    const sub = event.data.object as Stripe.Subscription;
-    // Abonelik iptal — ilgili ilanları normale döndür
-    await supabase.from("payments")
-      .update({ status: "cancelled" })
-      .eq("stripe_subscription_id", sub.id);
   }
 
   return NextResponse.json({ ok: true });

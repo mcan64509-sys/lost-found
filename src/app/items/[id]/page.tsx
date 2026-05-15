@@ -945,18 +945,19 @@ export default function ItemDetailPage() {
                 </button>
               </div>
 
-              {/* İlan sahibi için Öne Çıkar butonu */}
-              {isOwner && item.status !== "resolved" && (
+              {/* Öne Çıkar — sadece kayıp ilanlar */}
+              {isOwner && item.type === "lost" && item.status !== "resolved" && (
                 <div className="mt-3">
                   <a
                     href={`/upgrade?item=${id}`}
                     className="flex items-center justify-center gap-2 w-full rounded-2xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition"
                   >
                     ⭐ İlanı Öne Çıkar
-                    {(item.priority_level ?? 0) > 0 && (
-                      <span className="text-xs bg-amber-500/20 px-2 py-0.5 rounded-full">
-                        {item.priority_level === 3 ? "🥇 Altın" : item.priority_level === 2 ? "🥈 Gümüş" : "🥉 Bronz"} aktif
-                      </span>
+                    {item.is_urgent && (
+                      <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">🚨 Acil aktif</span>
+                    )}
+                    {!item.is_urgent && (item.priority_level ?? 0) > 0 && (
+                      <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">⭐ Altın aktif</span>
                     )}
                   </a>
                 </div>

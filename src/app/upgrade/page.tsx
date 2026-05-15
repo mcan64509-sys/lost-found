@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 import AppHeader from "../../components/AppHeader";
 import { supabase } from "../../lib/supabase";
 import { normalizeEmail } from "../../lib/utils";
 import { PRODUCTS, type ProductType } from "../../lib/stripe-products";
-import { Star, Zap, Check, ArrowRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+
+function formatTL(cents: number) {
+  return (cents / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ₺";
+}
 
 function UpgradeContent() {
   const router = useRouter();
@@ -16,6 +19,7 @@ function UpgradeContent() {
   const [userEmail, setUserEmail] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
   const [itemTitle, setItemTitle] = useState("");
+  const [itemType, setItemType] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -25,12 +29,43 @@ function UpgradeContent() {
       if (!email) router.push("/auth/login");
 
       if (itemId) {
-        const { data: item } = await supabase.from("items").select("title").eq("id", itemId).single();
-        if (item) setItemTitle(item.title);
+        const { data: item } = await supabase
+          .from("items")
+          .select("title, type")
+          .eq("id", itemId)
+          .single();
+        if (item) {
+          setItemTitle(item.title);
+          setItemType(item.type);
+        }
       }
     }
     load();
   }, [itemId, router]);
+
+  // Bulunan ilanlar ücretli özellik kullanamaz
+  if (itemType === "found") {
+    return (
+      <>
+        <AppHeader />
+        <main className="flex min-h-screen items-center justify-center bg-slate-950 text-white px-4">
+          <div className="text-center max-w-md">
+            <p className="text-5xl mb-4">✅</p>
+            <h1 className="text-2xl font-black mb-2">Bulundu ilanları ücretsiz!</h1>
+            <p className="text-slate-400 mb-6">
+              Bulundu ilanları tamamen ücretsizdir. Ücretli özellikler yalnızca kayıp ilanları için geçerlidir.
+            </p>
+            <button
+              onClick={() => router.back()}
+              className="rounded-2xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 transition"
+            >
+              Geri Dön
+            </button>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   async function handleCheckout(productType: ProductType) {
     if (!userEmail) { router.push("/auth/login"); return; }
@@ -55,121 +90,88 @@ function UpgradeContent() {
     <>
       <AppHeader />
       <main className="min-h-screen bg-slate-950 text-white">
-        <div className="mx-auto max-w-5xl px-4 py-12">
+        <div className="mx-auto max-w-3xl px-4 py-12">
 
-          {/* Başlık */}
           <div className="text-center mb-12">
-            <div className="w-16 h-16 rounded-3xl bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
-              <Star className="w-8 h-8 text-amber-400" />
-            </div>
             <h1 className="text-4xl font-black text-white mb-3">İlanını Öne Çıkar</h1>
             {itemTitle ? (
               <p className="text-slate-400">
-                <span className="text-white font-semibold">"{itemTitle}"</span> ilanı için öncelik seç
+                <span className="text-white font-semibold">"{itemTitle}"</span> ilanı için seçim yap
               </p>
             ) : (
               <p className="text-slate-400">Daha fazla kişiye ulaş, daha hızlı sonuç al</p>
             )}
           </div>
 
-          {/* Ürün kartları */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-            {products.map(([key, product]) => {
-              const isSubscription = key === "subscription_monthly";
-              const price = (product.price_cents / 100).toFixed(2);
-
-              return (
-                <div
-                  key={key}
-                  className={`relative rounded-3xl border p-6 flex flex-col ${product.color} ${isSubscription ? "ring-2 ring-purple-500/50" : ""}`}
-                >
-                  {isSubscription && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      EN İYİ DEĞER
-                    </div>
-                  )}
-
-                  <div className="text-3xl mb-3">{product.label.split(" ")[0]}</div>
-                  <h3 className="font-black text-white text-lg mb-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-10">
+            {products.map(([key, product]) => (
+              <div
+                key={key}
+                className={`relative rounded-3xl border p-7 flex flex-col gap-4 transition hover:scale-[1.02] ${product.color}`}
+              >
+                <div>
+                  <div className="text-4xl mb-2">{product.label.split(" ")[0]}</div>
+                  <h3 className="font-black text-white text-xl">
                     {product.label.split(" ").slice(1).join(" ")}
                   </h3>
-                  <p className="text-xs text-slate-500 mb-4 flex-1">{product.desc}</p>
-
-                  <div className="mb-4">
-                    <span className="text-3xl font-black text-white">€{price}</span>
-                    {isSubscription && <span className="text-slate-500 text-sm">/ay</span>}
-                    {!isSubscription && <span className="text-slate-500 text-sm"> / 30 gün</span>}
-                  </div>
-
-                  {/* Özellikler */}
-                  <ul className="space-y-1.5 mb-5">
-                    {key === "priority_bronze" && [
-                      "Listede öne çıkar",
-                      "Bronz rozet",
-                      "30 gün geçerli",
-                    ].map((f) => <li key={f} className="flex items-center gap-2 text-xs text-slate-400"><Check className="w-3 h-3 text-amber-600" />{f}</li>)}
-                    {key === "priority_silver" && [
-                      "Üst sıralarda gösterilir",
-                      "Gümüş rozet",
-                      "30 gün geçerli",
-                    ].map((f) => <li key={f} className="flex items-center gap-2 text-xs text-slate-400"><Check className="w-3 h-3 text-slate-300" />{f}</li>)}
-                    {key === "priority_gold" && [
-                      "En üst sırada",
-                      "Altın rozet",
-                      "30 gün geçerli",
-                    ].map((f) => <li key={f} className="flex items-center gap-2 text-xs text-slate-400"><Check className="w-3 h-3 text-yellow-400" />{f}</li>)}
-                    {key === "subscription_monthly" && [
-                      "Sınırsız Altın ilan",
-                      "Her ay otomatik yenilenir",
-                      "İstediğin zaman iptal",
-                    ].map((f) => <li key={f} className="flex items-center gap-2 text-xs text-slate-400"><Check className="w-3 h-3 text-purple-400" />{f}</li>)}
-                  </ul>
-
-                  <button
-                    onClick={() => handleCheckout(key)}
-                    disabled={loading === key}
-                    className={`w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-bold transition ${
-                      isSubscription
-                        ? "bg-purple-500 text-white hover:bg-purple-400"
-                        : "bg-white/10 text-white hover:bg-white/20"
-                    } disabled:opacity-50`}
-                  >
-                    {loading === key ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>Satın Al <ArrowRight className="w-3.5 h-3.5" /></>
-                    )}
-                  </button>
+                  <p className="text-sm text-slate-400 mt-1">{product.desc}</p>
                 </div>
-              );
-            })}
+
+                <div className="py-3 border-t border-b border-white/10">
+                  <span className="text-4xl font-black text-white">{formatTL(product.price_cents)}</span>
+                  <span className="text-slate-500 text-sm ml-1">/ 30 gün</span>
+                </div>
+
+                <ul className="space-y-2 flex-1">
+                  {product.features.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
+                      <span className="text-green-400">✓</span> {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => handleCheckout(key)}
+                  disabled={loading === key}
+                  className={`w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold transition disabled:opacity-50 ${
+                    key === "altin_ilan"
+                      ? "bg-yellow-500 text-slate-900 hover:bg-yellow-400"
+                      : "bg-red-600 text-white hover:bg-red-500"
+                  }`}
+                >
+                  {loading === key ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Satın Al"
+                  )}
+                </button>
+              </div>
+            ))}
           </div>
 
-          {/* Güven bilgileri */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center text-sm">
               <div>
                 <div className="text-xl mb-1">🔒</div>
                 <div className="font-semibold text-white">Güvenli Ödeme</div>
-                <div className="text-xs text-slate-500 mt-0.5">Stripe altyapısı, 256-bit SSL şifreleme</div>
+                <div className="text-xs text-slate-500 mt-0.5">Stripe altyapısı, 256-bit SSL</div>
               </div>
               <div>
                 <div className="text-xl mb-1">💳</div>
-                <div className="font-semibold text-white">Tüm Kartlar Kabul</div>
-                <div className="text-xs text-slate-500 mt-0.5">Visa, Mastercard, American Express</div>
+                <div className="font-semibold text-white">Tüm Kartlar</div>
+                <div className="text-xs text-slate-500 mt-0.5">Visa, Mastercard, Troy</div>
               </div>
               <div>
-                <div className="text-xl mb-1">↩️</div>
-                <div className="font-semibold text-white">İptal Garantisi</div>
-                <div className="text-xs text-slate-500 mt-0.5">Aboneliği istediğin zaman iptal edebilirsin</div>
+                <div className="text-xl mb-1">📋</div>
+                <div className="font-semibold text-white">30 Gün Geçerli</div>
+                <div className="text-xs text-slate-500 mt-0.5">Otomatik abonelik yok</div>
               </div>
             </div>
           </div>
 
-          {/* Test modu notu */}
           {process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.includes("test") && (
             <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-center text-xs text-amber-400">
-              🧪 Test modu aktif — Gerçek ödeme alınmaz. Test kartı: <strong>4242 4242 4242 4242</strong>, tarih: herhangi gelecek tarih, CVV: herhangi 3 rakam
+              🧪 Test modu — Gerçek ödeme alınmaz. Test kartı: <strong>4242 4242 4242 4242</strong>
             </div>
           )}
         </div>
