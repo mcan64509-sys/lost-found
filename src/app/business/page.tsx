@@ -9,6 +9,7 @@ import { supabase } from "../../lib/supabase";
 import { normalizeEmail } from "../../lib/utils";
 import { toast } from "sonner";
 import { Building2, Package, CheckCircle2, Clock, Eye } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
 
 type BusinessProfile = {
   id: string;
@@ -45,6 +46,8 @@ export default function BusinessPage() {
   const [converting, setConverting] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [companyType, setCompanyType] = useState("sirket");
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   useEffect(() => {
     async function init() {
@@ -121,6 +124,31 @@ export default function BusinessPage() {
       toast.error("Bir hata oluştu.");
     } finally {
       setConverting(false);
+    }
+  }
+
+  function toggleSelectItem(id: string) {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    if (selectedItems.size === 0) return;
+    if (!confirm(`${selectedItems.size} ilanı silmek istediğine emin misin?`)) return;
+    setBulkDeleting(true);
+    try {
+      const { error } = await supabase.from("items").delete().in("id", [...selectedItems]);
+      if (error) { toast.error("Bazı ilanlar silinemedi."); return; }
+      setItems((prev) => prev.filter((i) => !selectedItems.has(i.id)));
+      setSelectedItems(new Set());
+      toast.success("Seçili ilanlar silindi.");
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -276,11 +304,79 @@ export default function BusinessPage() {
                 ))}
               </div>
 
+              {/* Analitik */}
+              {items.length > 0 && (() => {
+                const catCounts: Record<string, number> = {};
+                items.forEach((i) => { const c = i.category || "Diğer"; catCounts[c] = (catCounts[c] || 0) + 1; });
+                const catData = Object.entries(catCounts).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name, value }));
+                const statusData = [
+                  { name: "Aktif", value: activeItems, color: "#f59e0b" },
+                  { name: "Çözüldü", value: resolvedItems, color: "#10b981" },
+                ];
+                return (
+                  <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
+                    <h2 className="text-lg font-bold mb-5">Analitik</h2>
+                    <div className="grid gap-6 sm:grid-cols-2">
+                      <div>
+                        <p className="text-xs text-slate-500 mb-3 uppercase tracking-wider">Kategori Dağılımı</p>
+                        <ResponsiveContainer width="100%" height={180}>
+                          <BarChart data={catData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                            <XAxis dataKey="name" tick={{ fill: "#64748b", fontSize: 10 }} />
+                            <YAxis tick={{ fill: "#64748b", fontSize: 10 }} allowDecimals={false} />
+                            <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, color: "#e2e8f0" }} />
+                            <Bar dataKey="value" name="İlan" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 mb-3 uppercase tracking-wider">Durum Dağılımı</p>
+                        <ResponsiveContainer width="100%" height={180}>
+                          <PieChart>
+                            <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={false}>
+                              {statusData.map((entry, index) => (
+                                <Cell key={index} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Legend wrapperStyle={{ fontSize: 11, color: "#64748b" }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+                      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                        <p className="text-lg font-black text-blue-400">{items.reduce((a, i) => a + (i.view_count || 0), 0).toLocaleString("tr-TR")}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Toplam Görüntülenme</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                        <p className="text-lg font-black text-amber-400">{totalSightings}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Gördüm Bildirimi</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
+                        <p className="text-lg font-black text-emerald-400">
+                          {totalItems > 0 ? Math.round((resolvedItems / totalItems) * 100) : 0}%
+                        </p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Çözüm Oranı</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* İlan listesi */}
               <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6">
-                <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
+                <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
                   <h2 className="text-lg font-bold">İlanlarım</h2>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
+                    {selectedItems.size > 0 && (
+                      <button
+                        onClick={handleBulkDelete}
+                        disabled={bulkDeleting}
+                        className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition disabled:opacity-50"
+                      >
+                        {bulkDeleting ? "Siliniyor..." : `🗑 ${selectedItems.size} İlanı Sil`}
+                      </button>
+                    )}
                     <button
                       onClick={exportCSV}
                       className="rounded-xl border border-slate-700 px-4 py-2 text-xs text-slate-300 hover:bg-slate-800 transition"
@@ -296,24 +392,45 @@ export default function BusinessPage() {
                   </div>
                 </div>
 
+                {/* Select all */}
+                {items.length > 0 && (
+                  <div className="flex items-center gap-2 mb-3 pb-3 border-b border-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={selectedItems.size === items.length}
+                      onChange={() => setSelectedItems(selectedItems.size === items.length ? new Set() : new Set(items.map((i) => i.id)))}
+                      className="accent-blue-500"
+                    />
+                    <span className="text-xs text-slate-500">
+                      {selectedItems.size > 0 ? `${selectedItems.size} ilan seçildi` : "Tümünü seç"}
+                    </span>
+                  </div>
+                )}
+
                 {items.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-slate-700 p-8 text-center text-slate-500">
                     Henüz ilan yok.
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {items.slice(0, 10).map((item) => (
-                      <Link
+                    {items.map((item) => (
+                      <div
                         key={item.id}
-                        href={`/items/${item.id}`}
-                        className="flex items-center gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-3 hover:border-slate-700 transition"
+                        className={`flex items-center gap-3 rounded-2xl border bg-slate-950/60 px-4 py-3 transition ${selectedItems.has(item.id) ? "border-blue-500/40 bg-blue-500/5" : "border-slate-800 hover:border-slate-700"}`}
                       >
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.has(item.id)}
+                          onChange={() => toggleSelectItem(item.id)}
+                          className="accent-blue-500 flex-shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        />
                         {item.image_url && (
                           <div className="relative w-12 h-12 flex-shrink-0 rounded-xl overflow-hidden">
                             <Image src={item.image_url} alt={item.title} fill className="object-cover" unoptimized />
                           </div>
                         )}
-                        <div className="flex-1 min-w-0">
+                        <Link href={`/items/${item.id}`} className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${item.type === "lost" ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"}`}>
                               {item.type === "lost" ? "Kayıp" : "Bulundu"}
@@ -324,14 +441,14 @@ export default function BusinessPage() {
                           </div>
                           <p className="text-sm font-semibold text-white truncate">{item.title}</p>
                           <p className="text-xs text-slate-500">{item.category} · {item.location}</p>
-                        </div>
+                        </Link>
                         <div className="flex-shrink-0 text-right">
                           <p className="text-xs text-slate-500">👁 {item.view_count || 0}</p>
                           {sightingCounts[item.id] > 0 && (
                             <p className="text-xs text-amber-400">{sightingCounts[item.id]} gördüm</p>
                           )}
                         </div>
-                      </Link>
+                      </div>
                     ))}
                   </div>
                 )}

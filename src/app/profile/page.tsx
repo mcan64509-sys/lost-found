@@ -130,6 +130,25 @@ export default function ProfilePage() {
   const [referrals, setReferrals] = useState<{ referred_email: string; created_at: string }[]>([]);
   const [referralsLoading, setReferralsLoading] = useState(false);
 
+  // Gamification
+  const [userPoints, setUserPoints] = useState(0);
+  const [userBadges, setUserBadges] = useState<string[]>([]);
+
+  // API key
+  const [apiKey, setApiKey] = useState("");
+  const [generatingApiKey, setGeneratingApiKey] = useState(false);
+  const [apiKeyVisible, setApiKeyVisible] = useState(false);
+
+  // 2FA
+  const [mfaFactors, setMfaFactors] = useState<{ id: string; factor_type: string; status: string }[]>([]);
+  const [mfaEnrolling, setMfaEnrolling] = useState(false);
+  const [mfaQrCode, setMfaQrCode] = useState<string | null>(null);
+  const [mfaSecret, setMfaSecret] = useState<string | null>(null);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaVerifying, setMfaVerifying] = useState(false);
+  const [mfaUnenrolling, setMfaUnenrolling] = useState(false);
+
   const initials = useMemo(
     () => getInitials(user?.fullName, user?.email),
     [user?.fullName, user?.email]
@@ -216,6 +235,14 @@ export default function ProfilePage() {
       setPhoneNumber(profileRow?.phone_number ?? "");
       setSmsEnabled(profileRow?.sms_notifications ?? false);
       setReferralCode(profileRow?.referral_code ?? "");
+      setUserPoints(profileRow?.points ?? 0);
+      setUserBadges(profileRow?.badges ?? []);
+      setApiKey(profileRow?.api_key ?? "");
+
+      // Load MFA factors
+      supabase.auth.mfa.listFactors().then(({ data }) => {
+        setMfaFactors((data?.all ?? []).map((f) => ({ id: f.id, factor_type: f.factor_type, status: f.status })));
+      });
 
       setUser({
         id: sessionUser.id,
@@ -516,6 +543,72 @@ export default function ProfilePage() {
       .order("created_at", { ascending: false });
     setReferrals((data || []) as { referred_email: string; created_at: string }[]);
     setReferralsLoading(false);
+  }
+
+  async function handleGenerateApiKey() {
+    if (!user) return;
+    setGeneratingApiKey(true);
+    try {
+      const newKey = `bvm_${crypto.randomUUID().replace(/-/g, "")}`;
+      const { error } = await supabase.from("profiles").update({ api_key: newKey }).eq("id", user.id);
+      if (error) { toast.error("API anahtarı oluşturulamadı."); return; }
+      setApiKey(newKey);
+      setApiKeyVisible(true);
+      toast.success("Yeni API anahtarı oluşturuldu!");
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setGeneratingApiKey(false);
+    }
+  }
+
+  async function handleMfaEnroll() {
+    setMfaEnrolling(true);
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", issuer: "BulanVarMı" });
+      if (error || !data) { toast.error(error?.message || "2FA başlatılamadı."); return; }
+      setMfaQrCode(data.totp.qr_code);
+      setMfaSecret(data.totp.secret);
+      setMfaFactorId(data.id);
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setMfaEnrolling(false);
+    }
+  }
+
+  async function handleMfaVerify() {
+    if (!mfaFactorId || !mfaCode) return;
+    setMfaVerifying(true);
+    try {
+      const { data: challengeData, error: challengeErr } = await supabase.auth.mfa.challenge({ factorId: mfaFactorId });
+      if (challengeErr || !challengeData) { toast.error("Doğrulama başlatılamadı."); return; }
+      const { error } = await supabase.auth.mfa.verify({ factorId: mfaFactorId, challengeId: challengeData.id, code: mfaCode });
+      if (error) { toast.error("Kod hatalı, tekrar deneyin."); return; }
+      toast.success("2FA etkinleştirildi!");
+      setMfaQrCode(null); setMfaSecret(null); setMfaCode("");
+      const { data } = await supabase.auth.mfa.listFactors();
+      setMfaFactors((data?.all ?? []).map((f) => ({ id: f.id, factor_type: f.factor_type, status: f.status })));
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setMfaVerifying(false);
+    }
+  }
+
+  async function handleMfaUnenroll(factorId: string) {
+    if (!confirm("2FA'yı kaldırmak istediğine emin misin?")) return;
+    setMfaUnenrolling(true);
+    try {
+      const { error } = await supabase.auth.mfa.unenroll({ factorId });
+      if (error) { toast.error(error.message); return; }
+      setMfaFactors((prev) => prev.filter((f) => f.id !== factorId));
+      toast.success("2FA kaldırıldı.");
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setMfaUnenrolling(false);
+    }
   }
 
   async function handleLogout() {
@@ -1152,6 +1245,147 @@ export default function ProfilePage() {
                     className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition"
                   >
                     Referans Kodu Oluştur
+                  </button>
+                )}
+              </div>
+
+              {/* Puanlar & Rozetler */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+                <h3 className="text-sm font-bold text-white mb-1">🏆 Puanlar & Rozetler</h3>
+                <p className="text-xs text-slate-500 mb-4">İlan oluşturarak, çözerek ve topluma katkıda bulunarak puan kazan.</p>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-1 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-center">
+                    <p className="text-2xl font-black text-amber-400">{userPoints}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Toplam Puan</p>
+                  </div>
+                  <div className="flex-1 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-center">
+                    <p className="text-2xl font-black text-blue-400">{userBadges.length}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">Rozet</p>
+                  </div>
+                </div>
+                {userBadges.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {userBadges.map((badge) => (
+                      <span key={badge} className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-sm">
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-4 space-y-1 text-xs text-slate-600">
+                  <p>• İlan oluşturma: +10 puan</p>
+                  <p>• İlanı çözüldü işaretleme: +50 puan</p>
+                  <p>• "Gördüm" bildirimi: +5 puan</p>
+                  <p>• Talep onaylatma: +20 puan</p>
+                </div>
+              </div>
+
+              {/* 2FA */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+                <h3 className="text-sm font-bold text-white mb-1">🔐 İki Faktörlü Doğrulama (2FA)</h3>
+                <p className="text-xs text-slate-500 mb-4">Hesabınızı TOTP uygulamasıyla (Google Authenticator vb.) koruyun.</p>
+                {mfaFactors.filter((f) => f.status === "verified").length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3">
+                      <span className="text-emerald-400 text-sm">✓ 2FA Aktif</span>
+                    </div>
+                    {mfaFactors.filter((f) => f.status === "verified").map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => handleMfaUnenroll(f.id)}
+                        disabled={mfaUnenrolling}
+                        className="w-full rounded-xl border border-red-500/30 bg-red-500/10 py-2.5 text-sm font-semibold text-red-400 hover:bg-red-500/20 transition disabled:opacity-50"
+                      >
+                        {mfaUnenrolling ? "Kaldırılıyor..." : "2FA'yı Kaldır"}
+                      </button>
+                    ))}
+                  </div>
+                ) : mfaQrCode ? (
+                  <div className="space-y-4">
+                    <p className="text-xs text-slate-400">Authenticator uygulamanızla QR kodu okutun:</p>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={mfaQrCode} alt="2FA QR Code" className="mx-auto rounded-xl border border-slate-700 bg-white p-2 w-40 h-40" />
+                    {mfaSecret && (
+                      <p className="text-center font-mono text-xs text-slate-500 break-all">
+                        Manuel: {mfaSecret}
+                      </p>
+                    )}
+                    <input
+                      type="text"
+                      value={mfaCode}
+                      onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="6 haneli kodu girin"
+                      maxLength={6}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-center text-lg font-mono text-white outline-none focus:border-blue-500 tracking-widest"
+                    />
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleMfaVerify}
+                        disabled={mfaVerifying || mfaCode.length < 6}
+                        className="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
+                      >
+                        {mfaVerifying ? "Doğrulanıyor..." : "Doğrula & Etkinleştir"}
+                      </button>
+                      <button
+                        onClick={() => { setMfaQrCode(null); setMfaFactorId(null); setMfaCode(""); }}
+                        className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 hover:bg-slate-800 transition"
+                      >
+                        İptal
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleMfaEnroll}
+                    disabled={mfaEnrolling}
+                    className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
+                  >
+                    {mfaEnrolling ? "Hazırlanıyor..." : "2FA Etkinleştir"}
+                  </button>
+                )}
+              </div>
+
+              {/* API Anahtarı */}
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
+                <h3 className="text-sm font-bold text-white mb-1">🔑 API Anahtarı</h3>
+                <p className="text-xs text-slate-500 mb-4">
+                  Kendi sisteminizden ilan oluşturmak için API anahtarı kullanın.{" "}
+                  <code className="text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">GET/POST /api/v1/items</code>
+                </p>
+                {apiKey ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3">
+                      <code className="flex-1 text-xs text-slate-300 font-mono truncate">
+                        {apiKeyVisible ? apiKey : `${apiKey.slice(0, 8)}${"•".repeat(24)}`}
+                      </code>
+                      <button
+                        onClick={() => setApiKeyVisible((v) => !v)}
+                        className="text-xs text-slate-500 hover:text-slate-300 shrink-0"
+                      >
+                        {apiKeyVisible ? "Gizle" : "Göster"}
+                      </button>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(apiKey); toast.success("Kopyalandı!"); }}
+                        className="text-xs text-blue-400 hover:text-blue-300 shrink-0"
+                      >
+                        Kopyala
+                      </button>
+                    </div>
+                    <button
+                      onClick={handleGenerateApiKey}
+                      disabled={generatingApiKey}
+                      className="w-full rounded-xl border border-red-500/20 bg-red-500/5 py-2 text-xs text-red-400 hover:bg-red-500/10 transition"
+                    >
+                      {generatingApiKey ? "Oluşturuluyor..." : "Yeni Anahtar Oluştur (eskisi geçersiz olur)"}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleGenerateApiKey}
+                    disabled={generatingApiKey}
+                    className="w-full rounded-xl bg-slate-700 py-2.5 text-sm font-semibold text-white hover:bg-slate-600 transition disabled:opacity-50"
+                  >
+                    {generatingApiKey ? "Oluşturuluyor..." : "API Anahtarı Oluştur"}
                   </button>
                 )}
               </div>

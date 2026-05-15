@@ -63,6 +63,7 @@ type AdminUser = {
   avatar_url: string | null;
   created_at: string;
   is_banned: boolean;
+  is_blacklisted: boolean;
   item_count: number;
   resolved_count: number;
 };
@@ -86,11 +87,15 @@ export default function AdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [sightings, setSightings] = useState<Sighting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"stats" | "items" | "reports" | "users" | "sightings">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "items" | "reports" | "users" | "sightings" | "moderation">("stats");
+  const [pendingItems, setPendingItems] = useState<AdminItem[]>([]);
+  const [moderating, setModerating] = useState<string | null>(null);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminEmail, setAdminEmail] = useState("");
   const [togglingBan, setTogglingBan] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deletingUser, setDeletingUser] = useState<string | null>(null);
+  const [blacklisting, setBlacklisting] = useState<string | null>(null);
   const [updatingReport, setUpdatingReport] = useState<string | null>(null);
   const [stats, setStats] = useState({
     total: 0, lost: 0, found: 0, resolved: 0, views: 0,
@@ -166,6 +171,15 @@ export default function AdminPage() {
     setSightings(sightingsWithTitle);
 
     setAdminUsers(usersRes.users ?? []);
+
+    // Load pending moderation items
+    const { data: pendingData } = await supabase
+      .from("items")
+      .select("*")
+      .eq("moderation_status", "pending")
+      .order("created_at", { ascending: false });
+    setPendingItems((pendingData || []) as AdminItem[]);
+
     setLoading(false);
   }
 
@@ -223,6 +237,84 @@ export default function AdminPage() {
       toast.error("Bir hata oluştu.");
     } finally {
       setTogglingBan(null);
+    }
+  }
+
+  async function handleDeleteUser(userId: string, userEmail: string) {
+    if (!confirm(`"${userEmail}" hesabını kalıcı olarak silmek istediğine emin misin?\n\nBu işlem geri alınamaz.`)) return;
+    setDeletingUser(userEmail);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token || ""}`,
+        },
+        body: JSON.stringify({ targetUserId: userId, targetEmail: userEmail }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAdminUsers((prev) => prev.filter((u) => u.email !== userEmail));
+        toast.success("Kullanıcı silindi.");
+      } else {
+        toast.error(data.error || "Silinemedi.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setDeletingUser(null);
+    }
+  }
+
+  async function handleToggleBlacklist(targetEmail: string, currentBlacklist: boolean) {
+    setBlacklisting(targetEmail);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/blacklist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token || ""}`,
+        },
+        body: JSON.stringify({ targetEmail, blacklist: !currentBlacklist }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAdminUsers((prev) =>
+          prev.map((u) => u.email === targetEmail ? { ...u, is_blacklisted: !currentBlacklist } : u)
+        );
+        toast.success(!currentBlacklist ? "E-posta kara listeye alındı." : "Kara listeden çıkarıldı.");
+      } else {
+        toast.error(data.error || "İşlem başarısız.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setBlacklisting(null);
+    }
+  }
+
+  async function handleModerateItem(itemId: string, action: "approve" | "reject") {
+    setModerating(itemId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/moderate-item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+        body: JSON.stringify({ itemId, action }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPendingItems((prev) => prev.filter((i) => i.id !== itemId));
+        toast.success(action === "approve" ? "İlan onaylandı." : "İlan reddedildi ve silindi.");
+      } else {
+        toast.error(data.error || "İşlem başarısız.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setModerating(null);
     }
   }
 
@@ -300,6 +392,7 @@ export default function AdminPage() {
               ["reports", stats.pendingReports > 0 ? `Şikayetler (${stats.pendingReports})` : "Şikayetler"],
               ["users", `Kullanıcılar (${adminUsers.length})`],
               ["sightings", sightings.length > 0 ? `👁 Gördüm (${sightings.length})` : "👁 Gördüm"],
+              ["moderation", pendingItems.length > 0 ? `🛡 Moderasyon (${pendingItems.length})` : "🛡 Moderasyon"],
             ] as const).map(([tab, label]) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition ${activeTab === tab ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"}`}>
@@ -452,17 +545,20 @@ export default function AdminPage() {
                     ? u.full_name.trim().split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
                     : u.email[0].toUpperCase();
                   return (
-                    <div key={u.email} className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${u.is_banned ? "border-red-500/20 bg-red-500/5" : "border-slate-800 bg-slate-900"}`}>
+                    <div key={u.email} className={`flex flex-wrap items-center gap-3 rounded-2xl border px-4 py-3 ${u.is_banned ? "border-red-500/20 bg-red-500/5" : u.is_blacklisted ? "border-orange-500/20 bg-orange-500/5" : "border-slate-800 bg-slate-900"}`}>
                       <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-white overflow-hidden">
                         {u.avatar_url ? (
                           <Image src={u.avatar_url} alt={u.full_name || u.email} width={36} height={36} className="h-9 w-9 rounded-full object-cover" unoptimized />
                         ) : initials}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-medium text-white truncate">{u.full_name || "—"}</p>
                           {u.is_banned && (
                             <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-red-500/20 text-red-300">Engelli</span>
+                          )}
+                          {u.is_blacklisted && (
+                            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-orange-500/20 text-orange-300">Kara Liste</span>
                           )}
                           {ADMIN_EMAILS.includes(u.email.toLowerCase()) && (
                             <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500/20 text-blue-300">Admin</span>
@@ -488,17 +584,37 @@ export default function AdminPage() {
                         Profil
                       </Link>
                       {u.email.toLowerCase() !== adminEmail && (
-                        <button
-                          onClick={() => handleToggleBan(u.email, u.is_banned)}
-                          disabled={togglingBan === u.email}
-                          className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
-                            u.is_banned
-                              ? "border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20"
-                              : "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                          }`}
-                        >
-                          {togglingBan === u.email ? "..." : u.is_banned ? "Engeli Kaldır" : "Engelle"}
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleToggleBan(u.email, u.is_banned)}
+                            disabled={togglingBan === u.email}
+                            className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
+                              u.is_banned
+                                ? "border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                                : "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                            }`}
+                          >
+                            {togglingBan === u.email ? "..." : u.is_banned ? "Engeli Kaldır" : "Engelle"}
+                          </button>
+                          <button
+                            onClick={() => handleToggleBlacklist(u.email, u.is_blacklisted)}
+                            disabled={blacklisting === u.email}
+                            className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
+                              u.is_blacklisted
+                                ? "border-slate-600 bg-slate-800 text-slate-400 hover:bg-slate-700"
+                                : "border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
+                            }`}
+                          >
+                            {blacklisting === u.email ? "..." : u.is_blacklisted ? "Kara Listeden Çıkar" : "Kara Liste"}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(u.id, u.email)}
+                            disabled={deletingUser === u.email}
+                            className="shrink-0 rounded-xl border border-red-600/40 bg-red-600/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-600/20 transition disabled:opacity-50"
+                          >
+                            {deletingUser === u.email ? "..." : "Hesabı Sil"}
+                          </button>
+                        </>
                       )}
                     </div>
                   );
@@ -581,6 +697,50 @@ export default function AdminPage() {
                       >
                         İlana Git →
                       </Link>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          ) : activeTab === "moderation" ? (
+            <div className="space-y-3">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-400">
+                <p className="font-semibold text-white mb-1">🛡 Moderasyon Kuyruğu</p>
+                <p>İlanları <code className="text-xs bg-slate-800 px-1.5 py-0.5 rounded">moderation_status = pending</code> yaparak buraya yönlendirebilirsin. Admin onaylayabilir veya reddedebilir.</p>
+              </div>
+              {pendingItems.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
+                  Onay bekleyen ilan yok.
+                </div>
+              ) : (
+                pendingItems.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${item.type === "lost" ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"}`}>
+                          {item.type === "lost" ? "Kayıp" : "Bulundu"}
+                        </span>
+                        <Link href={`/items/${item.id}`} className="truncate text-sm font-medium text-white hover:text-blue-300">{item.title}</Link>
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {item.created_by_email} · {item.category} · {new Date(item.created_at).toLocaleDateString("tr-TR")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleModerateItem(item.id, "approve")}
+                        disabled={moderating === item.id}
+                        className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50"
+                      >
+                        {moderating === item.id ? "..." : "Onayla"}
+                      </button>
+                      <button
+                        onClick={() => handleModerateItem(item.id, "reject")}
+                        disabled={moderating === item.id}
+                        className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+                      >
+                        {moderating === item.id ? "..." : "Reddet & Sil"}
+                      </button>
                     </div>
                   </div>
                 ))

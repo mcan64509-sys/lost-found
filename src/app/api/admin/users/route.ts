@@ -26,18 +26,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 403 });
   }
 
-  const { data: profiles, error } = await supabaseAdmin
-    .from("profiles")
-    .select("id, email, full_name, avatar_url, created_at, is_banned")
-    .order("created_at", { ascending: false });
+  const [{ data: profiles, error }, { data: blacklistData }, { data: items }] = await Promise.all([
+    supabaseAdmin
+      .from("profiles")
+      .select("id, email, full_name, avatar_url, created_at, is_banned")
+      .order("created_at", { ascending: false }),
+    supabaseAdmin.from("blacklisted_emails").select("email"),
+    supabaseAdmin.from("items").select("created_by_email, status"),
+  ]);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const { data: items } = await supabaseAdmin
-    .from("items")
-    .select("created_by_email, status");
+  const blacklistSet = new Set((blacklistData ?? []).map((r) => r.email.toLowerCase()));
 
   const itemMap: Record<string, { total: number; resolved: number }> = {};
   for (const item of items ?? []) {
@@ -52,6 +54,7 @@ export async function GET(req: NextRequest) {
     ...p,
     item_count: itemMap[p.email ?? ""]?.total ?? 0,
     resolved_count: itemMap[p.email ?? ""]?.resolved ?? 0,
+    is_blacklisted: blacklistSet.has((p.email ?? "").toLowerCase()),
   }));
 
   return NextResponse.json({ users });

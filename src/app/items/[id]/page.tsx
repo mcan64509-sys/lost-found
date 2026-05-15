@@ -10,6 +10,7 @@ import ConfirmDialog from "../../../components/ConfirmDialog";
 import QRCodeModal from "../../../components/QRCodeModal";
 import SightingModal from "../../../components/SightingModal";
 import SocialShareImageModal from "../../../components/SocialShareImageModal";
+import StoryInviteModal from "../../../components/StoryInviteModal";
 import { supabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 import { normalizeEmail, isValidEmail } from "../../../lib/utils";
@@ -79,6 +80,8 @@ export default function ItemDetailPage() {
   const [submittingReport, setSubmittingReport] = useState(false);
   const [showSightingModal, setShowSightingModal] = useState(false);
   const [showSocialImageModal, setShowSocialImageModal] = useState(false);
+  const [showStoryInvite, setShowStoryInvite] = useState(false);
+  const [similarItems, setSimilarItems] = useState<{ id: string; title: string; type: string; image_url: string | null; location: string | null }[]>([]);
 
   // Rating
   const [ratingScore, setRatingScore] = useState(0);
@@ -174,6 +177,18 @@ export default function ItemDetailPage() {
         } catch { /* localStorage unavailable */ }
 
         fetchMatches(id);
+
+        // Load similar items (same category, different id)
+        if (itemData.category) {
+          supabase
+            .from("items")
+            .select("id, title, type, image_url, location")
+            .eq("category", itemData.category)
+            .eq("status", "active")
+            .neq("id", id)
+            .limit(4)
+            .then(({ data: sim }) => { if (sim) setSimilarItems(sim); });
+        }
       } catch {
         setNotFound(true);
         setItem(null);
@@ -304,6 +319,18 @@ export default function ItemDetailPage() {
       setItem((prev) => prev ? { ...prev, status: "resolved" } : prev);
       setOpenMenu(false);
       toast.success("İlan çözüldü olarak işaretlendi.");
+      setShowStoryInvite(true);
+
+      // Award points for resolving
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.access_token) {
+          fetch("/api/points/award", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+            body: JSON.stringify({ action: "resolve_item" }),
+          }).catch(() => {});
+        }
+      });
 
       // Konuşmalara sistem mesajı gönder
       const systemContent = item.type === "lost"
@@ -495,6 +522,14 @@ export default function ItemDetailPage() {
   return (
     <AuthGuard>
       <AppHeader />
+
+      {showStoryInvite && item && (
+        <StoryInviteModal
+          itemTitle={item.title}
+          itemId={item.id}
+          onClose={() => setShowStoryInvite(false)}
+        />
+      )}
 
       {showSightingModal && item && userEmail && (
         <SightingModal
@@ -1050,6 +1085,36 @@ export default function ItemDetailPage() {
               </div>
             )}
           </div>
+          {/* Benzer İlanlar */}
+          {similarItems.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-xl font-bold mb-4 text-slate-300">Benzer İlanlar</h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {similarItems.map((s) => (
+                  <Link
+                    key={s.id}
+                    href={`/items/${s.id}`}
+                    className="group overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 hover:border-slate-600 transition"
+                  >
+                    <div className="relative h-32 bg-slate-800">
+                      {s.image_url ? (
+                        <Image src={s.image_url} alt={s.title} fill className="object-cover group-hover:scale-105 transition" unoptimized />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-3xl text-slate-600">📦</div>
+                      )}
+                      <span className={`absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[10px] font-bold ${s.type === "lost" ? "bg-amber-500 text-white" : "bg-emerald-500 text-white"}`}>
+                        {s.type === "lost" ? "Kayıp" : "Bulundu"}
+                      </span>
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-semibold text-white truncate">{s.title}</p>
+                      {s.location && <p className="text-xs text-slate-500 mt-0.5 truncate">📍 {s.location}</p>}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </AuthGuard>

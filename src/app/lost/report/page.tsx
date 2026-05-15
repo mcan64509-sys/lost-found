@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
@@ -84,6 +84,37 @@ export default function LostReportPage() {
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const [cropFileName, setCropFileName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const DRAFT_KEY = "lost_form_draft";
+
+  // Restore draft on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (!saved) return;
+      const d = JSON.parse(saved);
+      if (d.title) setTitle(d.title);
+      if (d.category) setCategory(d.category);
+      if (d.customCategory) setCustomCategory(d.customCategory);
+      if (d.description) setDescription(d.description);
+      if (d.rewardAmount) setRewardAmount(d.rewardAmount);
+      if (d.isUrgent) setIsUrgent(d.isUrgent);
+      if (d.priorityLevel) setPriorityLevel(d.priorityLevel);
+      if (d.location) setLocation(d.location);
+      if (d.date) setDate(d.date);
+      if (d.time) setTime(d.time);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Save draft on field changes
+  useEffect(() => {
+    if (!title && !category && !description && !location) return;
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        title, category, customCategory, description, rewardAmount, isUrgent, priorityLevel, location, date, time,
+      }));
+    } catch { /* ignore */ }
+  }, [title, category, customCategory, description, rewardAmount, isUrgent, priorityLevel, location, date, time]);
 
   function canGoNext() {
     if (step === 1) return title.trim() !== "" && category !== "" && description.trim() !== "";
@@ -179,6 +210,14 @@ export default function LostReportPage() {
           body: JSON.stringify({ itemId: newItem.id, title, description, category: finalCategory, location }),
         }).catch(() => {});
       }
+
+      // Clear draft + award points
+      try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+      fetch("/api/points/award", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session?.access_token ?? ""}` },
+        body: JSON.stringify({ action: "create_item" }),
+      }).catch(() => {});
 
       toast.success("Kayıp ilanı oluşturuldu!");
       router.push("/profile");
