@@ -100,6 +100,8 @@ export default function ItemDetailPage() {
   const [submittingRating, setSubmittingRating] = useState(false);
   const [alreadyRated, setAlreadyRated] = useState(false);
   const [canRate, setCanRate] = useState(false);
+  const [claimantEmail, setClaimantEmail] = useState<string | null>(null);
+  const [ownerAlreadyRated, setOwnerAlreadyRated] = useState(false);
   const [ratingAvg, setRatingAvg] = useState<number | null>(null);
   const [ratingCount, setRatingCount] = useState(0);
 
@@ -153,13 +155,38 @@ export default function ItemDetailPage() {
             .maybeSingle()
             .then(({ data }) => { if (data) setAlreadyRated(true); });
 
-          // Check if viewer has a claim or sighting — only they can rate
+          // Check if viewer has a claim or sighting — only they can rate the owner
           Promise.all([
             supabase.from("claims").select("id").eq("item_id", id).eq("claimant_email", email).maybeSingle(),
             supabase.from("sightings").select("id").eq("item_id", id).eq("reporter_email", email).maybeSingle(),
           ]).then(([{ data: claim }, { data: sighting }]) => {
             if (claim || sighting) setCanRate(true);
           });
+
+          // Load latest claimant for owner to rate
+          supabase
+            .from("claims")
+            .select("claimant_email")
+            .eq("item_id", id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            .then(({ data: latestClaim }) => {
+              if (latestClaim?.claimant_email) {
+                setClaimantEmail(latestClaim.claimant_email);
+                // Check if owner already rated the claimant
+                supabase
+                  .from("ratings")
+                  .select("id")
+                  .eq("item_id", id)
+                  .eq("rater_email", email)
+                  .eq("rated_email", latestClaim.claimant_email)
+                  .maybeSingle()
+                  .then(({ data: existingOwnerRating }) => {
+                    if (existingOwnerRating) setOwnerAlreadyRated(true);
+                  });
+              }
+            });
         }
 
         // Load rating stats for this item's owner
@@ -371,7 +398,7 @@ export default function ItemDetailPage() {
         body: JSON.stringify({ itemId: item.id, content: systemContent }),
       }).catch(() => {});
 
-      // Send rating notification to the claimant who helped
+      // Fetch claimant so owner can rate them
       supabase
         .from("claims")
         .select("claimant_email")
@@ -381,17 +408,7 @@ export default function ItemDetailPage() {
         .maybeSingle()
         .then(({ data: latestClaim }) => {
           if (latestClaim?.claimant_email) {
-            fetch("/api/push/send", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userEmail: latestClaim.claimant_email,
-                title: "Teşekkür edin! Değerlendirme zamanı",
-                body: `"${item.title}" ilanı çözüme kavuştu. İlan sahibini değerlendirerek güvenilirliğini belgele.`,
-                url: `/items/${item.id}`,
-                sendEmail: false,
-              }),
-            }).catch(() => {});
+            setClaimantEmail(latestClaim.claimant_email);
           }
         });
     } catch {
@@ -926,6 +943,64 @@ export default function ItemDetailPage() {
                         </button>
                       </div>
                     )
+                  )}
+                </div>
+              )}
+
+              {/* Owner rates the claimant after resolving */}
+              {isOwner && item.status === "resolved" && claimantEmail && (
+                <div className="mt-6 space-y-2">
+                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                    <p className="text-sm text-emerald-200 font-semibold mb-0.5">Eşyayı bulan kişiyi değerlendir</p>
+                    <p className="text-xs text-slate-400">Bu değerlendirme bulan kişinin profilinde güvenilirlik belgesi olarak görünür.</p>
+                  </div>
+                  {ownerAlreadyRated ? (
+                    <div className="rounded-2xl border border-slate-700 bg-slate-800/50 p-4 text-center">
+                      <p className="text-sm text-slate-400">✓ Bulan kişiyi değerlendirdiniz.</p>
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4">
+                      <div className="flex gap-1 mb-3">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            onMouseEnter={() => setRatingHover(star)}
+                            onMouseLeave={() => setRatingHover(0)}
+                            onClick={() => setRatingScore(star)}
+                            className={`text-2xl transition ${star <= (ratingHover || ratingScore) ? "text-amber-400" : "text-slate-600"}`}
+                          >★</button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={ratingComment}
+                        onChange={(e) => setRatingComment(e.target.value)}
+                        placeholder="Yorum ekle (isteğe bağlı)"
+                        rows={2}
+                        maxLength={300}
+                        className="w-full resize-none rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-600 mb-3"
+                      />
+                      <button
+                        onClick={async () => {
+                          if (ratingScore < 1) { toast.error("Lütfen bir puan seçin."); return; }
+                          setSubmittingRating(true);
+                          try {
+                            const res = await fetch("/api/ratings/submit", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ item_id: item.id, rater_email: userEmail, rated_email: claimantEmail, score: ratingScore, comment: ratingComment }),
+                            });
+                            const data = await res.json();
+                            if (res.ok) { setOwnerAlreadyRated(true); toast.success("Değerlendirme kaydedildi."); }
+                            else toast.error(data.error || "Gönderilemedi.");
+                          } catch { toast.error("Bir hata oluştu."); }
+                          finally { setSubmittingRating(false); }
+                        }}
+                        disabled={submittingRating || ratingScore < 1}
+                        className="w-full rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-black transition hover:bg-amber-400 disabled:opacity-50"
+                      >
+                        {submittingRating ? "Gönderiliyor..." : "Değerlendirmeyi Gönder"}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}

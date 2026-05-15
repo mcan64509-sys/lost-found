@@ -69,6 +69,15 @@ type Sighting = {
   item_title?: string;
 };
 
+type Story = {
+  id: string;
+  user_email: string;
+  item_title: string;
+  story: string;
+  approved: boolean;
+  created_at: string;
+};
+
 type AdminUser = {
   id: string;
   email: string;
@@ -100,7 +109,9 @@ export default function AdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [sightings, setSightings] = useState<Sighting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests" | "stories">("stats");
+  const [pendingStories, setPendingStories] = useState<Story[]>([]);
+  const [approvingStory, setApprovingStory] = useState<string | null>(null);
   const [pendingItems, setPendingItems] = useState<AdminItem[]>([]);
   const [moderating, setModerating] = useState<string | null>(null);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
@@ -200,6 +211,14 @@ export default function AdminPage() {
       .eq("moderation_status", "pending")
       .order("created_at", { ascending: false });
     setPendingItems((pendingData || []) as AdminItem[]);
+
+    // Load pending stories
+    const { data: storyData } = await supabase
+      .from("success_stories")
+      .select("*")
+      .eq("approved", false)
+      .order("created_at", { ascending: false });
+    setPendingStories((storyData || []) as Story[]);
 
     setLoading(false);
   }
@@ -460,6 +479,7 @@ export default function AdminPage() {
               ["sightings", "👁 Gördüm", sightings.length],
               ["moderation", "🛡 Moderasyon", pendingItems.length],
               ["requests", "💬 İstekler", userRequests.filter((r) => r.status === "pending").length],
+              ["stories", "🎉 Hikayeler", pendingStories.length],
             ] as const).map(([tab, label, count]) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`relative flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === tab ? "bg-slate-700 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-slate-800/50"}`}>
@@ -907,6 +927,55 @@ export default function AdminPage() {
                   </div>
                 ));
               })()}
+            </div>
+          ) : activeTab === "stories" ? (
+            /* Stories approval tab */
+            <div className="space-y-3 animate-fade-in-up">
+              {pendingStories.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
+                  Onay bekleyen hikaye yok.
+                </div>
+              ) : (
+                pendingStories.map((s) => (
+                  <div key={s.id} className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-slate-500 mb-1">{s.user_email} · {new Date(s.created_at).toLocaleDateString("tr-TR")}</p>
+                        <p className="text-sm font-semibold text-white mb-1">"{s.item_title}"</p>
+                        <p className="text-sm text-slate-300 whitespace-pre-line">{s.story}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        disabled={approvingStory === s.id}
+                        onClick={async () => {
+                          setApprovingStory(s.id);
+                          await supabase.from("success_stories").update({ approved: true }).eq("id", s.id);
+                          setPendingStories((prev) => prev.filter((x) => x.id !== s.id));
+                          toast.success("Hikaye onaylandı.");
+                          setApprovingStory(null);
+                        }}
+                        className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 transition disabled:opacity-50"
+                      >
+                        {approvingStory === s.id ? "..." : "✓ Onayla"}
+                      </button>
+                      <button
+                        disabled={approvingStory === s.id}
+                        onClick={async () => {
+                          setApprovingStory(s.id);
+                          await supabase.from("success_stories").delete().eq("id", s.id);
+                          setPendingStories((prev) => prev.filter((x) => x.id !== s.id));
+                          toast.success("Hikaye silindi.");
+                          setApprovingStory(null);
+                        }}
+                        className="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition disabled:opacity-50"
+                      >
+                        ✗ Reddet
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           ) : (
             /* Reports tab */

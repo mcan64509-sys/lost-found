@@ -32,14 +32,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sadece çözülmüş ilanlarda değerlendirme yapılabilir" }, { status: 400 });
   }
 
-  // Only allow rating if the rater submitted a claim or sighting for this item
-  const [{ data: claim }, { data: sighting }] = await Promise.all([
-    supabase.from("claims").select("id").eq("item_id", item_id).eq("claimant_email", rater_email).maybeSingle(),
-    supabase.from("sightings").select("id").eq("item_id", item_id).eq("reporter_email", rater_email).maybeSingle(),
-  ]);
+  // Item owner can rate the claimant; claimants/sighters can rate the owner
+  const isOwner = item.created_by_email === rater_email;
 
-  if (!claim && !sighting) {
-    return NextResponse.json({ error: "Sadece talep veya görme bildirimi gönderenler değerlendirme yapabilir" }, { status: 403 });
+  if (isOwner) {
+    // Owner rates claimant — verify rated_email has a claim
+    const { data: claimCheck } = await supabase
+      .from("claims").select("id").eq("item_id", item_id).eq("claimant_email", rated_email).maybeSingle();
+    if (!claimCheck) {
+      return NextResponse.json({ error: "Bu kişi bu ilan için talep göndermemiş" }, { status: 403 });
+    }
+  } else {
+    // Non-owner must have a claim or sighting
+    const [{ data: claim }, { data: sighting }] = await Promise.all([
+      supabase.from("claims").select("id").eq("item_id", item_id).eq("claimant_email", rater_email).maybeSingle(),
+      supabase.from("sightings").select("id").eq("item_id", item_id).eq("reporter_email", rater_email).maybeSingle(),
+    ]);
+    if (!claim && !sighting) {
+      return NextResponse.json({ error: "Sadece talep veya görme bildirimi gönderenler değerlendirme yapabilir" }, { status: 403 });
+    }
   }
 
   const { error } = await supabase.from("ratings").insert({
