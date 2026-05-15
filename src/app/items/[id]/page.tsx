@@ -110,9 +110,18 @@ export default function ItemDetailPage() {
           return;
         }
 
-        setItem(itemData as DbItem);
         const email = normalizeEmail(sessionData.session?.user?.email);
         setUserEmail(email);
+
+        // Pending ilanları sadece ilan sahibi görebilir
+        const isOwnerCheck = normalizeEmail(itemData.created_by_email) === email;
+        if ((itemData as DbItem & { moderation_status?: string }).moderation_status === "pending" && !isOwnerCheck) {
+          setNotFound(true);
+          setItem(null);
+          return;
+        }
+
+        setItem(itemData as DbItem);
 
         if (email) {
           fetch(`/api/favorites?userEmail=${encodeURIComponent(email)}`)

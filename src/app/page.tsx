@@ -65,6 +65,7 @@ export default function HomePage() {
           .from("items")
           .select("id, title, type, category, location, image_url, lat, lng")
           .eq("status", "active")
+          .eq("moderation_status", "approved")
           .not("lat", "is", null)
           .not("lng", "is", null)
           .limit(100);
@@ -80,10 +81,10 @@ export default function HomePage() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("items").select("*", { count: "exact", head: true }),
-      supabase.from("items").select("*", { count: "exact", head: true }).eq("type", "lost"),
-      supabase.from("items").select("*", { count: "exact", head: true }).eq("type", "found"),
-      supabase.from("items").select("*", { count: "exact", head: true }).eq("status", "resolved"),
+      supabase.from("items").select("*", { count: "exact", head: true }).eq("moderation_status", "approved"),
+      supabase.from("items").select("*", { count: "exact", head: true }).eq("type", "lost").eq("moderation_status", "approved"),
+      supabase.from("items").select("*", { count: "exact", head: true }).eq("type", "found").eq("moderation_status", "approved"),
+      supabase.from("items").select("*", { count: "exact", head: true }).eq("status", "resolved").eq("moderation_status", "approved"),
     ]).then(([{ count: total }, { count: lost }, { count: found }, { count: resolved }]) => {
       setStats({ total: total ?? 0, lost: lost ?? 0, found: found ?? 0, resolved: resolved ?? 0 });
     });

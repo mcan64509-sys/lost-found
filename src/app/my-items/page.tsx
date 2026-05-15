@@ -23,6 +23,7 @@ type MyItem = {
   created_by_email: string;
   expires_at: string | null;
   status: string | null;
+  moderation_status: string | null;
 };
 
 export default function MyItemsPage() {
@@ -364,7 +365,14 @@ export default function MyItemsPage() {
                           {item.description || "Açıklama bulunmuyor."}
                         </p>
 
-                        <div className="mt-5 inline-flex items-center text-sm font-medium text-blue-400 transition group-hover:text-blue-300">
+                        {item.moderation_status === "pending" && (
+                          <div className="mt-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                            <span className="text-amber-400 text-xs">⏳</span>
+                            <span className="text-xs font-semibold text-amber-400">Admin onayı bekleniyor</span>
+                          </div>
+                        )}
+
+                        <div className="mt-4 inline-flex items-center text-sm font-medium text-blue-400 transition group-hover:text-blue-300">
                           Detayı görüntüle →
                         </div>
 

@@ -212,8 +212,8 @@ export default function FoundReportPage() {
         body: JSON.stringify({ action: "create_item" }),
       }).catch(() => {});
 
-      toast.success("Bulundu ilanı oluşturuldu!");
-      router.push("/profile");
+      toast.success("Bulundu ilanınız alındı! Admin onayından sonra yayınlanacak.");
+      router.push("/my-items");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "İlan oluşturulurken bir hata oluştu.");
     } finally {

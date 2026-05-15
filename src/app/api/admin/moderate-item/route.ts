@@ -31,15 +31,53 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === "approve") {
-    const { error } = await supabaseAdmin
+    const { data: itemData, error } = await supabaseAdmin
       .from("items")
       .update({ moderation_status: "approved" })
-      .eq("id", itemId);
+      .eq("id", itemId)
+      .select("title, created_by_email")
+      .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // İlan sahibine bildirim gönder
+    if (itemData?.created_by_email) {
+      try {
+        await supabaseAdmin.from("notifications").insert({
+          user_email: itemData.created_by_email,
+          type: "moderation_approved",
+          title: "İlanınız onaylandı ✅",
+          message: `"${itemData.title}" ilanınız admin tarafından onaylandı ve yayına alındı.`,
+          item_id: itemId,
+          is_read: false,
+        });
+      } catch { /* bildirim hatası kritik değil */ }
+    }
+
     return NextResponse.json({ success: true, status: "approved" });
   } else {
+    const { data: itemData } = await supabaseAdmin
+      .from("items")
+      .select("title, created_by_email")
+      .eq("id", itemId)
+      .single();
+
     const { error } = await supabaseAdmin.from("items").delete().eq("id", itemId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // İlan sahibine red bildirimi
+    if (itemData?.created_by_email) {
+      try {
+        await supabaseAdmin.from("notifications").insert({
+          user_email: itemData.created_by_email,
+          type: "moderation_rejected",
+          title: "İlanınız reddedildi ❌",
+          message: `"${itemData.title}" ilanınız uygunsuz içerik nedeniyle admin tarafından reddedildi.`,
+          item_id: null,
+          is_read: false,
+        });
+      } catch { /* bildirim hatası kritik değil */ }
+    }
+
     return NextResponse.json({ success: true, status: "deleted" });
   }
 }

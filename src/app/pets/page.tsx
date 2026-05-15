@@ -135,6 +135,7 @@ export default function PetsPage() {
         .select("id,title,description,location,type,image_url,image_urls,priority_level,reward_amount,is_urgent,view_count,created_at,status,pet_species,pet_breed,pet_color,pet_age,pet_microchip")
         .eq("category", "Evcil Hayvan")
         .neq("status", "resolved")
+        .eq("moderation_status", "approved")
         .order("priority_level", { ascending: false })
         .order("created_at", { ascending: false });
       setItems((data as PetItem[]) ?? []);

@@ -117,6 +117,7 @@ export default function PriorityPage() {
         .select("id,title,description,category,location,type,image_url,image_urls,priority_level,reward_amount,is_urgent,view_count,created_at,status")
         .gt("priority_level", 0)
         .neq("status", "resolved")
+        .eq("moderation_status", "approved")
         .order("priority_level", { ascending: false })
         .order("created_at", { ascending: false });
       setItems((data as PriorityItem[]) ?? []);

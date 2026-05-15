@@ -34,6 +34,7 @@ export default function MapPage() {
         .not("lat", "is", null)
         .not("lng", "is", null)
         .neq("status", "resolved")
+        .eq("moderation_status", "approved")
         .order("priority_level", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(500);
