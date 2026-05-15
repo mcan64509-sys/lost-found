@@ -9,6 +9,7 @@ import ConfirmDialog from "../../components/ConfirmDialog";
 import { supabase } from "../../lib/supabase";
 import { toast } from "sonner";
 import { normalizeEmail } from "../../lib/utils";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 type MyItem = {
   id: string;
@@ -28,6 +29,7 @@ type MyItem = {
 
 export default function MyItemsPage() {
   const router = useRouter();
+  const { t } = useLanguage();
 
   const [userEmail, setUserEmail] = useState("");
   const [items, setItems] = useState<MyItem[]>([]);
@@ -163,9 +165,9 @@ export default function MyItemsPage() {
 
       <ConfirmDialog
         isOpen={confirmDeleteId !== null}
-        message="İlanı kaldırmak istediğine emin misin?"
-        description="Bu işlem geri alınamaz."
-        confirmLabel="Evet, kaldır"
+        message={t.myItems.removeConfirm}
+        description={t.myItems.removeConfirmDesc}
+        confirmLabel={t.myItems.removeConfirmBtn}
         danger
         onConfirm={() => { const id = confirmDeleteId!; setConfirmDeleteId(null); handleDeleteItem(id); }}
         onCancel={() => setConfirmDeleteId(null)}
@@ -175,10 +177,8 @@ export default function MyItemsPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <h1 className="text-3xl font-black md:text-4xl">İlanlarım</h1>
-              <p className="mt-2 text-slate-400">
-                Oluşturduğun kayıp ve bulundu ilanlarını buradan yönetebilirsin.
-              </p>
+              <h1 className="text-3xl font-black md:text-4xl">{t.myItems.title}</h1>
+              <p className="mt-2 text-slate-400">{t.myItems.subtitle}</p>
             </div>
 
             <div className="flex gap-3">
@@ -186,14 +186,14 @@ export default function MyItemsPage() {
                 href="/"
                 className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-white transition hover:bg-slate-900"
               >
-                ← Ana Sayfa
+                ← {t.myItems.home}
               </Link>
 
               <button
                 onClick={loadMyItems}
                 className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
               >
-                Yenile
+                {t.myItems.refresh}
               </button>
             </div>
           </div>
@@ -201,12 +201,12 @@ export default function MyItemsPage() {
           {!loading && userEmail && items.length > 0 && (
             <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
               {[
-                { label: "Toplam İlan", value: items.length, color: "text-white" },
-                { label: "Aktif", value: items.filter((i) => i.status === "active").length, color: "text-emerald-400" },
-                { label: "Kayıp", value: items.filter((i) => i.type === "lost").length, color: "text-amber-400" },
-                { label: "Bulundu", value: items.filter((i) => i.type === "found").length, color: "text-blue-400" },
-                { label: "Çözüldü", value: items.filter((i) => i.status === "resolved").length, color: "text-green-400" },
-                { label: "Süresi Dolmuş", value: items.filter((i) => i.status === "expired" || (i.expires_at !== null && new Date(i.expires_at) < new Date())).length, color: "text-red-400" },
+                { label: t.myItems.total, value: items.length, color: "text-white" },
+                { label: t.myItems.active, value: items.filter((i) => i.status === "active").length, color: "text-emerald-400" },
+                { label: t.myItems.lost, value: items.filter((i) => i.type === "lost").length, color: "text-amber-400" },
+                { label: t.myItems.found, value: items.filter((i) => i.type === "found").length, color: "text-blue-400" },
+                { label: t.myItems.resolved, value: items.filter((i) => i.status === "resolved").length, color: "text-green-400" },
+                { label: t.myItems.expired, value: items.filter((i) => i.status === "expired" || (i.expires_at !== null && new Date(i.expires_at) < new Date())).length, color: "text-red-400" },
               ].map((stat) => (
                 <div key={stat.label} className="rounded-2xl border border-slate-800 bg-slate-900 p-4 text-center">
                   <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
@@ -235,33 +235,29 @@ export default function MyItemsPage() {
             </div>
           ) : !userEmail ? (
             <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8">
-              <h2 className="text-2xl font-bold">Giriş yapman gerekiyor</h2>
-              <p className="mt-2 text-slate-400">
-                İlanlarını görmek için önce hesabına giriş yap.
-              </p>
+              <h2 className="text-2xl font-bold">{t.myItems.loginRequired}</h2>
+              <p className="mt-2 text-slate-400">{t.myItems.loginRequiredDesc}</p>
 
               <div className="mt-6 flex gap-3">
                 <Link
                   href="/auth/login"
                   className="rounded-2xl bg-blue-600 px-5 py-3 font-semibold text-white hover:bg-blue-700"
                 >
-                  Giriş Yap
+                  {t.myItems.login}
                 </Link>
 
                 <Link
                   href="/auth/register"
                   className="rounded-2xl border border-slate-700 px-5 py-3 font-semibold text-white hover:bg-slate-800"
                 >
-                  Kayıt Ol
+                  {t.myItems.register}
                 </Link>
               </div>
             </div>
           ) : items.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-900/50 p-10 text-center">
-              <h3 className="text-2xl font-bold">Henüz ilanın yok</h3>
-              <p className="mt-3 text-slate-400">
-                İlk ilanını oluşturduğunda burada görünecek.
-              </p>
+              <h3 className="text-2xl font-bold">{t.myItems.empty}</h3>
+              <p className="mt-3 text-slate-400">{t.myItems.emptyDesc}</p>
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -306,7 +302,7 @@ export default function MyItemsPage() {
                               onClick={() => router.push(`/items/${item.id}/edit`)}
                               className="w-full rounded-xl px-3 py-2 text-left text-sm text-white transition hover:bg-slate-800"
                             >
-                              İlanı düzenle
+                              {t.myItems.edit}
                             </button>
 
                             <button
@@ -314,7 +310,7 @@ export default function MyItemsPage() {
                               disabled={deletingItemId === item.id}
                               className="mt-1 w-full rounded-xl px-3 py-2 text-left text-sm text-red-300 transition hover:bg-slate-800 disabled:opacity-60"
                             >
-                              İlanı kaldır
+                              {t.myItems.remove}
                             </button>
                           </div>
                         )}
@@ -368,12 +364,12 @@ export default function MyItemsPage() {
                         {item.moderation_status === "pending" && (
                           <div className="mt-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
                             <span className="text-amber-400 text-xs">⏳</span>
-                            <span className="text-xs font-semibold text-amber-400">Admin onayı bekleniyor</span>
+                            <span className="text-xs font-semibold text-amber-400">{t.myItems.pending}</span>
                           </div>
                         )}
 
                         <div className="mt-4 inline-flex items-center text-sm font-medium text-blue-400 transition group-hover:text-blue-300">
-                          Detayı görüntüle →
+                          {t.myItems.view}
                         </div>
 
                         {item.expires_at && (
@@ -392,7 +388,7 @@ export default function MyItemsPage() {
                         disabled={renewingItemId === item.id}
                         className="w-full rounded-xl border border-slate-700 bg-slate-800 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white disabled:opacity-50"
                       >
-                        {renewingItemId === item.id ? "Yenileniyor..." : "↺ İlanı 60 Gün Uzat"}
+                        {renewingItemId === item.id ? t.myItems.renewing : t.myItems.renew}
                       </button>
                     </div>
                   </div>

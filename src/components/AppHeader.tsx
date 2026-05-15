@@ -72,6 +72,11 @@ export default function AppHeader() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [showIlanMenu, setShowIlanMenu] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackType, setFeedbackType] = useState("");
+  const [feedbackTitle, setFeedbackTitle] = useState("");
+  const [feedbackDesc, setFeedbackDesc] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   const notifRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -205,6 +210,34 @@ export default function AppHeader() {
     return () => window.removeEventListener("click", handleClickOutside);
   }, []);
 
+  async function handleFeedbackSubmit() {
+    if (!userEmail) { toast.error(t.feedback.loginRequired); return; }
+    if (!feedbackType || !feedbackTitle.trim() || !feedbackDesc.trim()) {
+      toast.error("Lütfen tüm alanları doldurun.");
+      return;
+    }
+    setSubmittingFeedback(true);
+    try {
+      const res = await fetch("/api/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userEmail, type: feedbackType, title: feedbackTitle.trim(), description: feedbackDesc.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(t.feedback.success);
+        setShowFeedback(false);
+        setFeedbackType(""); setFeedbackTitle(""); setFeedbackDesc("");
+      } else {
+        toast.error(data.error || "Gönderilemedi.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  }
+
   async function handleLogout() {
     try {
       await supabase.auth.signOut();
@@ -284,6 +317,17 @@ export default function AppHeader() {
                 </div>
               )}
             </div>
+
+            {/* GERİ BİLDİRİM */}
+            {userEmail && (
+              <button
+                onClick={() => setShowFeedback(true)}
+                title={t.feedback.navLabel}
+                className="hidden md:flex items-center gap-1.5 rounded-xl border border-slate-700 px-3 py-2 text-xs font-medium text-slate-400 hover:border-blue-500/40 hover:text-blue-400 transition"
+              >
+                💬 {t.feedback.navLabel}
+              </button>
+            )}
 
             {/* DİL SEÇİCİ */}
             <LanguageSwitcher />
@@ -562,6 +606,70 @@ export default function AppHeader() {
           </div>
         )}
       </header>
+
+      {/* Feedback Modal */}
+      {showFeedback && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={() => setShowFeedback(false)}>
+          <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-5">
+              <h3 className="text-lg font-bold text-white">{t.feedback.modalTitle}</h3>
+              <p className="mt-1 text-sm text-slate-400">{t.feedback.modalSubtitle}</p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-400">{t.feedback.typeLabel} *</label>
+                <select
+                  value={feedbackType}
+                  onChange={(e) => setFeedbackType(e.target.value)}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white focus:outline-none"
+                >
+                  <option value="">{t.feedback.selectType}</option>
+                  {Object.entries(t.feedback.types).map(([k, v]) => (
+                    <option key={k} value={k}>{v}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-400">{t.feedback.titleLabel} *</label>
+                <input
+                  type="text"
+                  value={feedbackTitle}
+                  onChange={(e) => setFeedbackTitle(e.target.value)}
+                  maxLength={120}
+                  placeholder={t.feedback.titlePlaceholder}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-400">{t.feedback.descLabel} *</label>
+                <textarea
+                  value={feedbackDesc}
+                  onChange={(e) => setFeedbackDesc(e.target.value)}
+                  rows={4}
+                  maxLength={1000}
+                  placeholder={t.feedback.descPlaceholder}
+                  className="w-full resize-none rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => setShowFeedback(false)}
+                  className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 hover:bg-slate-800 transition"
+                >
+                  {t.common.cancel}
+                </button>
+                <button
+                  onClick={handleFeedbackSubmit}
+                  disabled={submittingFeedback || !feedbackType || !feedbackTitle.trim() || !feedbackDesc.trim()}
+                  className="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
+                >
+                  {submittingFeedback ? t.feedback.submitting : t.feedback.submit}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

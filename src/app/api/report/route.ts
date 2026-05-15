@@ -18,12 +18,13 @@ const VALID_REASONS = [
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const itemId = (body.itemId || "").trim();
+    const itemId = (body.itemId || "").trim() || null;
+    const reportedUserEmail = (body.reportedUserEmail || "").trim().toLowerCase() || null;
     const reporterEmail = normalizeEmail(body.reporterEmail);
     const reason = (body.reason || "").trim();
     const details = (body.details || "").trim().slice(0, 500);
 
-    if (!itemId || !reporterEmail || !reason) {
+    if ((!itemId && !reportedUserEmail) || !reporterEmail || !reason) {
       return NextResponse.json({ error: "Eksik alanlar." }, { status: 400 });
     }
     if (!isValidEmail(reporterEmail)) {
@@ -33,23 +34,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Geçersiz şikayet sebebi." }, { status: 400 });
     }
 
-    // Aynı kullanıcı aynı ilana zaten rapor gönderdi mi?
-    const { data: existing } = await supabase
+    // Duplicate check
+    const query = supabase
       .from("reports")
       .select("id")
-      .eq("item_id", itemId)
-      .eq("reporter_email", reporterEmail)
-      .maybeSingle();
+      .eq("reporter_email", reporterEmail);
 
+    if (itemId) query.eq("item_id", itemId);
+    if (reportedUserEmail) query.eq("reported_user_email", reportedUserEmail);
+
+    const { data: existing } = await query.maybeSingle();
     if (existing) {
       return NextResponse.json(
-        { error: "Bu ilanı zaten şikayet etmişsiniz." },
+        { error: "Bu içeriği zaten şikayet etmişsiniz." },
         { status: 409 }
       );
     }
 
     const { error } = await supabase.from("reports").insert({
       item_id: itemId,
+      reported_user_email: reportedUserEmail,
       reporter_email: reporterEmail,
       reason,
       details: details || null,

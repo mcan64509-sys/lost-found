@@ -53,6 +53,10 @@ export default function UserProfilePage() {
   const [viewerEmail, setViewerEmail] = useState("");
   const [isBanned, setIsBanned] = useState(false);
   const [togglingBan, setTogglingBan] = useState(false);
+  const [showProfileReport, setShowProfileReport] = useState(false);
+  const [profileReportReason, setProfileReportReason] = useState("");
+  const [profileReportDetails, setProfileReportDetails] = useState("");
+  const [submittingProfileReport, setSubmittingProfileReport] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -127,6 +131,36 @@ export default function UserProfilePage() {
       toast.error("Bir hata oluştu.");
     } finally {
       setTogglingBan(false);
+    }
+  }
+
+  async function handleProfileReport() {
+    if (!profileReportReason) { toast.error("Şikayet sebebi seçin."); return; }
+    setSubmittingProfileReport(true);
+    try {
+      const res = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reportedUserEmail: emailParam,
+          reporterEmail: viewerEmail,
+          reason: profileReportReason,
+          details: profileReportDetails,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Şikayetiniz alındı, incelenecek.");
+        setShowProfileReport(false);
+        setProfileReportReason("");
+        setProfileReportDetails("");
+      } else {
+        toast.error(data.error || "Gönderilemedi.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSubmittingProfileReport(false);
     }
   }
 
@@ -235,6 +269,70 @@ export default function UserProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* Profile report button — for non-admin logged-in users viewing others */}
+          {viewerEmail && !isOwnProfile && !isAdmin && (
+            <div className="mb-4 flex justify-end">
+              <button
+                onClick={() => setShowProfileReport(true)}
+                className="rounded-xl border border-slate-700 px-3 py-1.5 text-xs text-slate-500 hover:border-red-500/40 hover:text-red-400 transition"
+              >
+                ⚑ Profili Şikayet Et
+              </button>
+            </div>
+          )}
+
+          {/* Profile report modal */}
+          {showProfileReport && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+              <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6">
+                <h3 className="text-lg font-bold text-white mb-4">Profili Şikayet Et</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Şikayet sebebi *</label>
+                    <select
+                      value={profileReportReason}
+                      onChange={(e) => setProfileReportReason(e.target.value)}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white focus:outline-none"
+                    >
+                      <option value="">Seçin...</option>
+                      <option value="spam">Spam / Reklam</option>
+                      <option value="yaniltici">Yanıltıcı Profil</option>
+                      <option value="uygunsuz">Uygunsuz Davranış</option>
+                      <option value="duplicate">Sahte / Kopya Hesap</option>
+                      <option value="diger">Diğer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">Detay (opsiyonel)</label>
+                    <textarea
+                      value={profileReportDetails}
+                      onChange={(e) => setProfileReportDetails(e.target.value)}
+                      rows={3}
+                      maxLength={500}
+                      placeholder="Şikayetinizi açıklayın..."
+                      className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none resize-none"
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => setShowProfileReport(false)}
+                      className="flex-1 rounded-xl border border-slate-700 py-2.5 text-sm text-slate-400 hover:bg-slate-800 transition"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      onClick={handleProfileReport}
+                      disabled={submittingProfileReport || !profileReportReason}
+                      className="flex-1 rounded-xl bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-50"
+                    >
+                      {submittingProfileReport ? "Gönderiliyor..." : "Şikayet Gönder"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Admin actions */}
           {isAdmin && !isOwnProfile && (

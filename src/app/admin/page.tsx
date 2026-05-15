@@ -41,9 +41,21 @@ type Report = {
   created_at: string;
   item_title?: string;
   item_owner_email?: string | null;
+  reported_user_email?: string | null;
 };
 
 type DayCount = { day: string; kayip: number; bulundu: number };
+
+type UserRequest = {
+  id: string;
+  user_email: string;
+  type: string;
+  title: string;
+  description: string;
+  status: string;
+  admin_response: string | null;
+  created_at: string;
+};
 
 type Sighting = {
   id: string;
@@ -88,7 +100,7 @@ export default function AdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [sightings, setSightings] = useState<Sighting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"stats" | "items" | "reports" | "users" | "sightings" | "moderation">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests">("stats");
   const [pendingItems, setPendingItems] = useState<AdminItem[]>([]);
   const [moderating, setModerating] = useState<string | null>(null);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
@@ -106,6 +118,9 @@ export default function AdminPage() {
   });
   const [sendingReminders, setSendingReminders] = useState(false);
   const [chartData, setChartData] = useState<DayCount[]>([]);
+  const [userRequests, setUserRequests] = useState<UserRequest[]>([]);
+  const [updatingRequest, setUpdatingRequest] = useState<string | null>(null);
+  const [requestResponse, setRequestResponse] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const init = async () => {
@@ -126,13 +141,16 @@ export default function AdminPage() {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     const accessToken = token || session?.access_token || "";
-    const [{ data: itemData }, { data: sightingData }, usersRes, reportsRes] = await Promise.all([
+    const [{ data: itemData }, { data: sightingData }, usersRes, reportsRes, requestsRes] = await Promise.all([
       supabase.from("items").select("*").order("created_at", { ascending: false }),
       supabase.from("sightings").select("*, items(title)").order("created_at", { ascending: false }).limit(200),
       fetch("/api/admin/users", {
         headers: { Authorization: `Bearer ${accessToken}` },
       }).then((r) => r.json()),
       fetch("/api/admin/reports", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }).then((r) => r.json()),
+      fetch("/api/admin/requests", {
         headers: { Authorization: `Bearer ${accessToken}` },
       }).then((r) => r.json()),
     ]);
@@ -173,6 +191,7 @@ export default function AdminPage() {
     setSightings(sightingsWithTitle);
 
     setAdminUsers(usersRes.users ?? []);
+    setUserRequests(requestsRes.requests ?? []);
 
     // Load pending moderation items
     const { data: pendingData } = await supabase
@@ -320,6 +339,28 @@ export default function AdminPage() {
     }
   }
 
+  async function handleRequestAction(requestId: string, status: "in_progress" | "resolved" | "dismissed") {
+    setUpdatingRequest(requestId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/requests", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+        body: JSON.stringify({ requestId, status, adminResponse: requestResponse[requestId] || "" }),
+      });
+      if (res.ok) {
+        setUserRequests((prev) => prev.map((r) => r.id === requestId ? { ...r, status, admin_response: requestResponse[requestId] || null } : r));
+        toast.success(status === "resolved" ? "İstek çözüldü olarak işaretlendi." : status === "in_progress" ? "İşleme alındı." : "Reddedildi.");
+      } else {
+        const d = await res.json();
+        toast.error(d.error || "Güncellenemedi.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    }
+    setUpdatingRequest(null);
+  }
+
   async function handleSendExpiryReminders() {
     setSendingReminders(true);
     try {
@@ -413,6 +454,7 @@ export default function AdminPage() {
               ["users", "👥 Kullanıcılar", adminUsers.length],
               ["sightings", "👁 Gördüm", sightings.length],
               ["moderation", "🛡 Moderasyon", pendingItems.length],
+              ["requests", "💬 İstekler", userRequests.filter((r) => r.status === "pending").length],
             ] as const).map(([tab, label, count]) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`relative flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === tab ? "bg-slate-700 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-slate-800/50"}`}>
@@ -774,6 +816,93 @@ export default function AdminPage() {
                 ))
               )}
             </div>
+          ) : activeTab === "requests" ? (
+            /* Requests tab */
+            <div className="space-y-3 animate-fade-in-up">
+              {(() => {
+                const REQUEST_TYPE_LABELS: Record<string, string> = {
+                  feature_request: "💡 Özellik İsteği",
+                  bug_report: "🐛 Hata Bildirimi",
+                  complaint: "⚑ Şikayet",
+                  other: "📝 Diğer",
+                };
+                const STATUS_COLORS: Record<string, string> = {
+                  pending: "bg-amber-500/20 text-amber-300",
+                  in_progress: "bg-blue-500/20 text-blue-300",
+                  resolved: "bg-green-500/20 text-green-300",
+                  dismissed: "bg-slate-700 text-slate-400",
+                };
+                const STATUS_LABELS: Record<string, string> = {
+                  pending: "Bekliyor",
+                  in_progress: "İşlemde",
+                  resolved: "Çözüldü",
+                  dismissed: "Reddedildi",
+                };
+                if (userRequests.length === 0) {
+                  return (
+                    <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
+                      Henüz kullanıcı isteği yok.
+                    </div>
+                  );
+                }
+                return userRequests.map((req) => (
+                  <div key={req.id} className={`rounded-2xl border p-4 ${req.status === "pending" ? "border-amber-500/20 bg-amber-500/5" : "border-slate-800 bg-slate-900"}`}>
+                    <div className="flex items-start gap-4 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[req.status] ?? ""}`}>
+                            {STATUS_LABELS[req.status] ?? req.status}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-300">{REQUEST_TYPE_LABELS[req.type] ?? req.type}</span>
+                        </div>
+                        <p className="text-sm font-semibold text-white">{req.title}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">{req.user_email} · {new Date(req.created_at).toLocaleDateString("tr-TR")}</p>
+                        <p className="mt-2 text-xs text-slate-300 leading-relaxed">{req.description}</p>
+                        {req.admin_response && (
+                          <p className="mt-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs text-blue-300">
+                            Admin yanıtı: {req.admin_response}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {req.status !== "resolved" && req.status !== "dismissed" && (
+                      <div className="mt-3 space-y-2">
+                        <textarea
+                          placeholder="Admin yanıtı (opsiyonel)..."
+                          value={requestResponse[req.id] ?? ""}
+                          onChange={(e) => setRequestResponse((prev) => ({ ...prev, [req.id]: e.target.value }))}
+                          rows={2}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none resize-none"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleRequestAction(req.id, "in_progress")}
+                            disabled={updatingRequest === req.id}
+                            className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-400 hover:bg-blue-500/20 transition disabled:opacity-50"
+                          >
+                            {updatingRequest === req.id ? "..." : "İşleme Al"}
+                          </button>
+                          <button
+                            onClick={() => handleRequestAction(req.id, "resolved")}
+                            disabled={updatingRequest === req.id}
+                            className="rounded-xl border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-semibold text-green-400 hover:bg-green-500/20 transition disabled:opacity-50"
+                          >
+                            {updatingRequest === req.id ? "..." : "✓ Çözüldü"}
+                          </button>
+                          <button
+                            onClick={() => handleRequestAction(req.id, "dismissed")}
+                            disabled={updatingRequest === req.id}
+                            className="rounded-xl border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-700 transition disabled:opacity-50"
+                          >
+                            {updatingRequest === req.id ? "..." : "Reddet"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ));
+              })()}
+            </div>
           ) : (
             /* Reports tab */
             <div className="space-y-3 animate-fade-in-up">
@@ -800,12 +929,18 @@ export default function AdminPage() {
                             </span>
                             <span className="text-xs font-semibold text-slate-300">{REASON_LABELS[report.reason] || report.reason}</span>
                           </div>
-                          <Link href={`/items/${report.item_id}`} target="_blank" className="text-sm font-semibold text-white hover:text-blue-300">
-                            {report.item_title} ↗
-                          </Link>
+                          {report.item_id ? (
+                            <Link href={`/items/${report.item_id}`} target="_blank" className="text-sm font-semibold text-white hover:text-blue-300">
+                              {report.item_title} ↗
+                            </Link>
+                          ) : (
+                            <Link href={`/users/${encodeURIComponent(report.item_owner_email || report.reported_user_email || "")}`} target="_blank" className="text-sm font-semibold text-white hover:text-red-300">
+                              👤 Profil: {report.item_owner_email || report.reported_user_email} ↗
+                            </Link>
+                          )}
                           <p className="mt-0.5 text-xs text-slate-500">
                             Şikayet eden: <span className="text-slate-400">{report.reporter_email}</span>
-                            {report.item_owner_email && (
+                            {report.item_owner_email && report.item_id && (
                               <> · İlan sahibi: <span className="text-slate-400">{report.item_owner_email}</span></>
                             )}
                             {" · "}{new Date(report.created_at).toLocaleDateString("tr-TR")}

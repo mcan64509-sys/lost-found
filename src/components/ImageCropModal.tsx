@@ -139,7 +139,7 @@ export default function ImageCropModal({ imageSrc, fileName, onConfirm, onCancel
             disabled={confirming || !completedCrop || completedCrop.width === 0}
             className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
           >
-            {confirming ? "İşleniyor..." : "Kırpı Uygula"}
+            {confirming ? "İşleniyor..." : "Görseli Kırp"}
           </button>
         </div>
       </div>
