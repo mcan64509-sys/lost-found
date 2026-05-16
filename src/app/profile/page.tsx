@@ -1220,7 +1220,7 @@ export default function ProfilePage() {
                       </button>
                     </div>
                     <p className="text-xs text-slate-500">
-                      Paylaş: <span className="text-slate-400 font-mono">bulanvarmi.vercel.app/auth/register?ref={referralCode}</span>
+                      Paylaş: <span className="text-slate-400 font-mono">bulanvarmi.com/auth/register?ref={referralCode}</span>
                     </p>
                     <div className="mt-3">
                       <p className="text-xs font-semibold text-slate-400 mb-2">Davet Edilenler ({referrals.length})</p>
