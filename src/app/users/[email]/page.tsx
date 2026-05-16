@@ -151,10 +151,11 @@ export default function UserProfilePage() {
     if (!profileReportReason) { toast.error("Şikayet sebebi seçin."); return; }
     setSubmittingProfileReport(true);
     try {
+      const { data: { session: rptSession } } = await supabase.auth.getSession();
       const res = await fetch("/api/report", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reportedUserEmail: emailParam, reporterEmail: viewerEmail, reason: profileReportReason, details: profileReportDetails }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${rptSession?.access_token ?? ""}` },
+        body: JSON.stringify({ reportedUserEmail: emailParam, reason: profileReportReason, details: profileReportDetails }),
       });
       const data = await res.json();
       if (res.ok) {

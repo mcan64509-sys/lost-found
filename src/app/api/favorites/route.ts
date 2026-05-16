@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getAuthenticatedUser } from "../../../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,13 +8,13 @@ const supabase = createClient(
 );
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const userEmail = searchParams.get("userEmail")?.trim().toLowerCase();
-  const withItems = searchParams.get("withItems") === "true";
-
-  if (!userEmail) {
-    return NextResponse.json({ error: "userEmail gerekli" }, { status: 400 });
+  const authUser = await getAuthenticatedUser(req);
+  if (!authUser?.email) {
+    return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
   }
+  const userEmail = authUser.email;
+  const { searchParams } = new URL(req.url);
+  const withItems = searchParams.get("withItems") === "true";
 
   const { data, error } = await supabase
     .from("favorites")
@@ -50,12 +51,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser?.email) {
+      return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+    }
+    const userEmail = authUser.email;
     const body = await req.json();
-    const userEmail = (body.userEmail || "").trim().toLowerCase();
     const itemId = (body.itemId || "").trim();
 
-    if (!userEmail || !itemId) {
-      return NextResponse.json({ error: "userEmail ve itemId gerekli" }, { status: 400 });
+    if (!itemId) {
+      return NextResponse.json({ error: "itemId gerekli" }, { status: 400 });
     }
 
     // Zaten favoride var mı?

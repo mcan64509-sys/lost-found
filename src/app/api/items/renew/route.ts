@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getAuthenticatedUser } from "../../../../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,12 +9,16 @@ const supabase = createClient(
 
 export async function PATCH(req: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser?.email) {
+      return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+    }
+    const userEmail = authUser.email;
     const body = await req.json();
     const itemId = (body.itemId || "").trim();
-    const userEmail = (body.userEmail || "").trim().toLowerCase();
 
-    if (!itemId || !userEmail) {
-      return NextResponse.json({ error: "itemId ve userEmail gerekli" }, { status: 400 });
+    if (!itemId) {
+      return NextResponse.json({ error: "itemId gerekli" }, { status: 400 });
     }
 
     // Verify item belongs to user

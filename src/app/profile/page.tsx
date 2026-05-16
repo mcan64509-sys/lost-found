@@ -262,12 +262,13 @@ export default function ProfilePage() {
     }
   }, [loadClaims]);
 
-  async function loadFavorites(email: string) {
+  async function loadFavorites(_email?: string) {
     setFavoritesLoading(true);
     try {
-      const res = await fetch(
-        `/api/favorites?userEmail=${encodeURIComponent(email)}&withItems=true`
-      );
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`/api/favorites?withItems=true`, {
+        headers: { Authorization: `Bearer ${session?.access_token ?? ""}` },
+      });
       if (!res.ok) {
         setFavoriteItems([]);
         return;
@@ -1210,7 +1211,7 @@ export default function ProfilePage() {
                       <span className="flex-1 font-mono text-lg font-bold text-emerald-400 tracking-widest">{referralCode}</span>
                       <button
                         onClick={() => {
-                          navigator.clipboard.writeText(`https://bulanvarmi.vercel.app/auth/register?ref=${referralCode}`);
+                          navigator.clipboard.writeText(`https://bulanvarmi.com/auth/register?ref=${referralCode}`);
                           toast.success("Link kopyalandı!");
                         }}
                         className="rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/30 transition"

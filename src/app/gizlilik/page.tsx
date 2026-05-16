@@ -22,7 +22,7 @@ export default function GizlilikPage() {
             <h2 className="mb-3 text-lg font-semibold text-white">1. Veri Sorumlusu</h2>
             <p>
               Bu gizlilik politikası, <strong className="text-white">Bulan Varmi</strong> platformu
-              (<strong className="text-white">bulanvarmi.vercel.app</strong>) tarafından hazırlanmıştır.
+              (<strong className="text-white">bulanvarmi.com</strong>) tarafından hazırlanmıştır.
               Kişisel verilerinizin işlenmesine ilişkin sorularınız için{" "}
               <a href="mailto:bulanvarmi1@gmail.com" className="text-blue-400 hover:text-blue-300">
                 bulanvarmi1@gmail.com

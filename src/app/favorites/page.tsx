@@ -22,6 +22,7 @@ type FavoriteItem = {
 
 export default function FavoritesPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [items, setItems] = useState<FavoriteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -31,23 +32,24 @@ export default function FavoritesPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const email = session?.user?.email?.trim().toLowerCase() ?? null;
       setUserEmail(email);
+      setToken(session?.access_token ?? null);
 
-      if (!email) {
+      if (!email || !session?.access_token) {
         setLoading(false);
         return;
       }
 
-      await loadFavorites(email);
+      await loadFavorites(session.access_token);
     }
     init();
   }, []);
 
-  async function loadFavorites(email: string) {
+  async function loadFavorites(accessToken: string) {
     setLoading(true);
     try {
-      const res = await fetch(
-        `/api/favorites?userEmail=${encodeURIComponent(email)}&withItems=true`
-      );
+      const res = await fetch(`/api/favorites?withItems=true`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       if (!res.ok) {
         setItems([]);
         return;
@@ -61,13 +63,13 @@ export default function FavoritesPage() {
   }
 
   async function handleRemove(itemId: string) {
-    if (!userEmail) return;
+    if (!token) return;
     setRemovingId(itemId);
     try {
       const res = await fetch("/api/favorites", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userEmail, itemId }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ itemId }),
       });
       if (res.ok) {
         setItems((prev) => prev.filter((i) => i.id !== itemId));

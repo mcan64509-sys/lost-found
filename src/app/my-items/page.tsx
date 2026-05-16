@@ -138,10 +138,11 @@ export default function MyItemsPage() {
   async function handleRenewItem(itemId: string) {
     try {
       setRenewingItemId(itemId);
+      const { data: { session: renewSession } } = await supabase.auth.getSession();
       const res = await fetch("/api/items/renew", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId, userEmail }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${renewSession?.access_token ?? ""}` },
+        body: JSON.stringify({ itemId }),
       });
       const data = await res.json();
       if (!res.ok) {

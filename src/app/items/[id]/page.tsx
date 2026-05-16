@@ -136,8 +136,10 @@ export default function ItemDetailPage() {
 
         setItem(itemData as DbItem);
 
-        if (email) {
-          fetch(`/api/favorites?userEmail=${encodeURIComponent(email)}`)
+        if (email && sessionData.session?.access_token) {
+          fetch(`/api/favorites`, {
+            headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
+          })
             .then((r) => r.json())
             .then((d) => {
               if (d.itemIds && Array.isArray(d.itemIds)) {
@@ -425,10 +427,11 @@ export default function ItemDetailPage() {
     }
     try {
       setTogglingFav(true);
+      const { data: { session: favSession } } = await supabase.auth.getSession();
       const res = await fetch("/api/favorites", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userEmail, itemId: id }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${favSession?.access_token ?? ""}` },
+        body: JSON.stringify({ itemId: id }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -455,10 +458,11 @@ export default function ItemDetailPage() {
     }
     try {
       setSubmittingReport(true);
+      const { data: { session: rptSession } } = await supabase.auth.getSession();
       const res = await fetch("/api/report", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId: id, reporterEmail: userEmail, reason: reportReason, details: reportDetails }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${rptSession?.access_token ?? ""}` },
+        body: JSON.stringify({ itemId: id, reason: reportReason, details: reportDetails }),
       });
       const data = await res.json();
       if (res.ok) {

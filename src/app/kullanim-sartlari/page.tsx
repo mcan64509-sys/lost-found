@@ -22,7 +22,7 @@ export default function KullanimSartlariPage() {
             <h2 className="mb-3 text-lg font-semibold text-white">1. Taraflar ve Kabul</h2>
             <p>
               Bu kullanım şartları, <strong className="text-white">Bulan Varmi</strong> platformu
-              (<strong className="text-white">bulanvarmi.vercel.app</strong>) ile platformu kullanan
+              (<strong className="text-white">bulanvarmi.com</strong>) ile platformu kullanan
               gerçek kişiler arasındaki ilişkiyi düzenler. Platformu kullanmaya devam ederek bu
               şartları okuduğunuzu, anladığınızı ve kabul ettiğinizi beyan etmiş olursunuz.
             </p>

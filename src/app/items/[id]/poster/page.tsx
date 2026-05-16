@@ -99,7 +99,7 @@ export default function PosterPage() {
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-400 font-medium">BulanVarMı?</p>
-                <p className="text-xs text-gray-500">bulanvarmi.vercel.app</p>
+                <p className="text-xs text-gray-500">bulanvarmi.com</p>
               </div>
             </div>
           </div>
@@ -172,7 +172,7 @@ export default function PosterPage() {
           {/* Footer */}
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-400">
-              Bu afiş BulanVarMı? platformu üzerinden oluşturulmuştur. • bulanvarmi.vercel.app
+              Bu afiş BulanVarMı? platformu üzerinden oluşturulmuştur. • bulanvarmi.com
             </p>
           </div>
         </div>

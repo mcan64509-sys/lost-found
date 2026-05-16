@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { isValidEmail, normalizeEmail } from "../../../lib/utils";
+import { getAuthenticatedUser } from "../../../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,18 +17,20 @@ const VALID_REASONS = [
 
 export async function POST(req: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser?.email) {
+      return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+    }
+    const reporterEmail = authUser.email;
+
     const body = await req.json();
     const itemId = (body.itemId || "").trim() || null;
     const reportedUserEmail = (body.reportedUserEmail || "").trim().toLowerCase() || null;
-    const reporterEmail = normalizeEmail(body.reporterEmail);
     const reason = (body.reason || "").trim();
     const details = (body.details || "").trim().slice(0, 500);
 
-    if ((!itemId && !reportedUserEmail) || !reporterEmail || !reason) {
+    if ((!itemId && !reportedUserEmail) || !reason) {
       return NextResponse.json({ error: "Eksik alanlar." }, { status: 400 });
-    }
-    if (!isValidEmail(reporterEmail)) {
-      return NextResponse.json({ error: "Geçersiz email." }, { status: 400 });
     }
     if (!VALID_REASONS.includes(reason)) {
       return NextResponse.json({ error: "Geçersiz şikayet sebebi." }, { status: 400 });
