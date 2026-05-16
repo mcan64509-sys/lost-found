@@ -25,8 +25,8 @@ type PriorityItem = {
 };
 
 const LEVEL_CONFIG = {
-  3: { label: "Altın", color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/30", badge: "bg-yellow-500 text-slate-950", icon: "🥇" },
-  2: { label: "Gümüş", color: "text-slate-300", bg: "bg-slate-500/10 border-slate-500/30", badge: "bg-slate-400 text-slate-950", icon: "🥈" },
+  3: { label: "Acil", color: "text-red-400", bg: "bg-red-500/10 border-red-500/30", badge: "bg-red-500 text-white", icon: "🚨" },
+  2: { label: "Altın", color: "text-yellow-400", bg: "bg-yellow-500/10 border-yellow-500/30", badge: "bg-yellow-500 text-slate-950", icon: "⭐" },
   1: { label: "Bronz", color: "text-amber-600", bg: "bg-amber-900/20 border-amber-800/30", badge: "bg-amber-700 text-white", icon: "🥉" },
 };
 
@@ -132,8 +132,8 @@ export default function PriorityPage() {
     return true;
   });
 
-  const goldCount = items.filter((i) => i.priority_level === 3).length;
-  const silverCount = items.filter((i) => i.priority_level === 2).length;
+  const acilCount = items.filter((i) => i.priority_level === 3).length;
+  const altinCount = items.filter((i) => i.priority_level === 2).length;
   const bronzeCount = items.filter((i) => i.priority_level === 1).length;
 
   return (
@@ -157,20 +157,20 @@ export default function PriorityPage() {
 
           {/* Öncelik açıklamaları */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4 flex items-center gap-3">
-              <span className="text-2xl">🥇</span>
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 flex items-center gap-3">
+              <span className="text-2xl">🚨</span>
               <div>
-                <div className="font-bold text-yellow-400 text-sm">Altın Öncelik</div>
+                <div className="font-bold text-red-400 text-sm">Acil Öncelik</div>
                 <div className="text-xs text-slate-500 mt-0.5">En üst sıralarda gösterilir, en fazla görünürlük</div>
-                <div className="text-xs font-bold text-yellow-500 mt-1">{goldCount} aktif ilan</div>
+                <div className="text-xs font-bold text-red-500 mt-1">{acilCount} aktif ilan</div>
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-500/20 bg-slate-500/5 p-4 flex items-center gap-3">
-              <span className="text-2xl">🥈</span>
+            <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4 flex items-center gap-3">
+              <span className="text-2xl">⭐</span>
               <div>
-                <div className="font-bold text-slate-300 text-sm">Gümüş Öncelik</div>
-                <div className="text-xs text-slate-500 mt-0.5">Normal ilanların üzerinde listelenir</div>
-                <div className="text-xs font-bold text-slate-400 mt-1">{silverCount} aktif ilan</div>
+                <div className="font-bold text-yellow-400 text-sm">Altın Öncelik</div>
+                <div className="text-xs text-slate-500 mt-0.5">Acil ilanların hemen altında listelenir</div>
+                <div className="text-xs font-bold text-yellow-500 mt-1">{altinCount} aktif ilan</div>
               </div>
             </div>
             <div className="rounded-2xl border border-amber-800/20 bg-amber-900/10 p-4 flex items-center gap-3">
@@ -198,7 +198,7 @@ export default function PriorityPage() {
             </div>
 
             <div className="flex rounded-xl overflow-hidden border border-slate-700 text-sm font-semibold">
-              {([["all", "Tüm Seviyeler"], [3, "🥇 Altın"], [2, "🥈 Gümüş"], [1, "🥉 Bronz"]] as const).map(([v, l]) => (
+              {([["all", "Tüm Seviyeler"], [3, "🚨 Acil"], [2, "⭐ Altın"], [1, "🥉 Bronz"]] as const).map(([v, l]) => (
                 <button
                   key={String(v)}
                   onClick={() => setActiveLevel(v)}

@@ -84,8 +84,8 @@ function UpgradeContent() {
           {/* Free tier info */}
           <div className="mb-6 rounded-2xl border border-blue-500/20 bg-blue-500/5 px-5 py-4 text-sm text-slate-300">
             <span className="font-semibold text-white">İlk 3 ilanın ücretsiz!</span>{" "}
-            4. ilanından itibaren Standart, Acil veya Altın paket seçmelisin.
-            Acil ilanlar en üst sıraya, Altın ilanlar hemen altına çıkar.
+            4. ilanından itibaren Standart, Altın veya Acil paket seçmelisin.
+            Altın ve Acil ilanlar "Acil İlanlar" kategorisinde görünür. Acil ilanlar en üst sıraya çıkar.
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">

@@ -14,10 +14,25 @@ export const PRODUCTS = {
       "Arama sonuçlarında görünür",
     ],
   },
+  altin_ilan: {
+    label: "⭐ Altın İlan",
+    desc: "Üst sıralarda yüksek görünürlük — acil kategorisinde öne çık",
+    price_cents: 2999, // 29,99 ₺
+    currency: "try",
+    priority_level: 2,
+    is_urgent: true,
+    days: 30,
+    color: "border-yellow-500/50 bg-yellow-500/10 text-yellow-400",
+    features: [
+      "⭐ Altın rozet",
+      "Acil İlanlar kategorisinde görünür",
+      "30 gün geçerli",
+    ],
+  },
   acil_ilan: {
     label: "🚨 Acil İlan",
     desc: "En üst sıralarda gösterilir — acil kayıp durumları için",
-    price_cents: 2999, // 29,99 ₺
+    price_cents: 4999, // 49,99 ₺
     currency: "try",
     priority_level: 3,
     is_urgent: true,
@@ -26,21 +41,7 @@ export const PRODUCTS = {
     features: [
       "🚨 Kırmızı Acil rozeti",
       "Tüm ilanların EN ÜSTÜNDE çıkar",
-      "30 gün geçerli",
-    ],
-  },
-  altin_ilan: {
-    label: "⭐ Altın İlan",
-    desc: "Üst sıralarda yüksek görünürlük — geniş kitlelere ulaş",
-    price_cents: 4999, // 49,99 ₺
-    currency: "try",
-    priority_level: 2,
-    is_urgent: false,
-    days: 30,
-    color: "border-yellow-500/50 bg-yellow-500/10 text-yellow-400",
-    features: [
-      "⭐ Altın rozet",
-      "Acil ilanların hemen altında",
+      "Acil İlanlar kategorisinde görünür",
       "30 gün geçerli",
     ],
   },

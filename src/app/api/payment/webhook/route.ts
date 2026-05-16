@@ -46,10 +46,11 @@ export async function POST(req: NextRequest) {
       })
       .eq("stripe_session_id", session.id);
 
-    // İlan varsa priority_level ve is_urgent güncelle
+    // İlan varsa priority_level, is_urgent ve is_featured güncelle
     if (itemId) {
       const updateFields: Record<string, unknown> = {
         priority_level: product.priority_level,
+        is_featured: true,
       };
       if ("is_urgent" in product) {
         updateFields.is_urgent = product.is_urgent;
