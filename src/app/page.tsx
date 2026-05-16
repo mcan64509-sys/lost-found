@@ -8,6 +8,18 @@ import HomeBanner from "../components/HomeBanner";
 import { useLanguage } from "../contexts/LanguageContext";
 import { supabase } from "../lib/supabase";
 
+type FeaturedItem = {
+  id: string;
+  title: string;
+  type: string;
+  category: string | null;
+  location: string | null;
+  image_url: string | null;
+  is_urgent: boolean | null;
+  is_featured: boolean | null;
+  reward_amount: number | null;
+};
+
 type NearbyItem = {
   id: string;
   title: string;
@@ -20,15 +32,13 @@ type NearbyItem = {
 };
 
 const CATEGORY_ITEMS = [
-  { dbKey: "Telefon",       emoji: "📱", i18n: "phone" as const },
-  { dbKey: "Cüzdan",        emoji: "👛", i18n: "wallet" as const },
-  { dbKey: "Anahtar",       emoji: "🔑", i18n: "key" as const },
-  { dbKey: "Çanta",         emoji: "👜", i18n: "bag" as const },
-  { dbKey: "Laptop",        emoji: "💻", i18n: "laptop" as const },
-  { dbKey: "Saat / Takı",   emoji: "⌚", i18n: "watch" as const },
-  { dbKey: "Kimlik / Evrak",emoji: "🪪", i18n: "id" as const },
-  { dbKey: "Evcil Hayvan",  emoji: "🐾", i18n: "pet" as const },
-  { dbKey: "Diğer",         emoji: "📦", i18n: "other" as const },
+  { dbKey: "Telefon",      emoji: "📱", i18n: "phone"   as const },
+  { dbKey: "Cüzdan",       emoji: "👛", i18n: "wallet"  as const },
+  { dbKey: "Anahtar",      emoji: "🔑", i18n: "key"     as const },
+  { dbKey: "Çanta",        emoji: "👜", i18n: "bag"     as const },
+  { dbKey: "Laptop",       emoji: "💻", i18n: "laptop"  as const },
+  { dbKey: "Evcil Hayvan", emoji: "🐾", i18n: "pet"     as const },
+  { dbKey: "Diğer",        emoji: "📦", i18n: "other"   as const },
 ];
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -47,6 +57,7 @@ export default function HomePage() {
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [geoError, setGeoError] = useState(false);
   const [geoAsked, setGeoAsked] = useState(false);
+  const [featuredItems, setFeaturedItems] = useState<FeaturedItem[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setIsAuthed(!!data.session));
@@ -92,6 +103,16 @@ export default function HomePage() {
         const resolved = data.filter((i) => i.status === "resolved").length;
         setStats({ total, lost, found, resolved });
       });
+
+    supabase
+      .from("items")
+      .select("id, title, type, category, location, image_url, is_urgent, is_featured, reward_amount")
+      .eq("status", "active")
+      .eq("moderation_status", "approved")
+      .or("is_urgent.eq.true,is_featured.eq.true")
+      .order("is_urgent", { ascending: false })
+      .limit(6)
+      .then(({ data }) => { if (data) setFeaturedItems(data as FeaturedItem[]); });
   }, []);
 
   return (
@@ -108,15 +129,15 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl px-4 py-5">
             <div className="grid grid-cols-4 divide-x divide-slate-800/60">
               {[
-                { label: t.home.statTotal,    value: stats.total,    color: "text-white",       glow: "" },
-                { label: t.home.statLost,     value: stats.lost,     color: "text-amber-400",   glow: "drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]" },
-                { label: t.home.statFound,    value: stats.found,    color: "text-emerald-400", glow: "drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]" },
-                { label: t.home.statResolved, value: stats.resolved, color: "text-blue-400",    glow: "drop-shadow-[0_0_8px_rgba(96,165,250,0.3)]" },
+                { label: t.home.statTotal,    value: stats.total,    color: "text-white",       glow: "",                                              href: "/search" },
+                { label: t.home.statLost,     value: stats.lost,     color: "text-amber-400",   glow: "drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]",   href: "/search?type=lost" },
+                { label: t.home.statFound,    value: stats.found,    color: "text-emerald-400", glow: "drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]",   href: "/search?type=found" },
+                { label: t.home.statResolved, value: stats.resolved, color: "text-blue-400",    glow: "drop-shadow-[0_0_8px_rgba(96,165,250,0.3)]",   href: "/search?status=resolved" },
               ].map((s) => (
-                <div key={s.label} className="text-center px-3 py-2 group">
+                <Link key={s.label} href={isAuthed ? s.href : `/auth/login?redirect=${s.href}`} className="text-center px-3 py-2 group cursor-pointer hover:bg-slate-800/40 transition-colors duration-150 rounded-xl">
                   <div className={`text-xl md:text-2xl font-black transition-all duration-300 group-hover:scale-110 ${s.color} ${s.glow}`}>{s.value.toLocaleString()}</div>
-                  <div className="text-[10px] md:text-xs text-slate-500 mt-0.5 leading-tight">{s.label}</div>
-                </div>
+                  <div className="text-[10px] md:text-xs text-slate-500 mt-0.5 leading-tight group-hover:text-slate-400 transition-colors">{s.label}</div>
+                </Link>
               ))}
             </div>
           </div>
@@ -124,10 +145,22 @@ export default function HomePage() {
 
         {/* ── KATEGORİLER ── */}
         <section className="mx-auto max-w-7xl px-4 py-8 md:py-12 animate-fade-in-up">
-          <h2 className="text-[11px] font-bold text-slate-500 mb-5 text-center tracking-widest uppercase">
-            {t.cats.all}
-          </h2>
-          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3 stagger">
+          <div className="flex items-center justify-center mb-5">
+            <h2 className="text-[11px] font-bold text-slate-500 tracking-widest uppercase">
+              {t.cats.all}
+            </h2>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3 stagger">
+            {/* Acil İlanlar — special first card */}
+            <Link
+              href={isAuthed ? "/search?urgent=true" : "/auth/login?redirect=/search?urgent=true"}
+              className="group flex flex-col items-center gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 hover:border-amber-400/70 hover:bg-amber-500/20 hover:-translate-y-1 hover:shadow-lg hover:shadow-amber-500/20 transition-all duration-200 animate-fade-in-up"
+            >
+              <span className="text-3xl group-hover:scale-110 transition-transform duration-200">★</span>
+              <span className="text-[11px] font-bold text-amber-400 group-hover:text-amber-300 transition-colors text-center leading-tight">
+                Acil İlanlar
+              </span>
+            </Link>
             {CATEGORY_ITEMS.map((cat) => (
               <Link
                 key={cat.dbKey}
@@ -142,6 +175,7 @@ export default function HomePage() {
             ))}
           </div>
         </section>
+
 
         {/* ── YAKINIMDAKI İLANLAR ── */}
         <section className="mx-auto max-w-7xl px-4 pb-8 animate-fade-in-up" style={{ animationDelay: "100ms" }}>

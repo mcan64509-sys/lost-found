@@ -45,6 +45,7 @@ const CATEGORIES = [
 export default function AlertsPage() {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState("");
+  const [token, setToken] = useState("");
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -67,19 +68,23 @@ export default function AlertsPage() {
     async function init() {
       const { data } = await supabase.auth.getSession();
       const email = normalizeEmail(data.session?.user?.email);
+      const accessToken = data.session?.access_token ?? "";
       if (!email) {
         router.push("/auth/login");
         return;
       }
       setUserEmail(email);
-      loadAlerts(email);
+      setToken(accessToken);
+      loadAlerts(accessToken);
     }
     init();
   }, [router]);
 
-  async function loadAlerts(email: string) {
+  async function loadAlerts(accessToken: string) {
     setLoading(true);
-    const res = await fetch(`/api/alerts?userEmail=${encodeURIComponent(email)}`);
+    const res = await fetch("/api/alerts", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
     const data = await res.json();
     setAlerts(data.alerts || []);
     setLoading(false);
@@ -125,9 +130,8 @@ export default function AlertsPage() {
     try {
       const res = await fetch("/api/alerts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          user_email: userEmail,
           keyword: keyword.trim(),
           category: category === "Tüm kategoriler" ? "" : category,
           item_type: itemType,
@@ -158,8 +162,9 @@ export default function AlertsPage() {
   }
 
   async function handleDelete(id: string) {
-    const res = await fetch(`/api/alerts?id=${id}&userEmail=${encodeURIComponent(userEmail)}`, {
+    const res = await fetch(`/api/alerts?id=${id}`, {
       method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) {
       setAlerts((prev) => prev.filter((a) => a.id !== id));
@@ -170,8 +175,8 @@ export default function AlertsPage() {
   async function handleToggle(alert: Alert) {
     const res = await fetch("/api/alerts", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: alert.id, user_email: userEmail, is_active: !alert.is_active }),
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id: alert.id, is_active: !alert.is_active }),
     });
     if (res.ok) {
       setAlerts((prev) =>

@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
         claimerEmail: claim.claimer_email,
         itemTitle,
         itemId: claim.item_id,
-      }).catch(() => {});
+      }).catch((err) => console.error("[claims/approve] email failed:", err));
     }
 
     // Konuşmalara sistem mesajı ekle

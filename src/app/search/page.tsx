@@ -90,6 +90,8 @@ function SearchPageContent() {
   const [dateFrom, setDateFrom] = useState(() => searchParams.get("from") || "");
   const [dateTo, setDateTo] = useState(() => searchParams.get("to") || "");
   const [hideResolved, setHideResolved] = useState(() => searchParams.get("hide_resolved") === "1");
+  const [onlyUrgent] = useState(() => searchParams.get("urgent") === "true");
+  const [onlyStatus] = useState(() => searchParams.get("status") || "");
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation>(defaultLocation);
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [allItems, setAllItems] = useState<SearchItem[]>([]);
@@ -185,6 +187,8 @@ function SearchPageContent() {
         if (!inTitle && !inDesc && !inLocation) return false;
       }
       if (hideResolved && item.status === "resolved") return false;
+      if (onlyUrgent && !item.is_urgent) return false;
+      if (onlyStatus && item.status !== onlyStatus) return false;
       if (fromMs && new Date(item.created_at).getTime() < fromMs) return false;
       if (toMs && new Date(item.created_at).getTime() > toMs) return false;
       return true;
@@ -205,7 +209,7 @@ function SearchPageContent() {
       if (sortBy === "most_viewed") return (b.view_count ?? 0) - (a.view_count ?? 0);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [allItems, selectedLocation, locationEnabled, activeTab, category, keyword, sortBy, dateFrom, dateTo, hideResolved]);
+  }, [allItems, selectedLocation, locationEnabled, activeTab, category, keyword, sortBy, dateFrom, dateTo, hideResolved, onlyUrgent, onlyStatus]);
 
   const lostItems = filteredItems.filter((i) => i.type === "lost");
   const foundItems = filteredItems.filter((i) => i.type === "found");

@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { MapPin, X, Send, Loader2 } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
 const SightingMapInner = dynamic(() => import("./SightingMapInner"), { ssr: false });
 
@@ -33,10 +34,11 @@ export default function SightingModal({ itemId, itemTitle, reporterEmail, onClos
     }
     setSubmitting(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/sightings/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId, reporterEmail, lat, lng, locationText, note }),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+        body: JSON.stringify({ itemId, lat, lng, locationText, note }),
       });
       if (res.ok) {
         setDone(true);

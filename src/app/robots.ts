@@ -19,6 +19,6 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: "https://bulanvarmi.com/sitemap.xml",
+    sitemap: `${process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com"}/sitemap.xml`,
   };
 }

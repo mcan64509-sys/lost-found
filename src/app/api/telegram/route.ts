@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         await sendTelegram(chatId, "Aktif kayıp ilanı bulunamadı.");
       } else {
         const lines = data.map((item: { id: string; title: string; category: string | null; location: string | null }) =>
-          `• <b>${item.title}</b>\n  📂 ${item.category || "—"} | 📍 ${item.location || "—"}\n  🔗 https://bulanvarmi.vercel.app/items/${item.id}`
+          `• <b>${item.title}</b>\n  📂 ${item.category || "—"} | 📍 ${item.location || "—"}\n  🔗 ${process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com"}/items/${item.id}`
         );
         await sendTelegram(chatId, "🔴 <b>Son Kayıp İlanları</b>\n\n" + lines.join("\n\n"));
       }
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         await sendTelegram(chatId, "Aktif bulundu ilanı bulunamadı.");
       } else {
         const lines = data.map((item: { id: string; title: string; category: string | null; location: string | null }) =>
-          `• <b>${item.title}</b>\n  📂 ${item.category || "—"} | 📍 ${item.location || "—"}\n  🔗 https://bulanvarmi.vercel.app/items/${item.id}`
+          `• <b>${item.title}</b>\n  📂 ${item.category || "—"} | 📍 ${item.location || "—"}\n  🔗 ${process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com"}/items/${item.id}`
         );
         await sendTelegram(chatId, "🟢 <b>Son Bulundu İlanları</b>\n\n" + lines.join("\n\n"));
       }
@@ -86,13 +86,13 @@ export async function POST(req: NextRequest) {
           await sendTelegram(chatId, `"${args}" için ilan bulunamadı.`);
         } else {
           const lines = data.map((item: { id: string; title: string; type: string; category: string | null; location: string | null }) =>
-            `• [${item.type === "lost" ? "Kayıp" : "Bulundu"}] <b>${item.title}</b>\n  📍 ${item.location || "—"}\n  🔗 https://bulanvarmi.vercel.app/items/${item.id}`
+            `• [${item.type === "lost" ? "Kayıp" : "Bulundu"}] <b>${item.title}</b>\n  📍 ${item.location || "—"}\n  🔗 ${process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com"}/items/${item.id}`
           );
           await sendTelegram(chatId, `🔎 <b>"${args}" sonuçları</b>\n\n` + lines.join("\n\n"));
         }
       }
     } else if (cmd === "/site") {
-      await sendTelegram(chatId, "🌐 BulanVarMı? platform: https://bulanvarmi.vercel.app");
+      await sendTelegram(chatId, `🌐 BulanVarMı? platform: ${process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com"}`);
     } else {
       await sendTelegram(chatId, "Bilinmeyen komut. /yardim yazarak komut listesini görebilirsiniz.");
     }

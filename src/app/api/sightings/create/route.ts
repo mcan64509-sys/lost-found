@@ -3,14 +3,20 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function POST(req: NextRequest) {
   try {
-    const { itemId, reporterEmail, lat, lng, locationText, note } = await req.json();
+    const token = req.headers.get("authorization")?.replace("Bearer ", "") ?? null;
+    if (!token) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+    const { data: { user } } = await supabase.auth.getUser(token);
+    if (!user?.email) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+    const reporterEmail = user.email.toLowerCase();
 
-    if (!itemId || !reporterEmail || lat == null || lng == null) {
+    const { itemId, lat, lng, locationText, note } = await req.json();
+
+    if (!itemId || lat == null || lng == null) {
       return NextResponse.json({ error: "Eksik parametre" }, { status: 400 });
     }
 

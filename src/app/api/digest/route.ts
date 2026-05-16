@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     `).join("");
 
     await resend.emails.send({
-      from: "BulanVarMı? <onboarding@resend.dev>",
+      from: process.env.RESEND_FROM_EMAIL || "BulanVarMı? <onboarding@resend.dev>",
       to: userEmail,
       subject: `📋 Haftalık Özet — ${items.length} yeni ilan`,
       html: `

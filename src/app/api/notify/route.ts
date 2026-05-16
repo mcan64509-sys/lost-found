@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const itemUrl = itemId ? `${appUrl}/items/${itemId}` : appUrl;
 
     await resend.emails.send({
-      from: "Lost & Found <onboarding@resend.dev>",
+      from: process.env.RESEND_FROM_EMAIL || "BulanVarMı? <onboarding@resend.dev>",
       to: userEmail,
       subject: title,
       html: `
