@@ -11,7 +11,7 @@ const anthropic = new Anthropic();
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-async function sendTelegram(chatId: number, text: string) {
+async function sendTelegram(chatId: number | string, text: string) {
   if (!BOT_TOKEN) return;
   await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
     method: "POST",
@@ -205,4 +205,42 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ ok: true });
   }
+}
+
+// Yeni ilan kanalına bildirimi — /api/telegram/notify?secret=xxx&itemId=xxx
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const secret = searchParams.get("secret");
+  const itemId = searchParams.get("itemId");
+
+  if (secret !== process.env.CRON_SECRET || !itemId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const channelId = process.env.TELEGRAM_CHANNEL_ID;
+  if (!channelId || !BOT_TOKEN) {
+    return NextResponse.json({ skipped: "kanal veya token yok" });
+  }
+
+  const { data: item } = await supabase
+    .from("items")
+    .select("id, title, type, category, location, reward_amount, is_urgent")
+    .eq("id", itemId)
+    .single();
+
+  if (!item) return NextResponse.json({ error: "İlan bulunamadı" }, { status: 404 });
+
+  const typeLabel = item.type === "lost" ? "🔴 Kayıp" : "🟢 Bulundu";
+  const urgentTag = item.is_urgent ? " 🚨 <b>ACİL</b>" : "";
+  const rewardTag = item.reward_amount ? ` 💰 <b>${item.reward_amount}₺ Ödül</b>` : "";
+
+  const text =
+    `${typeLabel} Yeni İlan${urgentTag}${rewardTag}\n\n` +
+    `<b>${item.title}</b>\n` +
+    `📂 ${item.category ?? "-"}  📍 ${item.location ?? "-"}\n\n` +
+    `🔗 ${APP_URL}/items/${item.id}`;
+
+  await sendTelegram(channelId, text);
+
+  return NextResponse.json({ ok: true });
 }

@@ -69,7 +69,7 @@
 
 <!-- KAPAK -->
 <div class="cover">
-  <div class="badge">Gizli — Platform Dokümantasyonu v1.0</div>
+  <div class="badge">Gizli — Platform Dokümantasyonu v2.0</div>
   <h1>BulanVarMı?</h1>
   <div class="subtitle">Türkiye'nin Kayıp &amp; Buluntu Platformu<br>Teknik ve Kullanıcı Rehberi — En Güncel Sürüm</div>
   <div class="meta">
@@ -110,7 +110,7 @@
     </div>
     <div class="card green">
       <h4>🤖 Yapay Zeka</h4>
-      <p>Kayıp ve bulundu ilanlarını otomatik olarak eşleştiren AI sistemi. Benzer eşyalar için anında bildirim.</p>
+      <p>Claude Haiku ile çalışan agentic eşleştirme sistemi. Çift yönlü bildirim, Türkçe AI açıklaması, görsel moderasyon ve Telegram doğal dil desteği.</p>
     </div>
     <div class="card amber">
       <h4>🔒 Güvenli Sistem</h4>
@@ -125,6 +125,7 @@
     <li>Kayıp ilan sayısı</li>
     <li>Bulundu ilan sayısı</li>
     <li>Çözüme kavuşan ilan sayısı</li>
+    <li>AI eşleşme sayısı</li>
   </ul>
 
   <h3>Desteklenen Diller</h3>
@@ -519,22 +520,91 @@
 <div class="section">
   <h2 class="sec">7. Bildirim Sistemi</h2>
 
+  <h3>Bildirim Kanalları</h3>
+  <div class="grid3">
+    <div class="card">
+      <h4>🔔 Uygulama İçi</h4>
+      <p>Header'daki zil ikonu. Supabase Realtime ile anlık güncellenir. Okunmamış sayacı gösterilir.</p>
+    </div>
+    <div class="card green">
+      <h4>📧 E-posta</h4>
+      <p>Resend servisi ile gönderilir. AI eşleşmelerinde Claude tarafından yazılmış kişisel açıklama içerir.</p>
+    </div>
+    <div class="card purple">
+      <h4>📱 Push Bildirimi</h4>
+      <p>Web Push (VAPID) ile tarayıcıya gönderilir. Profil sayfasından abone olunur. Eşleşme, mesaj ve uyarı olaylarında tetiklenir.</p>
+    </div>
+  </div>
+
   <h3>Bildirim Türleri</h3>
   <table>
-    <tr><th>Tür (type)</th><th>Tetikleyen Olay</th><th>Gönderilen</th></tr>
-    <tr><td>moderation_approved</td><td>Admin ilanı onaylar</td><td>İlan sahibine</td></tr>
-    <tr><td>moderation_rejected</td><td>Admin ilanı reddeder ve siler</td><td>İlan sahibine</td></tr>
-    <tr><td>item_removed_report</td><td>Admin şikayet sonrası ilanı kaldırır</td><td>İlan sahibine</td></tr>
-    <tr><td>admin_warning</td><td>Admin şikayet değerlendirmesinde uyarı gönderir</td><td>İlan sahibine</td></tr>
-    <tr><td>claim_received</td><td>Sahiplik talebi alındı</td><td>İlan sahibine</td></tr>
-    <tr><td>claim_approved</td><td>Talep onaylandı</td><td>Talep yapan kullanıcıya</td></tr>
-    <tr><td>new_message</td><td>Yeni mesaj alındı</td><td>Mesajı alan kullanıcıya</td></tr>
-    <tr><td>ai_match</td><td>AI benzer ilan tespit etti</td><td>Her iki ilan sahibine</td></tr>
-    <tr><td>expiry_reminder</td><td>İlan bitiş tarihi yaklaştı</td><td>İlan sahibine</td></tr>
+    <tr><th>Tür (type)</th><th>Tetikleyen Olay</th><th>Gönderilen</th><th>Push</th></tr>
+    <tr><td>moderation_approved</td><td>Admin ilanı onaylar</td><td>İlan sahibine</td><td>—</td></tr>
+    <tr><td>moderation_rejected</td><td>Admin ilanı reddeder</td><td>İlan sahibine</td><td>—</td></tr>
+    <tr><td>item_removed_report</td><td>Admin şikayet sonrası ilanı kaldırır</td><td>İlan sahibine</td><td>—</td></tr>
+    <tr><td>admin_warning</td><td>Admin uyarı gönderir</td><td>İlan sahibine</td><td>—</td></tr>
+    <tr><td>claim_received</td><td>Sahiplik talebi alındı</td><td>İlan sahibine</td><td>—</td></tr>
+    <tr><td>claim_approved</td><td>Talep onaylandı</td><td>Talep yapan kullanıcıya</td><td>—</td></tr>
+    <tr><td>new_message</td><td>Yeni mesaj alındı</td><td>Mesajı alan kullanıcıya</td><td>—</td></tr>
+    <tr><td>match</td><td>AI eşleşme agentı benzer ilan tespit etti</td><td>Her iki ilan sahibine</td><td>✓</td></tr>
+    <tr><td>expiry_reminder</td><td>İlan bitiş tarihi 3 güne yaklaştı</td><td>İlan sahibine</td><td>—</td></tr>
   </table>
 
-  <h3>Gerçek Zamanlı Bildirimler</h3>
-  <p>Supabase Realtime kullanılarak bildirimler anında header'daki zil ikonuna yansır. Tarayıcı bildirim izni varsa ve sayfa arka planda açıksa sistem bildirimi de gösterilir.</p>
+  <h3>Haftalık Digest E-postası</h3>
+  <p>Her Pazartesi 08:00'de otomatik gönderilir. Kullanıcının kayıp ilan kategorilerine göre kişiselleştirilir. Claude Haiku kişiye özel giriş cümlesi yazar.</p>
+
+  <h3>Otomatik Cron Görevleri</h3>
+  <table>
+    <tr><th>Görev</th><th>Zamanlama</th><th>Açıklama</th></tr>
+    <tr><td>/api/alerts/check</td><td>Her saat</td><td>Yeni ilanları search alert abonelikleriyle karşılaştırır</td></tr>
+    <tr><td>/api/items/expiry-reminder</td><td>Her gün 09:00</td><td>3 güne kalan ilanlar için e-posta + bildirim gönderir</td></tr>
+    <tr><td>/api/cron/digest</td><td>Her Pazartesi 08:00</td><td>Kişiselleştirilmiş haftalık özet e-postası gönderir</td></tr>
+  </table>
+  <div class="alert alert-blue">Tüm cron görevleri Vercel Cron Jobs altyapısıyla çalışır. <code>CRON_SECRET</code> ile güvenlik sağlanır.</div>
+</div>
+
+<!-- 7b. AI AJANLARI -->
+<div class="section">
+  <h2 class="sec">7b. AI Ajanları</h2>
+  <p>Platform, Claude Haiku modeli üzerinde çalışan üç agentic endpoint barındırır. Bu ajanlar ilan oluşturulduğunda otomatik tetiklenir.</p>
+
+  <h3>🎯 Eşleştirme Agentı — <code>/api/agent/match</code></h3>
+  <div class="flow">
+    <div class="flow-step"><div class="flow-num">1</div><div class="flow-content"><h5>Embedding</h5><p>Yeni ilanın başlık + açıklama + kategori + konumundan vektör embedding oluşturulur, DB'ye kaydedilir.</p></div></div>
+    <div class="flow-step"><div class="flow-num">2</div><div class="flow-content"><h5>Aday Bulma</h5><p><code>match_items</code> RPC ile 0.35+ skor eşiğinde en fazla 10 aday ilan bulunur.</p></div></div>
+    <div class="flow-step"><div class="flow-num">3</div><div class="flow-content"><h5>Claude Değerlendirmesi</h5><p>Claude Haiku adayları değerlendirir: skor, kategori, konum, tarih ve açıklama benzerliğine göre gerçek eşleşmeleri belirler.</p></div></div>
+    <div class="flow-step"><div class="flow-num">4</div><div class="flow-content"><h5>Çift Yönlü Bildirim</h5><p>Her anlamlı eşleşme için: yeni ilan sahibi ve eşleşen ilan sahibi bildirim alır. Claude tarafından yazılmış Türkçe açıklama e-posta ve push bildirimde gösterilir.</p></div></div>
+  </div>
+
+  <h3>🛡 Moderasyon Agentı — <code>/api/agent/moderate</code></h3>
+  <table>
+    <tr><th>İşlem</th><th>Açıklama</th></tr>
+    <tr><td>Görsel Analiz</td><td>Claude Vision (Haiku) yüklenen fotoğrafı inceler</td></tr>
+    <tr><td>Uygunluk Kontrolü</td><td>Müstehcen, şiddet, açık kişisel belge tespiti → <code>moderation_status = flagged</code></td></tr>
+    <tr><td>Kategori Önerisi</td><td>Görselden otomatik kategori tespiti (kategori "Diğer" ise günceller)</td></tr>
+    <tr><td>Evcil Hayvan Alanları</td><td>Pet ilanlarında tür ve rengi görselden otomatik doldurur</td></tr>
+    <tr><td>Admin Bildirimi</td><td>Flaglenen ilanlar için admin'e in-app bildirim gider</td></tr>
+  </table>
+
+  <h3>🤖 Telegram Agentı — <code>@bulanvarmi_bot</code></h3>
+  <p>Claude Haiku ile doğal dil anlayan Telegram botu. <code>/api/telegram</code> webhook endpoint'i üzerinden çalışır.</p>
+  <table>
+    <tr><th>Özellik</th><th>Açıklama</th></tr>
+    <tr><td>Doğal Dil Arama</td><td>"Kadıköy'de bulunan telefon var mı?" gibi serbest Türkçe sorguları anlar</td></tr>
+    <tr><td>search_items Aracı</td><td>Sorgu, tür, kategori ve konum filtresiyle DB araması yapar</td></tr>
+    <tr><td>get_recent_items Aracı</td><td>En son eklenen ilanları getirir</td></tr>
+    <tr><td>Komut Desteği</td><td>/kayip, /buldum, /start, /yardim komutları desteklenir</td></tr>
+    <tr><td>Linkli Sonuçlar</td><td>Her ilan için doğrudan site linki döner</td></tr>
+  </table>
+
+  <h3>Ajan Tetikleme Akışı</h3>
+  <div class="flow">
+    <div class="flow-step"><div class="flow-num">1</div><div class="flow-content"><h5>İlan Oluşturuldu</h5><p>Kullanıcı kayıp veya bulundu ilanı ekler.</p></div></div>
+    <div class="flow-step"><div class="flow-num">2</div><div class="flow-content"><h5>/api/embed Çağrılır</h5><p>Client tarafı embedding isteği atar (fire-and-forget).</p></div></div>
+    <div class="flow-step"><div class="flow-num">3</div><div class="flow-content"><h5>İki Ajan Paralel Tetiklenir</h5><p>embed route, eşleştirme (<code>/api/agent/match</code>) ve moderasyon (<code>/api/agent/moderate</code>) ajanlarını sunucu taraflı fire-and-forget atar.</p></div></div>
+    <div class="flow-step"><div class="flow-num">4</div><div class="flow-content"><h5>Bildirimler Gönderilir</h5><p>Eşleşme varsa: uygulama içi + e-posta (AI açıklamasıyla) + push bildirimi. Görsel uygunsuzsa: admin bildirimi.</p></div></div>
+  </div>
+  <div class="alert alert-amber">Tüm ajan çağrıları <code>x-agent-secret</code> başlığıyla <code>CRON_SECRET</code> değeriyle korunur.</div>
 </div>
 
 <!-- 8. ÇEVİRİ -->
@@ -614,10 +684,36 @@
     <tr><td>/api/report</td><td>POST</td><td>İlan veya profil şikayeti gönder</td><td>Opsiyonel</td></tr>
     <tr><td>/api/requests</td><td>POST</td><td>Geri bildirim / özellik isteği gönder</td><td>Giriş gerekli</td></tr>
     <tr><td>/api/items/renew</td><td>PATCH</td><td>İlanı 60 gün uzat</td><td>Giriş gerekli</td></tr>
-    <tr><td>/api/items/expiry-reminder</td><td>POST</td><td>Bitiş hatırlatmaları gönder</td><td>Admin</td></tr>
+    <tr><td>/api/items/expiry-reminder</td><td>GET/POST</td><td>Bitiş hatırlatmaları gönder</td><td>Admin / Cron</td></tr>
     <tr><td>/api/ratings/list</td><td>GET</td><td>Kullanıcı puanlarını listele</td><td>Public</td></tr>
-    <tr><td>/api/ai/match</td><td>POST</td><td>AI eşleştirme</td><td>Giriş gerekli</td></tr>
-    <tr><td>/api/v1/items</td><td>GET</td><td>Public REST API (v1)</td><td>API Key</td></tr>
+    <tr><td>/api/match</td><td>POST</td><td>Manuel AI eşleştirme (ilan detay sayfası)</td><td>Giriş gerekli</td></tr>
+    <tr><td>/api/embed</td><td>POST</td><td>İlan embedding oluştur + ajan tetikle</td><td>Internal</td></tr>
+    <tr><td>/api/push/subscribe</td><td>POST</td><td>Push bildirim aboneliği kaydet</td><td>Giriş gerekli</td></tr>
+    <tr><td>/api/push/send</td><td>POST</td><td>Push bildirim gönder</td><td>Internal</td></tr>
+    <tr><td>/api/alerts</td><td>GET/POST/DELETE</td><td>Arama uyarıları CRUD</td><td>Giriş gerekli</td></tr>
+    <tr><td>/api/alerts/check</td><td>GET</td><td>Yeni ilanları alert'lerle karşılaştır</td><td>Cron Secret</td></tr>
+    <tr><td>/api/v1/items</td><td>GET/POST</td><td>Public REST API (v1)</td><td>API Key</td></tr>
+  </table>
+
+  <h3>AI Ajan API'leri (CRON_SECRET gerektirir)</h3>
+  <table>
+    <tr><th>Rota</th><th>Method</th><th>Açıklama</th></tr>
+    <tr><td>/api/agent/match</td><td>POST</td><td>Claude Haiku eşleştirme agentı — embedding + aday bulma + çift yönlü bildirim</td></tr>
+    <tr><td>/api/agent/moderate</td><td>POST</td><td>Claude Vision moderasyon agentı — görsel analiz, flagleme, kategori önerisi</td></tr>
+  </table>
+
+  <h3>Cron API'leri (CRON_SECRET / Vercel Bearer gerektirir)</h3>
+  <table>
+    <tr><th>Rota</th><th>Zamanlama</th><th>Açıklama</th></tr>
+    <tr><td>/api/alerts/check</td><td>Her saat</td><td>Search alert eşleşme kontrolü ve e-posta bildirimi</td></tr>
+    <tr><td>/api/items/expiry-reminder</td><td>Her gün 09:00</td><td>3 günde dolacak ilanlar için hatırlatma</td></tr>
+    <tr><td>/api/cron/digest</td><td>Her Pazartesi 08:00</td><td>Kişiselleştirilmiş haftalık özet e-postası</td></tr>
+  </table>
+
+  <h3>Telegram Webhook</h3>
+  <table>
+    <tr><th>Rota</th><th>Method</th><th>Açıklama</th></tr>
+    <tr><td>/api/telegram</td><td>POST</td><td>Telegram Bot webhook — Claude Haiku agentic loop ile doğal dil arama</td></tr>
   </table>
 
   <h3>Admin API'leri (Tüm Admin Auth Gerektirir)</h3>
@@ -650,7 +746,7 @@
     </div>
     <div class="card amber">
       <h4>🤖 AI</h4>
-      <p>OpenAI Embeddings ile vektör benzerlik araması. Kayıp/bulundu ilanları semantik olarak eşleştirilir.</p>
+      <p>Supabase Edge Function ile vektör embedding (pgvector). Claude Haiku (Anthropic) ile agentic eşleştirme, görsel moderasyon ve Telegram doğal dil desteği.</p>
     </div>
     <div class="card purple">
       <h4>☁ Deployment</h4>
@@ -661,12 +757,30 @@
   <h3>Önemli Kütüphaneler</h3>
   <table>
     <tr><th>Kütüphane</th><th>Kullanım Amacı</th></tr>
+    <tr><td>@anthropic-ai/sdk</td><td>Claude Haiku — eşleştirme agentı, moderasyon agentı, Telegram agentı, digest kişiselleştirme</td></tr>
+    <tr><td>web-push</td><td>VAPID ile tarayıcı push bildirimleri</td></tr>
     <tr><td>sonner</td><td>Toast bildirimleri (başarı/hata mesajları)</td></tr>
     <tr><td>react-image-crop</td><td>Görsel kırpma aracı (ImageCropModal)</td></tr>
     <tr><td>leaflet / react-leaflet</td><td>Interaktif harita</td></tr>
     <tr><td>recharts</td><td>Admin istatistik grafikleri</td></tr>
     <tr><td>lucide-react</td><td>İkon kütüphanesi</td></tr>
     <tr><td>qrcode.react</td><td>QR kod oluşturma</td></tr>
+    <tr><td>stripe</td><td>Ödeme sistemi (premium ilan özellikleri)</td></tr>
+    <tr><td>resend</td><td>E-posta gönderimi (bildirimler, digest, eşleşme)</td></tr>
+  </table>
+
+  <h3>Environment Variables</h3>
+  <table>
+    <tr><th>Değişken</th><th>Açıklama</th></tr>
+    <tr><td>NEXT_PUBLIC_SUPABASE_URL</td><td>Supabase proje URL'i</td></tr>
+    <tr><td>SUPABASE_SERVICE_ROLE_KEY</td><td>Supabase admin key (sunucu taraflı)</td></tr>
+    <tr><td>ANTHROPIC_API_KEY</td><td>Claude Haiku API anahtarı (AI ajanları için)</td></tr>
+    <tr><td>RESEND_API_KEY</td><td>E-posta servisi anahtarı</td></tr>
+    <tr><td>CRON_SECRET</td><td>Cron job ve ajan endpoint güvenlik anahtarı</td></tr>
+    <tr><td>TELEGRAM_BOT_TOKEN</td><td>@bulanvarmi_bot token (@BotFather'dan)</td></tr>
+    <tr><td>NEXT_PUBLIC_VAPID_PUBLIC_KEY</td><td>Web Push public key</td></tr>
+    <tr><td>VAPID_PRIVATE_KEY</td><td>Web Push private key</td></tr>
+    <tr><td>STRIPE_SECRET_KEY</td><td>Stripe ödeme gizli anahtarı</td></tr>
   </table>
 
   <h3>Kimlik Doğrulama</h3>
@@ -733,7 +847,7 @@
 </div>
 
 <div style="background: #0f172a; color: #64748b; padding: 32px 60px; text-align: center; font-size: 13px;">
-  <p><strong style="color: #e2e8f0;">BulanVarMı?</strong> — Platform Dokümantasyonu v1.0 · Mayıs 2026</p>
+  <p><strong style="color: #e2e8f0;">BulanVarMı?</strong> — Platform Dokümantasyonu v2.0 · Mayıs 2026</p>
   <p style="margin-top: 8px;">Bu belge gizlidir ve yalnızca platform yöneticileri için hazırlanmıştır.</p>
 </div>
 
