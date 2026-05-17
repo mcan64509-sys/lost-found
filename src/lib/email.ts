@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <noreply@bulanvarmi.com>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
-const REPLY_TO = "iletisim@bulanvarmi.com";
+const REPLY_TO = "destek@bulanvarmi.com";
 
 // Tüm gönderimler bu wrapper üzerinden geçer — spam önleme headerları ekler
 type SendParams = Parameters<typeof resend.emails.send>[0];
