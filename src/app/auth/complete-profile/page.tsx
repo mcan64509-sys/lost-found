@@ -10,6 +10,7 @@ function CompleteProfileForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
+  const accountType = searchParams.get("accountType") || "personal";
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -53,6 +54,7 @@ function CompleteProfileForm() {
         email,
         full_name: fullName,
         phone_number: phone,
+        account_type: accountType,
       }, { onConflict: "id" });
 
       toast.success("Profilin oluşturuldu! E-postana bir onay maili gönderdik.");
