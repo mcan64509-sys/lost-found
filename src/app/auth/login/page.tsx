@@ -8,11 +8,16 @@ import { toast } from "sonner";
 import { Loader2, Phone, Mail } from "lucide-react";
 
 function normalizePhone(raw: string): string {
-  const digits = raw.replace(/\D/g, "");
-  if (digits.startsWith("90") && digits.length === 12) return "+" + digits;
+  const trimmed = raw.trim();
+  // Already has + prefix — use as-is
+  if (trimmed.startsWith("+")) return trimmed.replace(/\s/g, "");
+  // 00 international prefix → +
+  if (trimmed.startsWith("00")) return "+" + trimmed.slice(2).replace(/\s/g, "");
+  // Bare Turkish number (10 digits starting with 5)
+  const digits = trimmed.replace(/\D/g, "");
   if (digits.startsWith("0") && digits.length === 11) return "+9" + digits;
-  if (digits.length === 10) return "+90" + digits;
-  return "+" + digits;
+  if (digits.length === 10 && digits.startsWith("5")) return "+90" + digits;
+  return "+" + digits.replace(/\s/g, "");
 }
 
 function LoginForm() {
@@ -71,7 +76,7 @@ function LoginForm() {
 
   async function handleSendOtp() {
     const normalized = normalizePhone(phone);
-    if (normalized.replace(/\D/g, "").length < 11) { toast.error("Geçerli bir telefon numarası gir."); return; }
+    if (normalized.replace(/\D/g, "").length < 10) { toast.error("Geçerli bir telefon numarası gir (ülke kodu dahil)."); return; }
     setPhoneLoading(true);
     const { error } = await supabase.auth.signInWithOtp({ phone: normalized });
     setPhoneLoading(false);
@@ -206,23 +211,21 @@ function LoginForm() {
               <>
                 <div>
                   <label className="mb-2 block text-sm text-slate-300">Telefon Numarası</label>
-                  <div className="flex gap-2">
-                    <div className="flex items-center rounded-xl border border-slate-600 bg-slate-950 px-3 text-sm text-slate-400 select-none whitespace-nowrap">
-                      🇹🇷 +90
-                    </div>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm select-none">+</span>
                     <input
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="5xx xxx xx xx"
-                      className="flex-1 rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-500 transition"
+                      placeholder="90 5xx xxx xx xx"
+                      className="w-full rounded-xl border border-slate-600 bg-slate-950 pl-8 pr-4 py-3 text-white outline-none focus:border-blue-500 transition"
                     />
                   </div>
-                  <p className="mt-1.5 text-xs text-slate-500">SMS ile 6 haneli doğrulama kodu gönderilecek.</p>
+                  <p className="mt-1.5 text-xs text-slate-500">Ülke koduyla gir: +90 (TR), +31 (NL), +49 (DE)…</p>
                 </div>
                 <button
                   onClick={handleSendOtp}
-                  disabled={phoneLoading || phone.replace(/\D/g, "").length < 10}
+                  disabled={phoneLoading || phone.replace(/\D/g, "").length < 8}
                   className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-6 py-3 font-semibold text-white hover:bg-blue-600 disabled:opacity-50 transition"
                 >
                   {phoneLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Gönderiliyor...</> : "Kod Gönder"}

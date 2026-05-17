@@ -521,10 +521,12 @@ export default function ProfilePage() {
   }
 
   function normalizePhoneForAuth(raw: string): string {
-    const digits = raw.replace(/\D/g, "");
-    if (digits.startsWith("90") && digits.length === 12) return "+" + digits;
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("+")) return trimmed.replace(/\s/g, "");
+    if (trimmed.startsWith("00")) return "+" + trimmed.slice(2).replace(/\s/g, "");
+    const digits = trimmed.replace(/\D/g, "");
     if (digits.startsWith("0") && digits.length === 11) return "+9" + digits;
-    if (digits.length === 10) return "+90" + digits;
+    if (digits.length === 10 && digits.startsWith("5")) return "+90" + digits;
     return "+" + digits;
   }
 
@@ -1263,7 +1265,7 @@ export default function ProfilePage() {
                         type="tel"
                         value={phoneNumber}
                         onChange={(e) => { setPhoneNumber(e.target.value); setPhoneVerified(false); }}
-                        placeholder="+90 5xx xxx xx xx"
+                        placeholder="+90 5xx… veya +31 6xx…"
                         className={`w-full rounded-xl border bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none transition pr-10 ${
                           phoneNumber.trim() && /^\+?[0-9\s\-]{10,15}$/.test(phoneNumber.replace(/\s/g, ""))
                             ? "border-emerald-500/40 focus:border-emerald-500/60"
@@ -1276,7 +1278,7 @@ export default function ProfilePage() {
                     </div>
                     <button
                       onClick={handleSendPhoneOtp}
-                      disabled={savingPhone || phoneNumber.replace(/\D/g, "").length < 10}
+                      disabled={savingPhone || phoneNumber.replace(/\D/g, "").length < 8}
                       className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
                     >
                       {savingPhone ? "Gönderiliyor..." : "Doğrulama Kodu Gönder"}
