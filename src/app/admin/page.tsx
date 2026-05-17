@@ -29,6 +29,7 @@ type AdminItem = {
   is_featured: boolean | null;
   is_urgent: boolean | null;
   reward_amount: number | null;
+  moderation_status: string | null;
 };
 
 type Report = {
@@ -213,11 +214,11 @@ export default function AdminPage() {
     setAdminUsers(usersRes.users ?? []);
     setUserRequests(requestsRes.requests ?? []);
 
-    // Load pending moderation items
+    // Load pending + flagged moderation items
     const { data: pendingData } = await supabase
       .from("items")
       .select("*")
-      .eq("moderation_status", "pending")
+      .in("moderation_status", ["pending", "flagged"])
       .order("created_at", { ascending: false });
     setPendingItems((pendingData || []) as AdminItem[]);
 
@@ -839,7 +840,7 @@ export default function AdminPage() {
             <div className="space-y-3">
               <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-400">
                 <p className="font-semibold text-white mb-1">🛡 Moderasyon Kuyruğu</p>
-                <p>İlanları <code className="text-xs bg-slate-800 px-1.5 py-0.5 rounded">moderation_status = pending</code> yaparak buraya yönlendirebilirsin. Admin onaylayabilir veya reddedebilir.</p>
+                <p>Yeni ilanlar <code className="text-xs bg-slate-800 px-1.5 py-0.5 rounded">pending</code>, AI tarafından bayraklananlar <code className="text-xs bg-slate-800 px-1.5 py-0.5 rounded">flagged</code> olarak burada görünür.</p>
               </div>
               {pendingItems.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
@@ -847,12 +848,15 @@ export default function AdminPage() {
                 </div>
               ) : (
                 pendingItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between gap-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+                  <div key={item.id} className={`flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 ${item.moderation_status === "flagged" ? "border-red-500/30 bg-red-500/5" : "border-amber-500/20 bg-amber-500/5"}`}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${item.type === "lost" ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"}`}>
                           {item.type === "lost" ? "Kayıp" : "Bulundu"}
                         </span>
+                        {item.moderation_status === "flagged" && (
+                          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-red-500/20 text-red-300">🚩 AI Bayraklandı</span>
+                        )}
                         <Link href={`/items/${item.id}`} className="truncate text-sm font-medium text-white hover:text-blue-300">{item.title}</Link>
                       </div>
                       <p className="mt-0.5 text-xs text-slate-500">

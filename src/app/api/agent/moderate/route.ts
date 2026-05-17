@@ -104,7 +104,22 @@ export async function POST(req: NextRequest) {
         is_read: false,
       });
     }
+
+    // Kullanıcıya bildirim — ilanı düzenlemesini iste
+    if (item.created_by_email) {
+      await supabase.from("notifications").insert({
+        user_email: item.created_by_email,
+        type: "moderation_flagged",
+        title: "⚠️ İlanınız incelemeye alındı",
+        message: `"${item.title}" ilanınız otomatik denetimden geçemedi: ${result.reason ?? "görsel veya kategori uyumsuzluğu"}. Lütfen ilanınızı düzenleyin.`,
+        item_id: itemId,
+        is_read: false,
+      });
+    }
   } else {
+    // Uygun ilan → onaylandı
+    updates.moderation_status = "approved";
+
     // Kategori önerisi (mevcut kategori "Diğer" veya boşsa uygula)
     if (result.suggested_category && (!item.category || item.category === "Diğer")) {
       updates.category = result.suggested_category;

@@ -224,6 +224,7 @@ export default function LostReportPage() {
           pet_color: finalCategory === "Evcil Hayvan" ? petColor || null : null,
           pet_microchip: finalCategory === "Evcil Hayvan" ? petMicrochip || null : null,
           pet_age: finalCategory === "Evcil Hayvan" ? petAge || null : null,
+          moderation_status: "pending",
         })
         .select("id")
         .single();

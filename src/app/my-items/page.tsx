@@ -369,6 +369,12 @@ export default function MyItemsPage() {
                             <span className="text-xs font-semibold text-amber-400">{t.myItems.pending}</span>
                           </div>
                         )}
+                        {item.moderation_status === "flagged" && (
+                          <div className="mt-4 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2">
+                            <span className="text-red-400 text-xs">🚩</span>
+                            <span className="text-xs font-semibold text-red-400">İlanınız incelemeye alındı. Düzenleyip tekrar gönderin.</span>
+                          </div>
+                        )}
 
                         <div className="mt-4 flex items-center justify-between">
                           <span className="inline-flex items-center text-sm font-medium text-blue-400 transition group-hover:text-blue-300">
