@@ -2,15 +2,35 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <onboarding@resend.dev>";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <noreply@bulanvarmi.com>";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
+const REPLY_TO = "iletisim@bulanvarmi.com";
+
+// Tüm gönderimler bu wrapper üzerinden geçer — spam önleme headerları ekler
+type SendParams = Parameters<typeof resend.emails.send>[0];
+function send(params: SendParams) {
+  return resend.emails.send({
+    reply_to: REPLY_TO,
+    headers: {
+      "List-Unsubscribe": `<mailto:${REPLY_TO}?subject=unsubscribe>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      "X-Entity-Ref-ID": `bulanvarmi-${Date.now()}`,
+    },
+    ...params,
+  });
+}
 
 function baseTemplate(content: string): string {
   return `
     <div style="font-family:sans-serif;max-width:580px;margin:0 auto;background:#0f172a;color:#e2e8f0;padding:28px 24px;border-radius:16px;">
       <p style="margin:0 0 24px;font-size:18px;font-weight:800;color:#fff;">BulanVarMı?</p>
       ${content}
-      <p style="margin-top:32px;font-size:11px;color:#475569;">Bu e-posta BulanVarMı? platformu tarafından gönderilmiştir. <a href="${APP_URL}" style="color:#60a5fa;text-decoration:none;">Platforma git →</a></p>
+      <p style="margin-top:32px;font-size:11px;color:#475569;">
+        Bu e-posta BulanVarMı? platformu tarafından gönderilmiştir.
+        <a href="${APP_URL}" style="color:#60a5fa;text-decoration:none;">Platforma git →</a>
+        &nbsp;·&nbsp;
+        <a href="mailto:${REPLY_TO}?subject=unsubscribe" style="color:#475569;text-decoration:none;">Abonelikten çık</a>
+      </p>
     </div>
   `;
 }
@@ -30,7 +50,7 @@ export async function sendClaimReceivedEmail({
   itemTitle: string;
   itemId: string;
 }) {
-  return resend.emails.send({
+  return send({
     from: FROM,
     to: ownerEmail,
     subject: `Yeni Sahiplik Talebi — ${itemTitle}`,
@@ -52,7 +72,7 @@ export async function sendClaimApprovedEmail({
   itemTitle: string;
   itemId: string;
 }) {
-  return resend.emails.send({
+  return send({
     from: FROM,
     to: claimerEmail,
     subject: `✅ Sahiplik Talebiniz Onaylandı — ${itemTitle}`,
@@ -74,7 +94,7 @@ export async function sendClaimRejectedEmail({
   itemTitle: string;
   itemId: string;
 }) {
-  return resend.emails.send({
+  return send({
     from: FROM,
     to: claimerEmail,
     subject: `❌ Sahiplik Talebiniz Reddedildi — ${itemTitle}`,
@@ -99,7 +119,7 @@ export async function sendNewMessageEmail({
   conversationId: string;
 }) {
   const convUrl = `${APP_URL}/messages/${conversationId}`;
-  return resend.emails.send({
+  return send({
     from: FROM,
     to: recipientEmail,
     subject: `Yeni mesaj — ${senderName}`,
@@ -125,7 +145,7 @@ export async function sendItemMatchEmail({
   matchedItemId: string;
   explanation?: string;
 }) {
-  return resend.emails.send({
+  return send({
     from: FROM,
     to: userEmail,
     subject: `🔍 Eşleşme bulundu — ${originalTitle}`,
@@ -151,7 +171,7 @@ export async function sendItemDeletedEmail({
   itemTitle: string;
   reason: string;
 }) {
-  return resend.emails.send({
+  return send({
     from: FROM,
     to: ownerEmail,
     subject: `İlanınız kaldırıldı — ${itemTitle}`,
@@ -192,7 +212,7 @@ export async function sendAlertMatchEmail({
     )
     .join("");
 
-  await resend.emails.send({
+  await send({
     from: FROM,
     to: userEmail,
     subject: `🔔 Arama uyarısı: "${keyword}" için yeni ilanlar`,
