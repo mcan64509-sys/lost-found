@@ -214,13 +214,15 @@ export default function AdminPage() {
       .order("created_at", { ascending: false });
     setPendingItems((pendingData || []) as AdminItem[]);
 
-    // Load pending stories
-    const { data: storyData } = await supabase
-      .from("success_stories")
-      .select("*")
-      .eq("approved", false)
-      .order("created_at", { ascending: false });
-    setPendingStories((storyData || []) as Story[]);
+    // Load pending stories via admin API (bypasses RLS)
+    const { data: { session: s2 } } = await supabase.auth.getSession();
+    const storyRes = await fetch("/api/admin/stories", {
+      headers: { Authorization: `Bearer ${s2?.access_token || ""}` },
+    });
+    if (storyRes.ok) {
+      const storyJson = await storyRes.json();
+      setPendingStories((storyJson.stories || []) as Story[]);
+    }
 
     setLoading(false);
   }
@@ -978,9 +980,14 @@ export default function AdminPage() {
                         disabled={approvingStory === s.id}
                         onClick={async () => {
                           setApprovingStory(s.id);
-                          await supabase.from("success_stories").update({ approved: true }).eq("id", s.id);
-                          setPendingStories((prev) => prev.filter((x) => x.id !== s.id));
-                          toast.success("Hikaye onaylandı.");
+                          const { data: { session } } = await supabase.auth.getSession();
+                          const res = await fetch("/api/admin/stories", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+                            body: JSON.stringify({ storyId: s.id }),
+                          });
+                          if (res.ok) { setPendingStories((prev) => prev.filter((x) => x.id !== s.id)); toast.success("Hikaye onaylandı."); }
+                          else toast.error("Onaylanamadı.");
                           setApprovingStory(null);
                         }}
                         className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 transition disabled:opacity-50"
@@ -991,9 +998,14 @@ export default function AdminPage() {
                         disabled={approvingStory === s.id}
                         onClick={async () => {
                           setApprovingStory(s.id);
-                          await supabase.from("success_stories").delete().eq("id", s.id);
-                          setPendingStories((prev) => prev.filter((x) => x.id !== s.id));
-                          toast.success("Hikaye silindi.");
+                          const { data: { session } } = await supabase.auth.getSession();
+                          const res = await fetch("/api/admin/stories", {
+                            method: "DELETE",
+                            headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+                            body: JSON.stringify({ storyId: s.id }),
+                          });
+                          if (res.ok) { setPendingStories((prev) => prev.filter((x) => x.id !== s.id)); toast.success("Hikaye silindi."); }
+                          else toast.error("Silinemedi.");
                           setApprovingStory(null);
                         }}
                         className="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition disabled:opacity-50"
