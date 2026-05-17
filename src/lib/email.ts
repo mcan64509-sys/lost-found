@@ -10,7 +10,7 @@ const REPLY_TO = "iletisim@bulanvarmi.com";
 type SendParams = Parameters<typeof resend.emails.send>[0];
 function send(params: SendParams) {
   return resend.emails.send({
-    reply_to: REPLY_TO,
+    replyTo: REPLY_TO,
     headers: {
       "List-Unsubscribe": `<mailto:${REPLY_TO}?subject=unsubscribe>`,
       "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
