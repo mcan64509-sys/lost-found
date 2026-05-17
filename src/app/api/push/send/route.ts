@@ -14,6 +14,17 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export async function POST(req: NextRequest) {
   try {
+    const internalSecret = req.headers.get("x-internal-secret");
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const isInternal = internalSecret === process.env.CRON_SECRET;
+
+    if (!isInternal) {
+      if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // Lazy init — env yoksa build patlamaz, sadece runtime'da hata verir
     if (process.env.VAPID_EMAIL && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
       webpush.setVapidDetails(
@@ -23,7 +34,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { userEmail, title, body, url, sendEmail = false } = await req.json();
+    const { userEmail, title, body, url, tag, sendEmail = false } = await req.json();
     if (!userEmail || !title) {
       return NextResponse.json({ error: "Eksik bilgi" }, { status: 400 });
     }
@@ -36,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     let pushSent = 0;
     if (subs?.length) {
-      const payload = JSON.stringify({ title, body, url: url || "/" });
+      const payload = JSON.stringify({ title, body, url: url || "/", tag: tag || url || title });
       const results = await Promise.allSettled(
         subs.map((sub) =>
           webpush.sendNotification(
@@ -77,7 +88,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ pushSent, emailSent });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
   }
 }

@@ -7,7 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const anthropic = new Anthropic();
+const anthropic = new Anthropic({ timeout: 30_000 });
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
 type ModerateResult = {
@@ -79,7 +79,10 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error || !item) return NextResponse.json({ error: "İlan bulunamadı" }, { status: 404 });
-  if (!item.image_url) return NextResponse.json({ skipped: "görsel yok" });
+  if (!item.image_url) {
+    await supabase.from("items").update({ moderation_status: "approved" }).eq("id", itemId);
+    return NextResponse.json({ skipped: "görsel yok", approved: true });
+  }
 
   let result: ModerateResult;
   try {

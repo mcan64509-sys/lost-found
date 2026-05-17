@@ -11,6 +11,23 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
+    // Internal server calls use x-internal-secret; client calls use Bearer JWT
+    const internalSecret = req.headers.get("x-internal-secret");
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+    const isInternal = internalSecret === process.env.CRON_SECRET;
+    let isAuthenticated = isInternal;
+
+    if (!isInternal && token) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      isAuthenticated = !!user;
+    }
+
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { userEmail, type, title, message, itemId, relatedItemId } = await req.json();
 
     if (!userEmail || !type || !title || !message) {

@@ -37,6 +37,7 @@ export default function ConversationDetailPage() {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [userEmail, setUserEmail] = useState("");
+  const [accessToken, setAccessToken] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [newMessage, setNewMessage] = useState("");
@@ -161,6 +162,7 @@ export default function ConversationDetailPage() {
 
         if (isMounted) {
           setUserEmail(currentUserEmail);
+          setAccessToken(session?.access_token || "");
           setConversation(conversationData);
           setMessages(messageData);
         }
@@ -277,7 +279,7 @@ export default function ConversationDetailPage() {
       if (receiverEmail && receiverEmail !== normalizedUserEmail) {
         fetch("/api/notify", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
           body: JSON.stringify({
             userEmail: receiverEmail,
             type: "message",

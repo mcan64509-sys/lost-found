@@ -73,6 +73,16 @@ async function processExpiryReminders() {
   for (const item of expiringItems as ExpiringItem[]) {
     if (!item.created_by_email) continue;
     try {
+      // Skip if reminder already sent in the last 23 hours
+      const { data: existing } = await supabase
+        .from("notifications")
+        .select("id")
+        .eq("type", "expiry_reminder")
+        .eq("item_id", item.id)
+        .gte("created_at", new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString())
+        .maybeSingle();
+      if (existing) continue;
+
       await sendExpiryReminderEmail(item);
 
       await supabase.from("notifications").insert({

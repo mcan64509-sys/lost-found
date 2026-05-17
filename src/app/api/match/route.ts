@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
 
         await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/notify`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-internal-secret": process.env.CRON_SECRET || "" },
           body: JSON.stringify({
             userEmail: normalizeEmail(item.created_by_email),
             type: "match",

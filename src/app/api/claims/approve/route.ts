@@ -47,18 +47,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Bu talebi onaylama yetkin yok." }, { status: 403 });
     }
 
-    // Talebi onayla ve ilanı çözüldü olarak işaretle
-    const [{ error: updateClaimError }, { error: updateItemError }] = await Promise.all([
-      supabase.from("claims").update({ status: "approved" }).eq("id", claimId),
-      supabase.from("items").update({ status: "resolved" }).eq("id", claim.item_id),
-    ]);
+    // Talebi onayla
+    const { error: updateClaimError } = await supabase
+      .from("claims").update({ status: "approved" }).eq("id", claimId);
 
     if (updateClaimError) {
       return NextResponse.json({ error: "Talep onaylanamadı." }, { status: 500 });
     }
-    if (updateItemError) {
-      // Non-critical, continue
-    }
+
+    // İlanı çözüldü olarak işaretle
+    await supabase.from("items").update({ status: "resolved" }).eq("id", claim.item_id);
 
     // Talep edenin e-postasına bildirim gönder
     if (claim.claimer_email) {

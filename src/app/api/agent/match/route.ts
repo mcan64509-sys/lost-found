@@ -9,7 +9,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const anthropic = new Anthropic();
+const anthropic = new Anthropic({ timeout: 30_000 });
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL!;
 
 type MatchCandidate = {
@@ -70,7 +70,7 @@ async function handleNotify(input: NotifyInput, newItemTitle: string): Promise<s
 
   await fetch(`${APP_URL}/api/notify`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-internal-secret": process.env.CRON_SECRET || "" },
     body: JSON.stringify({
       userEmail: normalizeEmail(user_email),
       type: "match",
@@ -83,12 +83,13 @@ async function handleNotify(input: NotifyInput, newItemTitle: string): Promise<s
 
   await fetch(`${APP_URL}/api/push/send`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-internal-secret": process.env.CRON_SECRET || "" },
     body: JSON.stringify({
       userEmail: normalizeEmail(user_email),
       title: "🎯 Eşleşme bulundu!",
       body: explanation,
       url: `/items/${matched_item_id}`,
+      tag: `match-${their_item_id}-${matched_item_id}`,
     }),
   }).catch(() => {});
 

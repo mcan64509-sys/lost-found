@@ -141,7 +141,7 @@ export default function ClaimPage() {
       if (ownerEmail) {
         fetch("/api/notify", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...(sessionData.session?.access_token ? { Authorization: `Bearer ${sessionData.session.access_token}` } : {}) },
           body: JSON.stringify({
             userEmail: ownerEmail,
             type: "claim",

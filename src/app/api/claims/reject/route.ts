@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
         user_email: normalizeEmail(claim.claimer_email),
         type: "claim_rejected",
         title: "❌ Sahiplik talebiniz reddedildi.",
-        message: `"${itemTitle}" ilanı için gönderdiğiniz sahiplik talebi reddedildi.`,
+        message: `"${itemTitle}" ilanı için gönderdiğiniz sahiplik talebi reddedildi. Bilgilerinizi güncelleyerek tekrar deneyebilirsiniz.`,
         item_id: claim.item_id,
         is_read: false,
       });
