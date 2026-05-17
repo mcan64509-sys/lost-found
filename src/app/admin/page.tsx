@@ -109,7 +109,7 @@ export default function AdminPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [sightings, setSightings] = useState<Sighting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests" | "stories">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests" | "stories" | "announce">("stats");
   const [pendingStories, setPendingStories] = useState<Story[]>([]);
   const [approvingStory, setApprovingStory] = useState<string | null>(null);
   const [pendingItems, setPendingItems] = useState<AdminItem[]>([]);
@@ -134,6 +134,13 @@ export default function AdminPage() {
   const [userRequests, setUserRequests] = useState<UserRequest[]>([]);
   const [updatingRequest, setUpdatingRequest] = useState<string | null>(null);
   const [requestResponse, setRequestResponse] = useState<Record<string, string>>({});
+  const [announceSubject, setAnnounceSubject] = useState("");
+  const [announceMessage, setAnnounceMessage] = useState("");
+  const [announceTargets, setAnnounceTargets] = useState<"all" | "custom">("all");
+  const [announceCustomEmails, setAnnounceCustomEmails] = useState("");
+  const [announceSendEmail, setAnnounceSendEmail] = useState(true);
+  const [announceSendNotif, setAnnounceSendNotif] = useState(true);
+  const [announcing, setAnnouncing] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -510,6 +517,7 @@ export default function AdminPage() {
               ["moderation", "🛡 Moderasyon", pendingItems.length],
               ["requests", "💬 İstekler", userRequests.filter((r) => r.status === "pending").length],
               ["stories", "🎉 Hikayeler", pendingStories.length],
+              ["announce", "📢 Duyuru", 0],
             ] as const).map(([tab, label, count]) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`relative flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === tab ? "bg-slate-700 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-slate-800/50"}`}>
@@ -1128,7 +1136,110 @@ export default function AdminPage() {
                 })
               )}
             </div>
-          )}
+          ) : activeTab === "announce" ? (
+            <div className="max-w-xl space-y-5 animate-fade-in-up">
+              <div>
+                <h2 className="text-base font-bold text-white mb-1">Duyuru Gönder</h2>
+                <p className="text-xs text-slate-500">Kullanıcılara tek seferlik uygulama bildirimi ve/veya e-posta gönder.</p>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-400">Konu / Başlık</label>
+                <input
+                  value={announceSubject}
+                  onChange={(e) => setAnnounceSubject(e.target.value)}
+                  placeholder="Örn: Yeni özellik duyurusu"
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-400">Mesaj</label>
+                <textarea
+                  value={announceMessage}
+                  onChange={(e) => setAnnounceMessage(e.target.value)}
+                  rows={5}
+                  placeholder="Kullanıcılara gönderilecek mesajı yazın..."
+                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-slate-400">Alıcılar</label>
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={() => setAnnounceTargets("all")}
+                    className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${announceTargets === "all" ? "border-blue-500 bg-blue-500/20 text-blue-400" : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-500"}`}
+                  >
+                    Tüm kullanıcılar ({adminUsers.length})
+                  </button>
+                  <button
+                    onClick={() => setAnnounceTargets("custom")}
+                    className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${announceTargets === "custom" ? "border-blue-500 bg-blue-500/20 text-blue-400" : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-500"}`}
+                  >
+                    Belirli kişiler
+                  </button>
+                </div>
+                {announceTargets === "custom" && (
+                  <textarea
+                    value={announceCustomEmails}
+                    onChange={(e) => setAnnounceCustomEmails(e.target.value)}
+                    rows={3}
+                    placeholder={"E-posta adreslerini virgülle ayırın\nornek@mail.com, diger@mail.com"}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="mb-2 block text-xs font-semibold text-slate-400">Gönderim Türü</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={announceSendNotif} onChange={(e) => setAnnounceSendNotif(e.target.checked)} className="accent-blue-500 w-4 h-4" />
+                    <span className="text-sm text-slate-300">Uygulama bildirimi</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={announceSendEmail} onChange={(e) => setAnnounceSendEmail(e.target.checked)} className="accent-blue-500 w-4 h-4" />
+                    <span className="text-sm text-slate-300">E-posta</span>
+                  </label>
+                </div>
+              </div>
+
+              <button
+                disabled={announcing || !announceSubject.trim() || !announceMessage.trim()}
+                onClick={async () => {
+                  setAnnouncing(true);
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const targets = announceTargets === "all"
+                      ? "all"
+                      : announceCustomEmails.split(",").map((e) => e.trim()).filter(Boolean);
+                    const res = await fetch("/api/admin/announce", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+                      body: JSON.stringify({ subject: announceSubject, message: announceMessage, targets, sendEmail: announceSendEmail, sendNotification: announceSendNotif }),
+                    });
+                    const d = await res.json();
+                    if (res.ok) {
+                      toast.success(`Gönderildi — ${d.recipients} kişi${d.emailSent ? `, ${d.emailSent} e-posta` : ""}${d.notifSent ? `, ${d.notifSent} bildirim` : ""}`);
+                      setAnnounceSubject("");
+                      setAnnounceMessage("");
+                      setAnnounceCustomEmails("");
+                    } else {
+                      toast.error(d.error || "Gönderilemedi.");
+                    }
+                  } catch {
+                    toast.error("Bir hata oluştu.");
+                  } finally {
+                    setAnnouncing(false);
+                  }
+                }}
+                className="w-full rounded-xl bg-blue-600 px-6 py-3 text-sm font-bold text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {announcing ? "Gönderiliyor..." : "📢 Gönder"}
+              </button>
+            </div>
+          ) : null}
         </div>
       </main>
 
