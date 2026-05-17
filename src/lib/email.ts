@@ -188,6 +188,67 @@ export async function sendItemDeletedEmail({
   });
 }
 
+export async function sendContactToAdminEmail({
+  fromName,
+  fromEmail,
+  subject,
+  message,
+  adminEmail,
+}: {
+  fromName: string;
+  fromEmail: string;
+  subject: string;
+  message: string;
+  adminEmail: string;
+}) {
+  return send({
+    from: FROM,
+    to: adminEmail,
+    replyTo: fromEmail,
+    subject: `[Destek] ${subject} — ${fromName}`,
+    html: baseTemplate(`
+      <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;">Yeni Destek Talebi</h1>
+      <div style="margin:0 0 16px;padding:12px 16px;background:#1e293b;border-radius:10px;">
+        <p style="margin:0;font-size:13px;color:#94a3b8;">Gönderen</p>
+        <p style="margin:4px 0 0;color:#e2e8f0;font-weight:600;">${fromName}</p>
+        <p style="margin:2px 0 0;font-size:13px;color:#60a5fa;">${fromEmail}</p>
+      </div>
+      <div style="margin:0 0 16px;padding:12px 16px;background:#1e293b;border-radius:10px;">
+        <p style="margin:0;font-size:13px;color:#94a3b8;">Konu</p>
+        <p style="margin:4px 0 0;color:#e2e8f0;font-weight:600;">${subject}</p>
+      </div>
+      <div style="padding:14px 16px;background:#1e293b;border-left:3px solid #3b82f6;border-radius:0 10px 10px 0;">
+        <p style="margin:0;font-size:13px;color:#94a3b8;margin-bottom:8px;">Mesaj</p>
+        <p style="margin:0;color:#e2e8f0;line-height:1.7;white-space:pre-wrap;">${message}</p>
+      </div>
+      <p style="margin-top:16px;font-size:12px;color:#475569;">Bu maile yanıt verdiğinizde <strong>${fromEmail}</strong> adresine gidecektir.</p>
+    `),
+  });
+}
+
+export async function sendContactConfirmationEmail({
+  toEmail,
+  toName,
+  subject,
+}: {
+  toEmail: string;
+  toName: string;
+  subject: string;
+}) {
+  return send({
+    from: FROM,
+    to: toEmail,
+    subject: `Mesajınız alındı — ${subject}`,
+    html: baseTemplate(`
+      <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;color:#4ade80;">Mesajınız alındı!</h1>
+      <p style="color:#94a3b8;line-height:1.6;margin:0;">Merhaba <strong style="color:#e2e8f0;">${toName}</strong>,</p>
+      <p style="color:#94a3b8;line-height:1.6;margin:12px 0 0;">"<strong style="color:#e2e8f0;">${subject}</strong>" konulu destek talebiniz ekibimize iletildi. En kısa sürede bu e-posta adresine yanıt vereceğiz.</p>
+      <p style="color:#475569;font-size:13px;margin:20px 0 0;">Acil durumlar için <a href="mailto:destek@bulanvarmi.com" style="color:#60a5fa;">destek@bulanvarmi.com</a> adresine yazabilirsiniz.</p>
+      <a href="${APP_URL}" style="display:inline-block;background:#2563eb;color:#fff;padding:11px 22px;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;margin-top:20px;">Platforma Dön →</a>
+    `),
+  });
+}
+
 export async function sendAlertMatchEmail({
   userEmail,
   keyword,

@@ -333,8 +333,11 @@ export default function AppHeader() {
                         <p className="text-xs text-slate-400 leading-5">{item.a}</p>
                       </div>
                     ))}
-                    <div className="pt-1 border-t border-slate-800 text-center">
+                    <div className="pt-1 border-t border-slate-800 flex items-center justify-between px-1">
                       <p className="text-[10px] text-slate-600">bulanvarmi1@gmail.com</p>
+                      <Link href="/destek" onClick={() => setAboutOpen(false)} className="text-[11px] text-blue-400 hover:text-blue-300 transition font-medium">
+                        Destek →
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -611,6 +614,10 @@ export default function AppHeader() {
               {messageCount > 0 && (
                 <span className="rounded-full bg-blue-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{messageCount}</span>
               )}
+            </Link>
+            <Link href="/destek" onClick={() => setMobileOpen(false)}
+              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${isActive("/destek") ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}>
+              📧 Destek
             </Link>
             <div className="border-t border-slate-800 pt-3 mt-3 grid grid-cols-2 gap-2">
               <button

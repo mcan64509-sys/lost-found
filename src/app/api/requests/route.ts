@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { sendContactToAdminEmail } from "../../../lib/email";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "bulanvarmi1@gmail.com";
+
 const VALID_TYPES = ["feature_request", "bug_report", "complaint", "other"];
+
+const TYPE_LABELS: Record<string, string> = {
+  feature_request: "Özellik İsteği",
+  bug_report: "Hata Bildirimi",
+  complaint: "Şikayet",
+  other: "Diğer",
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -30,6 +40,15 @@ export async function POST(req: NextRequest) {
     });
 
     if (error) return NextResponse.json({ error: "Gönderilemedi." }, { status: 500 });
+
+    sendContactToAdminEmail({
+      fromName: userEmail,
+      fromEmail: userEmail,
+      subject: `${TYPE_LABELS[type] || type}: ${title.trim()}`,
+      message: description.trim(),
+      adminEmail: ADMIN_EMAIL,
+    }).catch(() => {});
+
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
