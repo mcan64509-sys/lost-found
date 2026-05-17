@@ -677,7 +677,7 @@ export default function AdminPage() {
                 adminUsers.map((u) => {
                   const initials = u.full_name
                     ? u.full_name.trim().split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
-                    : u.email[0].toUpperCase();
+                    : (u.email?.[0] ?? "?").toUpperCase();
                   return (
                     <div key={u.email} className={`flex flex-wrap items-center gap-3 rounded-2xl border px-4 py-3 ${u.is_banned ? "border-red-500/20 bg-red-500/5" : u.is_blacklisted ? "border-orange-500/20 bg-orange-500/5" : "border-slate-800 bg-slate-900"}`}>
                       <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-white overflow-hidden">
