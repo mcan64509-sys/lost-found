@@ -115,22 +115,24 @@ export async function POST(req: NextRequest) {
   const { data: item, error } = await supabase.from("items").select("*").eq("id", itemId).single();
   if (error || !item) return NextResponse.json({ error: "İlan bulunamadı" }, { status: 404 });
 
-  // Embed
-  const embedText = `${item.title} ${item.description ?? ""} ${item.category ?? ""} ${item.location ?? ""}`.trim();
-  const { data: embedData, error: embedError } = await supabase.functions.invoke("embed", {
-    body: { input: embedText },
-    headers: { Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}` },
-  });
-
-  if (embedError || !embedData?.embedding) {
-    return NextResponse.json({ error: "Embedding hatası" }, { status: 500 });
+  // Use already-stored embedding (set by /api/embed); re-embed only if missing
+  let embedding = item.embedding;
+  if (!embedding) {
+    const embedText = `${item.title} ${item.description ?? ""} ${item.category ?? ""} ${item.location ?? ""}`.trim();
+    const { data: embedData, error: embedError } = await supabase.functions.invoke("embed", {
+      body: { input: embedText },
+      headers: { Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}` },
+    });
+    if (embedError || !embedData?.embedding) {
+      return NextResponse.json({ error: "Embedding hatası" }, { status: 500 });
+    }
+    embedding = embedData.embedding;
+    await supabase.from("items").update({ embedding }).eq("id", itemId);
   }
-
-  await supabase.from("items").update({ embedding: embedData.embedding }).eq("id", itemId);
 
   // Find candidates
   const { data: candidates, error: matchError } = await supabase.rpc("match_items", {
-    query_embedding: embedData.embedding,
+    query_embedding: embedding,
     query_type: item.type,
     query_category: item.category,
     query_lat: item.lat ?? 0,
