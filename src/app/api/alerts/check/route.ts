@@ -24,7 +24,9 @@ const supabase = createClient(
 // GET /api/alerts/check?secret=xxx
 export async function GET(req: Request) {
   const secret = new URL(req.url).searchParams.get("secret");
-  if (secret !== process.env.CRON_SECRET) {
+  const bearer = (req as Request & { headers: Headers }).headers.get("authorization");
+  const authorized = secret === process.env.CRON_SECRET || bearer === `Bearer ${process.env.CRON_SECRET}`;
+  if (!authorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

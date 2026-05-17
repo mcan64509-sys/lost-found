@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -6,6 +7,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const anthropic = new Anthropic();
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 async function sendTelegram(chatId: number, text: string) {
@@ -17,6 +20,144 @@ async function sendTelegram(chatId: number, text: string) {
   });
 }
 
+type ItemRow = {
+  id: string;
+  title: string;
+  type: string;
+  category: string | null;
+  location: string | null;
+  date: string | null;
+  description: string | null;
+};
+
+const tools: Anthropic.Tool[] = [
+  {
+    name: "search_items",
+    description: "Kayıp veya bulundu ilanlarını arar. Kullanıcının sorgusu, konum, kategori veya türe göre filtreler.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        query: { type: "string", description: "Aranacak kelime (başlık veya açıklamada arar)" },
+        type: { type: "string", enum: ["lost", "found", "all"], description: "Kayıp, bulundu veya hepsi" },
+        category: { type: "string", description: "Kategori filtresi (opsiyonel): Telefon, Cüzdan, Anahtar, Çanta, Laptop, Evcil Hayvan vb." },
+        location: { type: "string", description: "Konum filtresi (opsiyonel)" },
+        limit: { type: "number", description: "Maksimum sonuç sayısı (varsayılan 5, max 10)" },
+      },
+      required: ["type"],
+    },
+  },
+  {
+    name: "get_recent_items",
+    description: "En son eklenen ilanları getirir.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        type: { type: "string", enum: ["lost", "found", "all"] },
+        limit: { type: "number", description: "Kaç ilan (varsayılan 5)" },
+      },
+      required: ["type"],
+    },
+  },
+];
+
+async function executeTool(name: string, input: Record<string, string | number>): Promise<string> {
+  if (name === "search_items") {
+    const { query, type, category, location, limit = 5 } = input as {
+      query?: string; type: string; category?: string; location?: string; limit?: number;
+    };
+
+    let q = supabase
+      .from("items")
+      .select("id, title, type, category, location, date, description")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(Math.min(Number(limit), 10));
+
+    if (type !== "all") q = q.eq("type", type);
+    if (query) q = q.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
+    if (category) q = q.ilike("category", `%${category}%`);
+    if (location) q = q.ilike("location", `%${location}%`);
+
+    const { data } = await q;
+    if (!data || data.length === 0) return "Sonuç bulunamadı.";
+
+    return (data as ItemRow[]).map((item) =>
+      `• [${item.type === "lost" ? "Kayıp" : "Bulundu"}] ${item.title} | ${item.category ?? "-"} | ${item.location ?? "-"} | ${APP_URL}/items/${item.id}`
+    ).join("\n");
+  }
+
+  if (name === "get_recent_items") {
+    const { type, limit = 5 } = input as { type: string; limit?: number };
+
+    let q = supabase
+      .from("items")
+      .select("id, title, type, category, location, date")
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(Math.min(Number(limit), 10));
+
+    if (type !== "all") q = q.eq("type", type);
+
+    const { data } = await q;
+    if (!data || data.length === 0) return "Hiç ilan yok.";
+
+    return (data as ItemRow[]).map((item) =>
+      `• [${item.type === "lost" ? "Kayıp" : "Bulundu"}] ${item.title} | ${item.category ?? "-"} | ${item.location ?? "-"} | ${APP_URL}/items/${item.id}`
+    ).join("\n");
+  }
+
+  return "Bilinmeyen araç";
+}
+
+async function handleWithAgent(userMessage: string): Promise<string> {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return "AI servisi şu an kullanılamıyor.";
+  }
+
+  const messages: Anthropic.MessageParam[] = [
+    { role: "user", content: userMessage },
+  ];
+
+  for (let turn = 0; turn < 5; turn++) {
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      system: `Sen BulanVarMı? platformunun Telegram botusun. Türkiye'de kayıp ve bulundu eşyaları bulmaya yardım ediyorsun.
+
+Görevlerin:
+- Kullanıcının doğal dil sorgusunu anlayıp ilgili ilanları ara
+- Türkçe, kısa ve yardımsever yanıt ver
+- Sonuçları düzenli listele, her ilanın linkini ekle
+- Bulunamazsa alternatif öner (daha geniş arama, site linki vb.)
+
+Platform: ${APP_URL}`,
+      tools,
+      messages,
+    });
+
+    if (response.stop_reason === "end_turn") {
+      const textBlock = response.content.find((b) => b.type === "text");
+      return textBlock ? (textBlock as Anthropic.TextBlock).text : "Bir sorun oluştu.";
+    }
+
+    if (response.stop_reason === "tool_use") {
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
+      for (const block of response.content) {
+        if (block.type === "tool_use") {
+          const result = await executeTool(block.name, block.input as Record<string, string | number>);
+          toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result });
+        }
+      }
+      messages.push({ role: "assistant", content: response.content });
+      messages.push({ role: "user", content: toolResults });
+    } else {
+      break;
+    }
+  }
+
+  return "Yanıt oluşturulamadı.";
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -25,77 +166,40 @@ export async function POST(req: NextRequest) {
 
     const chatId: number = message.chat?.id;
     const text: string = (message.text || "").trim();
-    const cmd = text.split(" ")[0].toLowerCase();
-    const args = text.slice(cmd.length).trim();
+    if (!text || !chatId) return NextResponse.json({ ok: true });
 
+    const cmd = text.split(" ")[0].toLowerCase();
+
+    // Sabit komutlar
     if (cmd === "/start" || cmd === "/yardim" || cmd === "/help") {
       await sendTelegram(chatId,
         "🔍 <b>BulanVarMı? Bot</b>\n\n" +
+        "Doğal dilde yazabilirsin:\n" +
+        "• \"Kadıköy'de bulunan telefon var mı?\"\n" +
+        "• \"Dün kaybolan siyah kedi ilanı\"\n" +
+        "• \"İstanbul çanta kayıp\"\n\n" +
         "Komutlar:\n" +
-        "/kayip — Son kayıp ilanlarını listele\n" +
-        "/buldum — Son bulundu ilanlarını listele\n" +
-        "/ara &lt;kelime&gt; — İlan ara\n" +
-        "/site — Platform linkini göster"
+        "/kayip — Son kayıp ilanları\n" +
+        "/buldum — Son bulundu ilanları\n" +
+        `/site — ${APP_URL}`
       );
-    } else if (cmd === "/kayip") {
-      const { data } = await supabase
-        .from("items")
-        .select("id, title, category, location, created_at")
-        .eq("type", "lost")
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      if (!data || data.length === 0) {
-        await sendTelegram(chatId, "Aktif kayıp ilanı bulunamadı.");
-      } else {
-        const lines = data.map((item: { id: string; title: string; category: string | null; location: string | null }) =>
-          `• <b>${item.title}</b>\n  📂 ${item.category || "—"} | 📍 ${item.location || "—"}\n  🔗 ${process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com"}/items/${item.id}`
-        );
-        await sendTelegram(chatId, "🔴 <b>Son Kayıp İlanları</b>\n\n" + lines.join("\n\n"));
-      }
-    } else if (cmd === "/buldum") {
-      const { data } = await supabase
-        .from("items")
-        .select("id, title, category, location, created_at")
-        .eq("type", "found")
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(5);
-
-      if (!data || data.length === 0) {
-        await sendTelegram(chatId, "Aktif bulundu ilanı bulunamadı.");
-      } else {
-        const lines = data.map((item: { id: string; title: string; category: string | null; location: string | null }) =>
-          `• <b>${item.title}</b>\n  📂 ${item.category || "—"} | 📍 ${item.location || "—"}\n  🔗 ${process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com"}/items/${item.id}`
-        );
-        await sendTelegram(chatId, "🟢 <b>Son Bulundu İlanları</b>\n\n" + lines.join("\n\n"));
-      }
-    } else if (cmd === "/ara") {
-      if (!args) {
-        await sendTelegram(chatId, "Kullanım: /ara &lt;kelime&gt;\nÖrnek: /ara cüzdan");
-      } else {
-        const { data } = await supabase
-          .from("items")
-          .select("id, title, type, category, location")
-          .eq("status", "active")
-          .ilike("title", `%${args}%`)
-          .limit(5);
-
-        if (!data || data.length === 0) {
-          await sendTelegram(chatId, `"${args}" için ilan bulunamadı.`);
-        } else {
-          const lines = data.map((item: { id: string; title: string; type: string; category: string | null; location: string | null }) =>
-            `• [${item.type === "lost" ? "Kayıp" : "Bulundu"}] <b>${item.title}</b>\n  📍 ${item.location || "—"}\n  🔗 ${process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com"}/items/${item.id}`
-          );
-          await sendTelegram(chatId, `🔎 <b>"${args}" sonuçları</b>\n\n` + lines.join("\n\n"));
-        }
-      }
-    } else if (cmd === "/site") {
-      await sendTelegram(chatId, `🌐 BulanVarMı? platform: ${process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com"}`);
-    } else {
-      await sendTelegram(chatId, "Bilinmeyen komut. /yardim yazarak komut listesini görebilirsiniz.");
+      return NextResponse.json({ ok: true });
     }
+
+    if (cmd === "/site") {
+      await sendTelegram(chatId, `🌐 BulanVarMı?: ${APP_URL}`);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Tüm diğer mesajlar (komutlar dahil) Claude agent'a gider
+    const agentInput = cmd === "/kayip"
+      ? "Son kayıp ilanlarını listele"
+      : cmd === "/buldum"
+        ? "Son bulundu ilanlarını listele"
+        : text;
+
+    const reply = await handleWithAgent(agentInput);
+    await sendTelegram(chatId, reply);
 
     return NextResponse.json({ ok: true });
   } catch {

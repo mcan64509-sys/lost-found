@@ -81,6 +81,17 @@ async function handleNotify(input: NotifyInput, newItemTitle: string): Promise<s
     }),
   }).catch(() => {});
 
+  await fetch(`${APP_URL}/api/push/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userEmail: normalizeEmail(user_email),
+      title: "🎯 Eşleşme bulundu!",
+      body: explanation,
+      url: `/items/${matched_item_id}`,
+    }),
+  }).catch(() => {});
+
   await sendItemMatchEmail({
     userEmail: normalizeEmail(user_email),
     matchedTitle: matched_item_title,
