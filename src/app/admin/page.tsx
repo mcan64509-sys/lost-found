@@ -1025,7 +1025,7 @@ export default function AdminPage() {
                 ))
               )}
             </div>
-          ) : (
+          ) : activeTab === "reports" ? (
             /* Reports tab */
             <div className="space-y-3 animate-fade-in-up">
               {reports.length === 0 ? (
