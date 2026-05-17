@@ -90,7 +90,8 @@ function SearchPageContent() {
   const [dateFrom, setDateFrom] = useState(() => searchParams.get("from") || "");
   const [dateTo, setDateTo] = useState(() => searchParams.get("to") || "");
   const [hideResolved, setHideResolved] = useState(() => searchParams.get("hide_resolved") === "1");
-  const [onlyUrgent] = useState(() => searchParams.get("urgent") === "true");
+  const [onlyUrgent, setOnlyUrgent] = useState(() => searchParams.get("urgent") === "true");
+  const [onlyFeatured, setOnlyFeatured] = useState(() => searchParams.get("featured") === "true");
   const [onlyStatus] = useState(() => searchParams.get("status") || "");
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation>(defaultLocation);
   const [locationEnabled, setLocationEnabled] = useState(false);
@@ -188,6 +189,7 @@ function SearchPageContent() {
       }
       if (hideResolved && item.status === "resolved") return false;
       if (onlyUrgent && !item.is_urgent) return false;
+      if (onlyFeatured && !item.is_featured) return false;
       if (onlyStatus && item.status !== onlyStatus) return false;
       if (fromMs && new Date(item.created_at).getTime() < fromMs) return false;
       if (toMs && new Date(item.created_at).getTime() > toMs) return false;
@@ -209,13 +211,13 @@ function SearchPageContent() {
       if (sortBy === "most_viewed") return (b.view_count ?? 0) - (a.view_count ?? 0);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [allItems, selectedLocation, locationEnabled, activeTab, category, keyword, sortBy, dateFrom, dateTo, hideResolved, onlyUrgent, onlyStatus]);
+  }, [allItems, selectedLocation, locationEnabled, activeTab, category, keyword, sortBy, dateFrom, dateTo, hideResolved, onlyUrgent, onlyFeatured, onlyStatus]);
 
   const lostItems = filteredItems.filter((i) => i.type === "lost");
   const foundItems = filteredItems.filter((i) => i.type === "found");
   const displayedItems = activeTab === "all" ? filteredItems : activeTab === "lost" ? lostItems : foundItems;
 
-  const hasActiveFilter = keyword || category !== CATEGORIES_DB[0] || sortBy !== "newest" || dateFrom || dateTo || hideResolved;
+  const hasActiveFilter = keyword || category !== CATEGORIES_DB[0] || sortBy !== "newest" || dateFrom || dateTo || hideResolved || onlyUrgent || onlyFeatured;
 
   const handleClear = () => {
     setActiveTab("all");
@@ -225,6 +227,8 @@ function SearchPageContent() {
     setDateFrom("");
     setDateTo("");
     setHideResolved(false);
+    setOnlyUrgent(false);
+    setOnlyFeatured(false);
     setSelectedLocation(defaultLocation);
     setLocationEnabled(false);
     router.replace("/search", { scroll: false });
@@ -402,7 +406,7 @@ function SearchPageContent() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-wrap">
                     {/* Çözüldü gizle toggle */}
                     <label className="flex items-center gap-2 cursor-pointer">
                       <div
@@ -412,6 +416,28 @@ function SearchPageContent() {
                         <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${hideResolved ? "translate-x-4" : ""}`} />
                       </div>
                       <span className="text-xs text-slate-400">{t.search.hideResolved}</span>
+                    </label>
+
+                    {/* Sadece acil toggle */}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <div
+                        onClick={() => { setOnlyUrgent(!onlyUrgent); syncUrl({ urgent: !onlyUrgent ? "true" : "" }); }}
+                        className={`relative w-9 h-5 rounded-full transition-colors ${onlyUrgent ? "bg-red-600" : "bg-slate-700"}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${onlyUrgent ? "translate-x-4" : ""}`} />
+                      </div>
+                      <span className="text-xs text-slate-400">Sadece acil</span>
+                    </label>
+
+                    {/* Sadece öne çıkan toggle */}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <div
+                        onClick={() => { setOnlyFeatured(!onlyFeatured); syncUrl({ featured: !onlyFeatured ? "true" : "" }); }}
+                        className={`relative w-9 h-5 rounded-full transition-colors ${onlyFeatured ? "bg-amber-500" : "bg-slate-700"}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${onlyFeatured ? "translate-x-4" : ""}`} />
+                      </div>
+                      <span className="text-xs text-slate-400">Sadece öne çıkan</span>
                     </label>
 
                     {hasActiveFilter && (
