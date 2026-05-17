@@ -60,6 +60,7 @@ function RegisterForm() {
       email,
       password,
       options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?type=signup`,
         data: {
           full_name: fullName,
           account_type: accountType,
