@@ -103,8 +103,13 @@ function RegisterForm() {
     }
 
     setLoading(false);
-    toast.success("Kayıt başarılı! E-posta adresinizi doğruladıktan sonra giriş yapabilirsiniz.");
-    router.push("/auth/login");
+    if (authData.session) {
+      toast.success("Hoş geldin! Hesabın oluşturuldu.");
+      window.location.href = "/";
+    } else {
+      toast.success("Kayıt başarılı! E-posta adresinizi doğruladıktan sonra giriş yapabilirsiniz.");
+      router.push("/auth/login");
+    }
   }
 
   return (
