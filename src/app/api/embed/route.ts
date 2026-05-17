@@ -29,6 +29,18 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError;
 
+    // Trigger AI matching agent asynchronously — no await, fire-and-forget
+    if (process.env.CRON_SECRET && process.env.NEXT_PUBLIC_APP_URL) {
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/agent/match`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-agent-secret": process.env.CRON_SECRET,
+        },
+        body: JSON.stringify({ itemId }),
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[embed]", error);

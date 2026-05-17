@@ -117,11 +117,13 @@ export async function sendItemMatchEmail({
   matchedTitle,
   originalTitle,
   matchedItemId,
+  explanation,
 }: {
   userEmail: string;
   matchedTitle: string;
   originalTitle: string;
   matchedItemId: string;
+  explanation?: string;
 }) {
   return resend.emails.send({
     from: FROM,
@@ -133,7 +135,8 @@ export async function sendItemMatchEmail({
         "<strong style="color:#e2e8f0;">${originalTitle}</strong>" ilanınızla eşleşen yeni bir ilan bulundu:
       </p>
       <p style="margin:14px 0;padding:12px 16px;background:#1e293b;border-radius:10px;color:#e2e8f0;font-weight:600;">${matchedTitle}</p>
-      <p style="color:#94a3b8;font-size:13px;">Bu eşleşme yapay zeka tarafından oluşturulmuştur. Yanıltıcı olabilir.</p>
+      ${explanation ? `<p style="color:#cbd5e1;font-size:14px;line-height:1.6;margin:0 0 12px;padding:10px 14px;background:#1e3a5f;border-left:3px solid #3b82f6;border-radius:0 8px 8px 0;">${explanation}</p>` : ""}
+      <p style="color:#475569;font-size:12px;margin:0;">Bu eşleşme yapay zeka tarafından oluşturulmuştur. Yanıltıcı olabilir.</p>
       ${itemButton(matchedItemId, "Eşleşmeyi Gör")}
     `),
   });
