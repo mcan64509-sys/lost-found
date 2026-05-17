@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe, PRODUCTS, type ProductType } from "../../../../lib/stripe";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
+import { sendCriticalAlert } from "../../../../lib/criticalAlert";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,6 +23,11 @@ export async function POST(req: NextRequest) {
       event = JSON.parse(body);
     }
   } catch (err) {
+    await sendCriticalAlert(
+      "Stripe webhook başarısız",
+      String(err),
+      "/api/payment/webhook"
+    );
     return NextResponse.json({ error: "Webhook hatası" }, { status: 400 });
   }
 

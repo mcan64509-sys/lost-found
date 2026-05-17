@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { sendCriticalAlert } from "../../../lib/criticalAlert";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -46,6 +47,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[embed]", error);
+    await sendCriticalAlert(
+      "Embedding başarısız",
+      String(error),
+      "/api/embed"
+    );
     return NextResponse.json({ error: "Embedding hatası" }, { status: 500 });
   }
 }
