@@ -103,11 +103,14 @@ function PriorityCard({ item }: { item: PriorityItem }) {
   );
 }
 
+const CITIES = ["Tüm Şehirler", "İstanbul", "Ankara", "İzmir", "Bursa", "Antalya", "Adana", "Konya", "Gaziantep", "Mersin", "Kayseri"];
+
 export default function PriorityPage() {
   const [items, setItems] = useState<PriorityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeLevel, setActiveLevel] = useState<number | "all">("all");
   const [activeType, setActiveType] = useState<"all" | "lost" | "found">("all");
+  const [activeCity, setActiveCity] = useState("Tüm Şehirler");
 
   useEffect(() => {
     async function load() {
@@ -129,6 +132,7 @@ export default function PriorityPage() {
   const filtered = items.filter((item) => {
     if (activeLevel !== "all" && item.priority_level !== activeLevel) return false;
     if (activeType !== "all" && item.type !== activeType) return false;
+    if (activeCity !== "Tüm Şehirler" && !item.location?.toLowerCase().includes(activeCity.toLowerCase())) return false;
     return true;
   });
 
@@ -184,7 +188,7 @@ export default function PriorityPage() {
           </div>
 
           {/* Filtreler */}
-          <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex flex-wrap gap-2 mb-4">
             <div className="flex rounded-xl overflow-hidden border border-slate-700 text-sm font-semibold">
               {(["all", "lost", "found"] as const).map((t) => (
                 <button
@@ -208,6 +212,24 @@ export default function PriorityPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Şehir filtresi */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            <span className="self-center text-xs text-slate-500">📍 Şehir:</span>
+            {CITIES.map((city) => (
+              <button
+                key={city}
+                onClick={() => setActiveCity(city)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  activeCity === city
+                    ? "bg-blue-500 text-white"
+                    : "bg-slate-800 text-slate-400 hover:text-white"
+                }`}
+              >
+                {city}
+              </button>
+            ))}
           </div>
 
           {/* İlanlar */}

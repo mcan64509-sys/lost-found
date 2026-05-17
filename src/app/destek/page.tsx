@@ -66,7 +66,7 @@ export default function DestekPage() {
             </div>
             <div>
               <p className="text-sm font-semibold text-white">E-posta</p>
-              <p className="text-xs text-slate-400">destek@bulanvarmi.com</p>
+              <p className="text-xs text-slate-400 select-all">destek@bulanvarmi.com</p>
             </div>
           </a>
           <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4">

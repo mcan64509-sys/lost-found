@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import {
   getConversationById,
@@ -9,11 +10,13 @@ import {
   sendMessage,
 } from "../../../lib/chat";
 import { supabase } from "../../../lib/supabase";
+import { uploadChatImage } from "../../../lib/storage";
 import type { Conversation, Message } from "../../../types/chat";
 import { toast } from "sonner";
 import AppHeader from "../../../components/AppHeader";
 import ConfirmDialog from "../../../components/ConfirmDialog";
 import { normalizeEmail } from "../../../lib/utils";
+import { ImageIcon, Loader2 } from "lucide-react";
 
 function formatDateTime(value: string) {
   const date = new Date(value);
@@ -40,6 +43,9 @@ export default function ConversationDetailPage() {
   const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "error">("connecting");
   const [confirmDeleteMsgId, setConfirmDeleteMsgId] = useState<string | null>(null);
   const [deletingMsgId, setDeletingMsgId] = useState<string | null>(null);
+
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -245,6 +251,49 @@ export default function ConversationDetailPage() {
     }
   }
 
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !normalizedUserEmail || !conversation) return;
+    if (!file.type.startsWith("image/")) { toast.error("Lütfen bir görsel seç."); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error("Görsel 10 MB'dan küçük olmalı."); return; }
+
+    try {
+      setUploadingImage(true);
+      const { publicUrl } = await uploadChatImage(file, conversationId);
+
+      const created = await sendMessage({
+        conversationId,
+        senderEmail: normalizedUserEmail,
+        content: `__img__:${publicUrl}`,
+      });
+
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === created.id)) return prev;
+        return [...prev, created];
+      });
+
+      const receiverEmail = normalizeEmail(otherSideEmail);
+      if (receiverEmail && receiverEmail !== normalizedUserEmail) {
+        fetch("/api/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userEmail: receiverEmail,
+            type: "message",
+            title: "📷 Fotoğraf paylaşıldı!",
+            message: `${normalizedUserEmail} sana "${conversation.item_title}" ilanı hakkında fotoğraf gönderdi.`,
+            itemId: conversation.item_id,
+          }),
+        }).catch(() => {});
+      }
+    } catch {
+      toast.error("Görsel gönderilemedi.");
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
   async function handleSendMessage(e: FormEvent) {
     e.preventDefault();
 
@@ -409,6 +458,23 @@ export default function ConversationDetailPage() {
                         )}
 
                         <div>
+                          {message.content.startsWith("__img__:") ? (
+                            <div className={`max-w-[240px] rounded-2xl overflow-hidden shadow-sm ${isMine ? "ml-auto" : ""}`}>
+                              <a href={message.content.slice(8)} target="_blank" rel="noopener noreferrer">
+                                <Image
+                                  src={message.content.slice(8)}
+                                  alt="Gönderilen görsel"
+                                  width={240}
+                                  height={240}
+                                  className="w-full h-auto object-cover rounded-2xl hover:opacity-90 transition cursor-pointer"
+                                  unoptimized
+                                />
+                              </a>
+                              <p className={`mt-1 text-[11px] ${isMine ? "text-right text-blue-200" : "text-slate-500"}`}>
+                                {formatDateTime(message.created_at)}
+                              </p>
+                            </div>
+                          ) : (
                           <div
                             className={`max-w-[80%] rounded-2xl px-4 py-3 shadow-sm ${
                               isMine
@@ -425,6 +491,7 @@ export default function ConversationDetailPage() {
                               {formatDateTime(message.created_at)}
                             </p>
                           </div>
+                          )}
                           {isMine && (
                             <div className="mt-1 flex justify-end">
                               <span className={`text-[10px] ${message.is_read ? "text-blue-400" : "text-slate-500"}`}>
@@ -442,7 +509,18 @@ export default function ConversationDetailPage() {
             </div>
 
             <form onSubmit={handleSendMessage} className="border-t border-slate-800 p-4">
-              <div className="flex gap-3">
+              <div className="flex gap-2">
+                <label className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl border border-slate-700 bg-slate-800 text-slate-400 hover:text-white hover:border-slate-600 transition cursor-pointer">
+                  {uploadingImage ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="sr-only"
+                    disabled={uploadingImage || sending}
+                  />
+                </label>
                 <input
                   ref={inputRef}
                   type="text"
@@ -450,11 +528,11 @@ export default function ConversationDetailPage() {
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Mesaj yaz..."
                   className="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500"
-                  disabled={sending}
+                  disabled={sending || uploadingImage}
                 />
                 <button
                   type="submit"
-                  disabled={sending || !newMessage.trim()}
+                  disabled={sending || uploadingImage || !newMessage.trim()}
                   className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {sending ? "Gönderiliyor..." : "Gönder"}

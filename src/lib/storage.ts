@@ -12,6 +12,22 @@ function getFileExtension(fileName: string) {
   return parts.length > 1 ? parts[parts.length - 1] : "";
 }
 
+export async function uploadChatImage(file: File, conversationId: string) {
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const timestamp = Date.now();
+  const randomPart = Math.random().toString(36).slice(2, 8);
+  const filePath = `chat/${conversationId}/${timestamp}-${randomPart}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("item-images")
+    .upload(filePath, file, { cacheControl: "3600", upsert: false });
+
+  if (uploadError) throw new Error(uploadError.message);
+
+  const { data } = supabase.storage.from("item-images").getPublicUrl(filePath);
+  return { path: filePath, publicUrl: data.publicUrl };
+}
+
 export async function uploadItemImage(file: File, userEmail: string) {
   if (!file) {
     throw new Error("Yüklenecek dosya bulunamadı.");

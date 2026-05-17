@@ -82,11 +82,22 @@ function UpgradeContent() {
           </div>
 
           {/* Free tier info */}
-          <div className="mb-6 rounded-2xl border border-blue-500/20 bg-blue-500/5 px-5 py-4 text-sm text-slate-300">
+          <div className="mb-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 px-5 py-4 text-sm text-slate-300">
             <span className="font-semibold text-white">İlk 3 ilanın ücretsiz!</span>{" "}
             4. ilanından itibaren Standart, Altın veya Acil paket seçmelisin.
             Altın ve Acil ilanlar "Acil İlanlar" kategorisinde görünür. Acil ilanlar en üst sıraya çıkar.
           </div>
+
+          {/* Location boost info */}
+          {itemTitle && (
+            <div className="mb-6 rounded-2xl border border-violet-500/20 bg-violet-500/5 px-5 py-4 text-sm">
+              <p className="font-semibold text-violet-300 mb-1">📍 Şehir Bazlı Öne Çıkarma</p>
+              <p className="text-slate-400">
+                İlanın satın aldığın paketle birlikte <span className="text-white font-semibold">Öncelikli İlanlar</span> sayfasında şehre göre filtrelenebilecek.
+                İlancın konumuna göre arama yapan kullanıcılar seni daha kolay bulur.
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
             {products.map(([key, product]) => (

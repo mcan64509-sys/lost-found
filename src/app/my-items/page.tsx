@@ -25,6 +25,7 @@ type MyItem = {
   expires_at: string | null;
   status: string | null;
   moderation_status: string | null;
+  view_count?: number | null;
 };
 
 export default function MyItemsPage() {
@@ -369,8 +370,15 @@ export default function MyItemsPage() {
                           </div>
                         )}
 
-                        <div className="mt-4 inline-flex items-center text-sm font-medium text-blue-400 transition group-hover:text-blue-300">
-                          {t.myItems.view}
+                        <div className="mt-4 flex items-center justify-between">
+                          <span className="inline-flex items-center text-sm font-medium text-blue-400 transition group-hover:text-blue-300">
+                            {t.myItems.view}
+                          </span>
+                          {(item.view_count ?? 0) > 0 && (
+                            <span className="flex items-center gap-1 text-xs text-slate-500">
+                              👁 {item.view_count}
+                            </span>
+                          )}
                         </div>
 
                         {item.expires_at && (

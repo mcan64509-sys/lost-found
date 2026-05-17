@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import AppHeader from "../../components/AppHeader";
 import AuthGuard from "../../components/AuthGuard";
 import { supabase } from "../../lib/supabase";
-import { MapPin, Filter, X } from "lucide-react";
+import { MapPin, Filter, LocateFixed } from "lucide-react";
 import type { ItemMarker } from "../../components/SearchMiniMapInner";
 
 const MapViewInner = dynamic(() => import("../../components/MapViewInner"), { ssr: false });
@@ -18,12 +18,32 @@ type MapItem = ItemMarker & {
 
 const CATEGORIES = ["Tümü", "Telefon", "Cüzdan", "Anahtar", "Çanta", "Laptop", "Saat / Takı", "Kimlik / Evrak", "Evcil Hayvan", "Diğer"];
 
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function MapPage() {
   const [items, setItems] = useState<MapItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<"all" | "lost" | "found">("all");
   const [catFilter, setCatFilter] = useState("Tümü");
   const [showFilters, setShowFilters] = useState(false);
+  const [radiusKm, setRadiusKm] = useState<number | null>(null);
+  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+  const [locLoading, setLocLoading] = useState(false);
+
+  function toggleRadius() {
+    if (radiusKm !== null) { setRadiusKm(null); setUserLoc(null); return; }
+    setLocLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setRadiusKm(5); setLocLoading(false); },
+      () => { alert("Konum alınamadı. Tarayıcı iznini kontrol edin."); setLocLoading(false); }
+    );
+  }
 
   useEffect(() => {
     async function load() {
@@ -49,6 +69,9 @@ export default function MapPage() {
     if (catFilter !== "Tümü") {
       if (catFilter === "Evcil Hayvan") return item.category === "Evcil Hayvan";
       return item.category === catFilter;
+    }
+    if (radiusKm !== null && userLoc && item.lat && item.lng) {
+      return haversineKm(userLoc.lat, userLoc.lng, item.lat, item.lng) <= radiusKm;
     }
     return true;
   });
@@ -95,6 +118,15 @@ export default function MapPage() {
                 Kategori
                 {catFilter !== "Tümü" && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
               </button>
+
+              <button
+                onClick={toggleRadius}
+                disabled={locLoading}
+                className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${radiusKm !== null ? "border-blue-500/50 bg-blue-500/10 text-blue-400" : "border-slate-700 text-slate-400 hover:text-white"}`}
+              >
+                <LocateFixed className="w-3.5 h-3.5" />
+                {locLoading ? "Konum alınıyor..." : radiusKm !== null ? `${radiusKm} km` : "Yarıçap"}
+              </button>
             </div>
           </div>
 
@@ -112,6 +144,26 @@ export default function MapPage() {
                   }`}
                 >
                   {cat === "Evcil Hayvan" ? "🐾 " + cat : cat}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Yarıçap filtresi */}
+          {radiusKm !== null && (
+            <div className="mx-auto max-w-7xl mt-3 flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-slate-500">Yarıçap:</span>
+              {[1, 5, 10, 25, 50].map((km) => (
+                <button
+                  key={km}
+                  onClick={() => setRadiusKm(km)}
+                  className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${
+                    radiusKm === km
+                      ? "bg-blue-500 text-white"
+                      : "bg-slate-800 text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {km} km
                 </button>
               ))}
             </div>

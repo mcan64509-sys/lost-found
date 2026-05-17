@@ -75,6 +75,10 @@ export default function FoundReportPage() {
   const [cropFileName, setCropFileName] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // AI suggestion
+  const [aiSuggestion, setAiSuggestion] = useState<{ category: string; title: string } | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
   const DRAFT_KEY = "found_form_draft";
 
   useEffect(() => {
@@ -124,10 +128,36 @@ export default function FoundReportPage() {
     }
   }
 
-  function handleCropConfirm(croppedFile: File) {
+  async function handleCropConfirm(croppedFile: File) {
     setSelectedImages((prev) => [...prev, croppedFile]);
     setPreviewUrls((prev) => [...prev, URL.createObjectURL(croppedFile)]);
     setCropSrc(null);
+
+    // AI detection only on first image
+    if (selectedImages.length === 0) {
+      setAiLoading(true);
+      try {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const dataUrl = reader.result as string;
+          const base64 = dataUrl.split(",")[1];
+          const mimeType = dataUrl.split(";")[0].split(":")[1];
+          const res = await fetch("/api/ai/detect-category", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ imageBase64: base64, mimeType }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setAiSuggestion(data);
+          }
+          setAiLoading(false);
+        };
+        reader.readAsDataURL(croppedFile);
+      } catch {
+        setAiLoading(false);
+      }
+    }
   }
 
   function removeImage(index: number) {
@@ -541,6 +571,44 @@ export default function FoundReportPage() {
                 <p className="mt-3 text-xs text-slate-500 text-center">
                   {selectedImages.length}/5 görsel — {5 - selectedImages.length} daha ekleyebilirsin
                 </p>
+              )}
+
+              {/* AI Suggestion Banner */}
+              {aiLoading && (
+                <div className="mt-4 flex items-center gap-3 rounded-2xl border border-violet-500/30 bg-violet-500/10 px-4 py-3">
+                  <Loader2 className="w-4 h-4 animate-spin text-violet-400 flex-shrink-0" />
+                  <span className="text-sm text-violet-300">AI görseli analiz ediyor...</span>
+                </div>
+              )}
+              {!aiLoading && aiSuggestion && (
+                <div className="mt-4 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-4">
+                  <p className="text-xs font-semibold text-violet-400 uppercase tracking-wider mb-2">✨ AI Önerisi</p>
+                  <p className="text-sm text-slate-300 mb-3">
+                    Görselden <span className="text-white font-semibold">{aiSuggestion.category}</span> kategorisi ve
+                    {" "}<span className="text-white font-semibold">"{aiSuggestion.title}"</span> başlığı tespit edildi.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategory(aiSuggestion.category);
+                        if (!title) setTitle(aiSuggestion.title);
+                        setAiSuggestion(null);
+                        toast.success("AI önerisi uygulandı.");
+                      }}
+                      className="rounded-xl bg-violet-500 px-4 py-2 text-xs font-bold text-white hover:bg-violet-400 transition"
+                    >
+                      Uygula
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAiSuggestion(null)}
+                      className="rounded-xl border border-slate-700 px-4 py-2 text-xs font-medium text-slate-400 hover:text-white transition"
+                    >
+                      Reddet
+                    </button>
+                  </div>
+                </div>
               )}
 
               {/* Final özet */}

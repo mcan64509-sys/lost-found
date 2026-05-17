@@ -1169,15 +1169,33 @@ export default function ProfilePage() {
             <section className="mt-6 max-w-lg space-y-6">
               {/* Telefon Numarası */}
               <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-                <h3 className="text-sm font-bold text-white mb-1">📱 Telefon Numarası</h3>
-                <p className="text-xs text-slate-500 mb-4">SMS bildirimleri için telefon numaranızı ekleyin.</p>
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="+90 5xx xxx xx xx"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none focus:border-slate-600 transition mb-3"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-sm font-bold text-white">📱 Telefon Numarası</h3>
+                  {phoneNumber.trim() && /^\+?[0-9\s\-]{10,15}$/.test(phoneNumber.replace(/\s/g, "")) && (
+                    <span className="flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-400">
+                      ✓ Kayıtlı
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mb-4">Telefon numaranızı ekleyin ve doğrulayın.</p>
+
+                <div className="relative mb-3">
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="+90 5xx xxx xx xx"
+                    className={`w-full rounded-xl border bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none transition pr-10 ${
+                      phoneNumber.trim() && /^\+?[0-9\s\-]{10,15}$/.test(phoneNumber.replace(/\s/g, ""))
+                        ? "border-emerald-500/40 focus:border-emerald-500/60"
+                        : "border-slate-700 focus:border-slate-600"
+                    }`}
+                  />
+                  {phoneNumber.trim() && /^\+?[0-9\s\-]{10,15}$/.test(phoneNumber.replace(/\s/g, "")) && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400 text-sm">✓</span>
+                  )}
+                </div>
+
                 <button
                   onClick={() => setSmsEnabled((v) => !v)}
                   className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition mb-3 ${
@@ -1191,10 +1209,10 @@ export default function ProfilePage() {
                 </button>
                 <button
                   onClick={handleSavePhone}
-                  disabled={savingPhone}
+                  disabled={savingPhone || !phoneNumber.trim()}
                   className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
                 >
-                  {savingPhone ? "Kaydediliyor..." : "Kaydet"}
+                  {savingPhone ? "Kaydediliyor..." : "Telefonu Kaydet & Doğrula"}
                 </button>
                 {smsEnabled && (
                   <p className="mt-2 text-xs text-amber-400">⚠️ SMS bildirimleri yakında aktif edilecek.</p>
