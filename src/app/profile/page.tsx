@@ -126,6 +126,10 @@ export default function ProfilePage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [smsEnabled, setSmsEnabled] = useState(false);
   const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [phoneCountdown, setPhoneCountdown] = useState(0);
   const [referralCode, setReferralCode] = useState("");
   const [referrals, setReferrals] = useState<{ referred_email: string; created_at: string }[]>([]);
   const [referralsLoading, setReferralsLoading] = useState(false);
@@ -232,7 +236,12 @@ export default function ProfilePage() {
 
       // Load privacy mode from profile
       setPrivacyMode(profileRow?.privacy_mode ?? false);
-      setPhoneNumber(profileRow?.phone_number ?? "");
+      const savedPhone = profileRow?.phone_number ?? "";
+      setPhoneNumber(savedPhone);
+      // If phone in profiles matches auth user's verified phone, mark as verified
+      if (savedPhone && sessionUser.phone && savedPhone.replace(/\D/g, "") === sessionUser.phone.replace(/\D/g, "")) {
+        setPhoneVerified(true);
+      }
       setSmsEnabled(profileRow?.sms_notifications ?? false);
       setReferralCode(profileRow?.referral_code ?? "");
       setUserPoints(profileRow?.points ?? 0);
@@ -508,6 +517,63 @@ export default function ProfilePage() {
       toast.error("Bir hata oluştu.");
     } finally {
       setSavingPrivacy(false);
+    }
+  }
+
+  function normalizePhoneForAuth(raw: string): string {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.startsWith("90") && digits.length === 12) return "+" + digits;
+    if (digits.startsWith("0") && digits.length === 11) return "+9" + digits;
+    if (digits.length === 10) return "+90" + digits;
+    return "+" + digits;
+  }
+
+  async function handleSendPhoneOtp() {
+    if (!user) return;
+    setSavingPhone(true);
+    try {
+      const normalized = normalizePhoneForAuth(phoneNumber);
+      const { error } = await supabase.auth.updateUser({ phone: normalized });
+      if (error) { toast.error(error.message); return; }
+      setPhoneOtpSent(true);
+      setPhoneCountdown(60);
+      const interval = setInterval(() => {
+        setPhoneCountdown((prev) => { if (prev <= 1) { clearInterval(interval); return 0; } return prev - 1; });
+      }, 1000);
+      toast.success("Doğrulama kodu gönderildi!");
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSavingPhone(false);
+    }
+  }
+
+  async function handleVerifyPhoneOtp() {
+    if (!user) return;
+    setSavingPhone(true);
+    try {
+      const normalized = normalizePhoneForAuth(phoneNumber);
+      const { error } = await supabase.auth.verifyOtp({
+        phone: normalized,
+        token: phoneOtp,
+        type: "phone_change",
+      });
+      if (error) { toast.error("Kod hatalı veya süresi dolmuş."); return; }
+
+      // Save to profiles
+      await supabase.from("profiles").update({
+        phone_number: normalized,
+        sms_notifications: smsEnabled,
+      }).eq("id", user.id);
+
+      setPhoneVerified(true);
+      setPhoneOtpSent(false);
+      setPhoneOtp("");
+      toast.success("Telefon numarası doğrulandı!");
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSavingPhone(false);
     }
   }
 
@@ -1177,28 +1243,80 @@ export default function ProfilePage() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-500 mb-4">Telefon numaranızı ekleyin ve doğrulayın.</p>
+                <p className="text-xs text-slate-500 mb-4">Telefon numaranı doğrula — SMS kodu ile giriş yapabilirsin.</p>
 
-                <div className="relative mb-3">
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="+90 5xx xxx xx xx"
-                    className={`w-full rounded-xl border bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none transition pr-10 ${
-                      phoneNumber.trim() && /^\+?[0-9\s\-]{10,15}$/.test(phoneNumber.replace(/\s/g, ""))
-                        ? "border-emerald-500/40 focus:border-emerald-500/60"
-                        : "border-slate-700 focus:border-slate-600"
-                    }`}
-                  />
-                  {phoneNumber.trim() && /^\+?[0-9\s\-]{10,15}$/.test(phoneNumber.replace(/\s/g, "")) && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400 text-sm">✓</span>
-                  )}
-                </div>
+                {phoneVerified ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 mb-3">
+                    <span className="text-emerald-400">✓</span>
+                    <span className="text-sm font-semibold text-emerald-300">{phoneNumber} doğrulandı</span>
+                    <button
+                      onClick={() => { setPhoneVerified(false); setPhoneOtpSent(false); }}
+                      className="ml-auto text-xs text-slate-500 hover:text-slate-300"
+                    >
+                      Değiştir
+                    </button>
+                  </div>
+                ) : !phoneOtpSent ? (
+                  <>
+                    <div className="relative mb-3">
+                      <input
+                        type="tel"
+                        value={phoneNumber}
+                        onChange={(e) => { setPhoneNumber(e.target.value); setPhoneVerified(false); }}
+                        placeholder="+90 5xx xxx xx xx"
+                        className={`w-full rounded-xl border bg-slate-950 px-4 py-3 text-sm text-white placeholder:text-slate-600 outline-none transition pr-10 ${
+                          phoneNumber.trim() && /^\+?[0-9\s\-]{10,15}$/.test(phoneNumber.replace(/\s/g, ""))
+                            ? "border-emerald-500/40 focus:border-emerald-500/60"
+                            : "border-slate-700 focus:border-slate-600"
+                        }`}
+                      />
+                      {phoneNumber.trim() && /^\+?[0-9\s\-]{10,15}$/.test(phoneNumber.replace(/\s/g, "")) && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-400 text-sm">✓</span>
+                      )}
+                    </div>
+                    <button
+                      onClick={handleSendPhoneOtp}
+                      disabled={savingPhone || phoneNumber.replace(/\D/g, "").length < 10}
+                      className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
+                    >
+                      {savingPhone ? "Gönderiliyor..." : "Doğrulama Kodu Gönder"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="mb-3 rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-3 text-xs text-slate-400">
+                      <span className="font-semibold text-white">{normalizePhoneForAuth(phoneNumber)}</span> numarasına kod gönderildi.{" "}
+                      <button onClick={() => setPhoneOtpSent(false)} className="text-blue-400 underline">Değiştir</button>
+                    </div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={phoneOtp}
+                      onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="_ _ _ _ _ _"
+                      className="mb-3 w-full rounded-xl border border-slate-600 bg-slate-950 px-4 py-3 text-center text-xl font-bold tracking-[0.4em] text-white outline-none focus:border-blue-500 transition"
+                    />
+                    <button
+                      onClick={handleVerifyPhoneOtp}
+                      disabled={savingPhone || phoneOtp.length !== 6}
+                      className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 transition disabled:opacity-50"
+                    >
+                      {savingPhone ? "Doğrulanıyor..." : "Doğrula"}
+                    </button>
+                    <div className="mt-2 text-center text-xs text-slate-500">
+                      {phoneCountdown > 0 ? (
+                        <span>Tekrar gönder ({phoneCountdown}s)</span>
+                      ) : (
+                        <button onClick={handleSendPhoneOtp} className="text-blue-400 hover:text-blue-300">Tekrar gönder</button>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <button
                   onClick={() => setSmsEnabled((v) => !v)}
-                  className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition mb-3 ${
+                  className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition mt-3 ${
                     smsEnabled ? "border-blue-500/30 bg-blue-500/10" : "border-slate-700 bg-slate-900 hover:border-slate-600"
                   }`}
                 >
@@ -1207,15 +1325,14 @@ export default function ProfilePage() {
                     <div className={`mt-0.5 ml-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${smsEnabled ? "translate-x-5" : "translate-x-0"}`} />
                   </div>
                 </button>
-                <button
-                  onClick={handleSavePhone}
-                  disabled={savingPhone || !phoneNumber.trim()}
-                  className="w-full rounded-xl bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
-                >
-                  {savingPhone ? "Kaydediliyor..." : "Telefonu Kaydet & Doğrula"}
-                </button>
-                {smsEnabled && (
-                  <p className="mt-2 text-xs text-amber-400">⚠️ SMS bildirimleri yakında aktif edilecek.</p>
+                {phoneVerified && (
+                  <button
+                    onClick={handleSavePhone}
+                    disabled={savingPhone}
+                    className="mt-3 w-full rounded-xl bg-slate-700 py-2.5 text-sm font-semibold text-white hover:bg-slate-600 transition disabled:opacity-50"
+                  >
+                    {savingPhone ? "Kaydediliyor..." : "SMS Tercihini Kaydet"}
+                  </button>
                 )}
               </div>
 

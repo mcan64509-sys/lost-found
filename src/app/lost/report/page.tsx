@@ -184,9 +184,19 @@ export default function LostReportPage() {
         return;
       }
       const user = data.session.user;
-      const createdByEmail = normalizeEmail(user.email);
+      // Phone-only users may have no email on auth — fall back to profiles.email
+      let createdByEmail = normalizeEmail(user.email);
+      if (!createdByEmail) {
+        const { data: profileData } = await supabase.from("profiles").select("email").eq("id", user.id).maybeSingle();
+        createdByEmail = normalizeEmail(profileData?.email);
+      }
+      if (!createdByEmail) {
+        toast.error("Hesabınıza bir e-posta adresi ekleyin.");
+        router.push("/auth/complete-profile");
+        return;
+      }
 
-      const { data: profile } = await supabase.from("profiles").select("is_banned").eq("email", createdByEmail).maybeSingle();
+      const { data: profile } = await supabase.from("profiles").select("is_banned").eq("id", user.id).maybeSingle();
       if (profile?.is_banned) { toast.error("Hesabınız engellendi. İlan oluşturamazsınız."); return; }
 
       // Count existing active items to enforce free tier limit
