@@ -118,6 +118,8 @@ export default function AdminPage() {
   const [adminEmail, setAdminEmail] = useState("");
   const [togglingBan, setTogglingBan] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; ownerEmail: string } | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
   const [blacklisting, setBlacklisting] = useState<string | null>(null);
   const [updatingReport, setUpdatingReport] = useState<string | null>(null);
@@ -223,13 +225,39 @@ export default function AdminPage() {
     setLoading(false);
   }
 
-  async function handleDeleteItem(id: string) {
-    if (!confirm("Bu ilanı silmek istediğine emin misin?")) return;
-    setDeleting(id);
-    const { error } = await supabase.from("items").delete().eq("id", id);
-    if (error) { toast.error("Silinemedi."); }
-    else { toast.success("İlan silindi."); setItems((prev) => prev.filter((i) => i.id !== id)); }
-    setDeleting(null);
+  function handleDeleteItem(id: string) {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    setDeleteTarget({ id, title: item.title, ownerEmail: item.created_by_email || "" });
+    setDeleteReason("");
+  }
+
+  async function confirmDeleteItem() {
+    if (!deleteTarget || !deleteReason.trim()) return;
+    setDeleting(deleteTarget.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/delete-item", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token || ""}`,
+        },
+        body: JSON.stringify({ itemId: deleteTarget.id, reason: deleteReason.trim() }),
+      });
+      if (res.ok) {
+        setItems((prev) => prev.filter((i) => i.id !== deleteTarget.id));
+        toast.success("İlan silindi, kullanıcıya bildirim gönderildi.");
+        setDeleteTarget(null);
+      } else {
+        const d = await res.json();
+        toast.error(d.error || "Silinemedi.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setDeleting(null);
+    }
   }
 
   async function handleToggleFeatured(id: string, current: boolean | null) {
@@ -1091,6 +1119,59 @@ export default function AdminPage() {
           )}
         </div>
       </main>
+
+      {/* Delete item modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <h2 className="mb-1 text-lg font-bold text-white">İlanı Sil</h2>
+            <p className="mb-4 text-sm text-slate-400">
+              <span className="font-semibold text-white">&ldquo;{deleteTarget.title}&rdquo;</span> ilanını siliyorsunuz.
+              İlan sahibine ({deleteTarget.ownerEmail}) uygulama bildirimi ve e-posta gönderilecek.
+            </p>
+
+            <p className="mb-2 text-xs font-semibold text-slate-400">Silme sebebi</p>
+            <div className="mb-3 flex flex-wrap gap-2">
+              {["Spam / Reklam", "Yanıltıcı / Sahte ilan", "Uygunsuz içerik", "Platform kuralları ihlali"].map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setDeleteReason(r)}
+                  className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
+                    deleteReason === r
+                      ? "border-red-500 bg-red-500/20 text-red-400"
+                      : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-500"
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              placeholder="Veya özel sebep yazın..."
+              rows={2}
+              className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none mb-4"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition"
+              >
+                İptal
+              </button>
+              <button
+                onClick={confirmDeleteItem}
+                disabled={!deleteReason.trim() || deleting === deleteTarget.id}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting === deleteTarget.id ? "Siliniyor..." : "Kalıcı Olarak Sil"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

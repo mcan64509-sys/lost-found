@@ -142,6 +142,32 @@ export async function sendItemMatchEmail({
   });
 }
 
+export async function sendItemDeletedEmail({
+  ownerEmail,
+  itemTitle,
+  reason,
+}: {
+  ownerEmail: string;
+  itemTitle: string;
+  reason: string;
+}) {
+  return resend.emails.send({
+    from: FROM,
+    to: ownerEmail,
+    subject: `İlanınız kaldırıldı — ${itemTitle}`,
+    html: baseTemplate(`
+      <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;color:#f87171;">İlanınız kaldırıldı ⚠️</h1>
+      <p style="color:#94a3b8;line-height:1.6;margin:0;">"<strong style="color:#e2e8f0;">${itemTitle}</strong>" başlıklı ilanınız platform yöneticisi tarafından kaldırıldı.</p>
+      <div style="margin:16px 0;padding:12px 16px;background:#1e293b;border-left:3px solid #f87171;border-radius:0 10px 10px 0;">
+        <p style="margin:0;font-size:13px;color:#94a3b8;">Kaldırılma sebebi:</p>
+        <p style="margin:6px 0 0;color:#e2e8f0;font-weight:600;">${reason}</p>
+      </div>
+      <p style="color:#475569;font-size:13px;line-height:1.6;margin:0;">Hatalı bir işlem olduğunu düşünüyorsanız platform üzerinden bizimle iletişime geçebilirsiniz.</p>
+      <a href="${APP_URL}" style="display:inline-block;background:#2563eb;color:#fff;padding:11px 22px;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;margin-top:20px;">Platforma Git →</a>
+    `),
+  });
+}
+
 export async function sendAlertMatchEmail({
   userEmail,
   keyword,
