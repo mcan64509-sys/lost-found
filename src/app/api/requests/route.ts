@@ -41,19 +41,20 @@ export async function POST(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: "Gönderilemedi." }, { status: 500 });
 
-    sendContactToAdminEmail({
-      fromName: userEmail,
-      fromEmail: userEmail,
-      subject: `${TYPE_LABELS[type] || type}: ${title.trim()}`,
-      message: description.trim(),
-      adminEmail: ADMIN_EMAIL,
-    }).catch(() => {});
-
-    sendContactConfirmationEmail({
-      toEmail: userEmail,
-      toName: userEmail,
-      subject: `${TYPE_LABELS[type] || type}: ${title.trim()}`,
-    }).catch(() => {});
+    await Promise.all([
+      sendContactToAdminEmail({
+        fromName: userEmail,
+        fromEmail: userEmail,
+        subject: `${TYPE_LABELS[type] || type}: ${title.trim()}`,
+        message: description.trim(),
+        adminEmail: ADMIN_EMAIL,
+      }),
+      sendContactConfirmationEmail({
+        toEmail: userEmail,
+        toName: userEmail,
+        subject: `${TYPE_LABELS[type] || type}: ${title.trim()}`,
+      }).catch(() => {}),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch {
