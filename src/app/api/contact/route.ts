@@ -30,23 +30,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Mesaj çok uzun (maks. 2000 karakter)." }, { status: 400 });
     }
 
-    const adminSends = ADMIN_EMAILS.map((adminEmail) =>
-      sendContactToAdminEmail({
-        fromName: name.trim(),
-        fromEmail: email.trim().toLowerCase(),
-        subject: subject.trim(),
-        message: message.trim(),
-        adminEmail,
-      }).catch((err) => console.error("Admin email error:", adminEmail, err))
+    await Promise.all(
+      ADMIN_EMAILS.map((adminEmail) =>
+        sendContactToAdminEmail({
+          fromName: name.trim(),
+          fromEmail: email.trim().toLowerCase(),
+          subject: subject.trim(),
+          message: message.trim(),
+          adminEmail,
+        })
+      )
     );
 
-    const confirmSend = sendContactConfirmationEmail({
+    sendContactConfirmationEmail({
       toEmail: email.trim().toLowerCase(),
       toName: name.trim(),
       subject: subject.trim(),
-    }).catch((err) => console.error("Confirmation email error:", err));
-
-    await Promise.all([...adminSends, confirmSend]);
+    }).catch(() => {});
 
     return NextResponse.json({ ok: true });
   } catch (err) {
