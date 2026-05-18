@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendContactToAdminEmail, sendContactConfirmationEmail } from "../../../lib/email";
 
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "bulanvarmi1@gmail.com")
-  .split(",")
-  .map((e) => e.trim())
-  .filter(Boolean);
+const ADMIN_EMAILS = ["support@bulanvarmi.com"];
 
 const SUBJECTS = [
   "Hesap Sorunu",

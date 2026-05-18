@@ -11,7 +11,7 @@ const anthropic = new Anthropic();
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
 const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <support@bulanvarmi.com>";
-const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",")[0].trim();
+const ADMIN_EMAIL = "support@bulanvarmi.com";
 
 const REASON_LABELS: Record<string, string> = {
   spam: "Spam",
