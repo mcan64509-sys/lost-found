@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendContactToAdminEmail } from "../../../lib/email";
+import { sendContactToAdminEmail, sendContactConfirmationEmail } from "../../../lib/email";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,6 +47,12 @@ export async function POST(req: NextRequest) {
       subject: `${TYPE_LABELS[type] || type}: ${title.trim()}`,
       message: description.trim(),
       adminEmail: ADMIN_EMAIL,
+    }).catch(() => {});
+
+    sendContactConfirmationEmail({
+      toEmail: userEmail,
+      toName: userEmail,
+      subject: `${TYPE_LABELS[type] || type}: ${title.trim()}`,
     }).catch(() => {});
 
     return NextResponse.json({ success: true });
