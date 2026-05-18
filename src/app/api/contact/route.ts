@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendContactToAdminEmail, sendContactConfirmationEmail } from "../../../lib/email";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "bulanvarmi1@gmail.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "support@bulanvarmi.com";
 
 const SUBJECTS = [
   "Hesap Sorunu",
