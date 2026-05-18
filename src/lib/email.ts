@@ -2,9 +2,9 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <noreply@bulanvarmi.com>";
+const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <support@bulanvarmi.com>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
-const REPLY_TO = "destek@bulanvarmi.com";
+const REPLY_TO = "support@bulanvarmi.com";
 
 // Tüm gönderimler bu wrapper üzerinden geçer — spam önleme headerları ekler
 type SendParams = Parameters<typeof resend.emails.send>[0];
@@ -243,7 +243,7 @@ export async function sendContactConfirmationEmail({
       <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;color:#4ade80;">Mesajınız alındı!</h1>
       <p style="color:#94a3b8;line-height:1.6;margin:0;">Merhaba <strong style="color:#e2e8f0;">${toName}</strong>,</p>
       <p style="color:#94a3b8;line-height:1.6;margin:12px 0 0;">"<strong style="color:#e2e8f0;">${subject}</strong>" konulu destek talebiniz ekibimize iletildi. En kısa sürede bu e-posta adresine yanıt vereceğiz.</p>
-      <p style="color:#475569;font-size:13px;margin:20px 0 0;">Acil durumlar için <a href="mailto:destek@bulanvarmi.com" style="color:#60a5fa;">destek@bulanvarmi.com</a> adresine yazabilirsiniz.</p>
+      <p style="color:#475569;font-size:13px;margin:20px 0 0;">Acil durumlar için <a href="mailto:support@bulanvarmi.com" style="color:#60a5fa;">support@bulanvarmi.com</a> adresine yazabilirsiniz.</p>
       <a href="${APP_URL}" style="display:inline-block;background:#2563eb;color:#fff;padding:11px 22px;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;margin-top:20px;">Platforma Dön →</a>
     `),
   });

@@ -58,7 +58,7 @@ export default function DestekPage() {
         {/* İletişim kartları */}
         <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <a
-            href="mailto:destek@bulanvarmi.com"
+            href="mailto:support@bulanvarmi.com"
             className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4 transition hover:border-blue-500/40 hover:bg-slate-800/50"
           >
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-500/10">
@@ -66,7 +66,7 @@ export default function DestekPage() {
             </div>
             <div>
               <p className="text-sm font-semibold text-white">E-posta</p>
-              <p className="text-xs text-slate-400 select-all">destek@bulanvarmi.com</p>
+              <p className="text-xs text-slate-400 select-all">support@bulanvarmi.com</p>
             </div>
           </a>
           <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-4">
