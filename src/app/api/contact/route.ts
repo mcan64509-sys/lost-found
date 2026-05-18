@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendContactToAdminEmail, sendContactConfirmationEmail } from "../../../lib/email";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "support@bulanvarmi.com";
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "bulanvarmi1@gmail.com")
+  .split(",")
+  .map((e) => e.trim())
+  .filter(Boolean);
 
 const SUBJECTS = [
   "Hesap Sorunu",
@@ -30,20 +33,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Mesaj çok uzun (maks. 2000 karakter)." }, { status: 400 });
     }
 
-    await Promise.all([
+    const adminSends = ADMIN_EMAILS.map((adminEmail) =>
       sendContactToAdminEmail({
         fromName: name.trim(),
         fromEmail: email.trim().toLowerCase(),
         subject: subject.trim(),
         message: message.trim(),
-        adminEmail: ADMIN_EMAIL,
-      }),
-      sendContactConfirmationEmail({
-        toEmail: email.trim().toLowerCase(),
-        toName: name.trim(),
-        subject: subject.trim(),
-      }),
-    ]);
+        adminEmail,
+      }).catch((err) => console.error("Admin email error:", adminEmail, err))
+    );
+
+    const confirmSend = sendContactConfirmationEmail({
+      toEmail: email.trim().toLowerCase(),
+      toName: name.trim(),
+      subject: subject.trim(),
+    }).catch((err) => console.error("Confirmation email error:", err));
+
+    await Promise.all([...adminSends, confirmSend]);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

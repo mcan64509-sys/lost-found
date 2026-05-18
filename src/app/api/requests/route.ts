@@ -7,7 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "support@bulanvarmi.com";
+const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "bulanvarmi1@gmail.com").split(",")[0].trim();
 
 const VALID_TYPES = ["feature_request", "bug_report", "complaint", "other"];
 
