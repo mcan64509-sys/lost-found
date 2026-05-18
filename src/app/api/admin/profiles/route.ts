@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { sendCriticalAlert } from "../../../../lib/criticalAlert";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,48 +52,50 @@ export async function GET(req: NextRequest) {
   const { data: profiles, error } = await query;
 
   if (error) {
+    await sendCriticalAlert("Admin Profiles Hatası", error.message, "/api/admin/profiles");
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Enrich with ratings + item counts
-  const enriched = await Promise.all(
-    (profiles ?? []).map(async (profile) => {
-      const [{ data: ratings }, { data: items }] = await Promise.all([
-        supabaseAdmin
-          .from("ratings")
-          .select("score")
-          .eq("rated_email", profile.email),
-        supabaseAdmin
-          .from("items")
-          .select("status, type")
-          .eq("created_by_email", profile.email),
-      ]);
+  const emails = (profiles ?? []).map((p) => p.email);
 
-      const scores = (ratings ?? []).map((r: { score: number }) => r.score);
-      const avg = scores.length > 0
-        ? scores.reduce((a: number, b: number) => a + b, 0) / scores.length
-        : null;
+  if (emails.length === 0) {
+    return NextResponse.json({ profiles: [] });
+  }
 
-      const itemList = items ?? [];
-      const lostCount = itemList.filter((i: { type: string }) => i.type === "lost").length;
-      const foundCount = itemList.filter((i: { type: string }) => i.type === "found").length;
-      const resolvedCount = itemList.filter((i: { status: string }) => i.status === "resolved").length;
-      const helpedCount = itemList.filter(
-        (i: { type: string; status: string }) => i.type === "found" && i.status === "resolved"
-      ).length;
+  // Batch fetch ratings + items for all profiles at once
+  const [{ data: allRatings }, { data: allItems }] = await Promise.all([
+    supabaseAdmin.from("ratings").select("rated_email, score").in("rated_email", emails),
+    supabaseAdmin.from("items").select("created_by_email, status, type").in("created_by_email", emails),
+  ]);
 
-      return {
-        ...profile,
-        ratingAvg: avg,
-        ratingCount: scores.length,
-        totalItems: itemList.length,
-        lostCount,
-        foundCount,
-        resolvedCount,
-        helpedCount,
-      };
-    })
-  );
+  const ratingsMap = new Map<string, number[]>();
+  for (const r of allRatings ?? []) {
+    if (!ratingsMap.has(r.rated_email)) ratingsMap.set(r.rated_email, []);
+    ratingsMap.get(r.rated_email)!.push(r.score);
+  }
+
+  type ItemRow = { created_by_email: string; type: string; status: string };
+  const itemsMap = new Map<string, ItemRow[]>();
+  for (const i of (allItems ?? []) as ItemRow[]) {
+    if (!itemsMap.has(i.created_by_email)) itemsMap.set(i.created_by_email, []);
+    itemsMap.get(i.created_by_email)!.push(i);
+  }
+
+  const enriched = (profiles ?? []).map((profile) => {
+    const scores = ratingsMap.get(profile.email) ?? [];
+    const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+    const itemList = itemsMap.get(profile.email) ?? [];
+    return {
+      ...profile,
+      ratingAvg: avg,
+      ratingCount: scores.length,
+      totalItems: itemList.length,
+      lostCount: itemList.filter((i) => i.type === "lost").length,
+      foundCount: itemList.filter((i) => i.type === "found").length,
+      resolvedCount: itemList.filter((i) => i.status === "resolved").length,
+      helpedCount: itemList.filter((i) => i.type === "found" && i.status === "resolved").length,
+    };
+  });
 
   return NextResponse.json({ profiles: enriched });
 }
