@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
             <p style="margin-top:32px;font-size:11px;color:#475569;">Bu e-posta BulanVarMı? platformu tarafından gönderilmiştir. <a href="${APP_URL}" style="color:#60a5fa;text-decoration:none;">Platforma git →</a></p>
           </div>
         `,
-      }).then(() => { emailSent = true; }).catch(() => {});
+      }).then(() => { emailSent = true; }).catch((err) => console.error("Push email notification failed:", err));
     }
 
     return NextResponse.json({ pushSent, emailSent });

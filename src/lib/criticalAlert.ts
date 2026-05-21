@@ -39,5 +39,5 @@ export async function sendCriticalAlert(
         <p style="margin-top:24px;font-size:11px;color:#475569;">BulanVarMı? otomatik hata alarmı</p>
       </div>
     `,
-  }).catch(() => {});
+  }).catch((err) => console.error("criticalAlert email failed:", err));
 }

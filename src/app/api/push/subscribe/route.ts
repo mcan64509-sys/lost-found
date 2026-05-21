@@ -12,6 +12,14 @@ export async function POST(req: NextRequest) {
     if (!subscription?.endpoint || !userEmail) {
       return NextResponse.json({ error: "Eksik bilgi" }, { status: 400 });
     }
+    if (
+      subscription.endpoint.length > 512 ||
+      (subscription.keys?.p256dh && subscription.keys.p256dh.length > 128) ||
+      (subscription.keys?.auth && subscription.keys.auth.length > 64) ||
+      userEmail.length > 254
+    ) {
+      return NextResponse.json({ error: "Geçersiz veri." }, { status: 400 });
+    }
 
     await supabase.from("push_subscriptions").upsert(
       {

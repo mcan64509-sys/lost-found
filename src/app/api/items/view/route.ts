@@ -9,7 +9,9 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   try {
     const { itemId } = await req.json();
-    if (!itemId) return NextResponse.json({ ok: false });
+    if (!itemId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(itemId)) {
+      return NextResponse.json({ ok: false });
+    }
 
     const { error: rpcError } = await supabase.rpc("increment_view_count", { item_id: itemId });
     if (rpcError) {

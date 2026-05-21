@@ -27,6 +27,9 @@ export async function POST(req: NextRequest) {
     if (!conversationId || !content?.trim()) {
       return NextResponse.json({ error: "Eksik alanlar." }, { status: 400 });
     }
+    if (content.trim().length > 2000) {
+      return NextResponse.json({ error: "Mesaj çok uzun (maks. 2000 karakter)." }, { status: 400 });
+    }
 
     // Konuşma var mı ve gönderen katılımcı mı?
     const { data: conversation, error: convError } = await supabase

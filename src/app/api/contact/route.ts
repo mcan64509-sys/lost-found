@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sendContactToAdminEmail, sendContactConfirmationEmail } from "../../../lib/email";
+import { checkRateLimit, getClientIp } from "../../../lib/ratelimit";
 
 const ADMIN_EMAILS = ["support@bulanvarmi.com"];
 
@@ -15,6 +16,12 @@ const SUBJECTS = [
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const rl = await checkRateLimit(`contact:${ip}`);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Çok fazla istek. Lütfen bekleyin." }, { status: 429 });
+    }
+
     const { name, email, subject, message } = await req.json();
 
     if (!name?.trim() || !email?.trim() || !subject?.trim() || !message?.trim()) {
@@ -30,8 +37,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Mesaj çok uzun (maks. 2000 karakter)." }, { status: 400 });
     }
 
-    await Promise.all(
-      ADMIN_EMAILS.map((adminEmail) =>
+    await Promise.all([
+      ...ADMIN_EMAILS.map((adminEmail) =>
         sendContactToAdminEmail({
           fromName: name.trim(),
           fromEmail: email.trim().toLowerCase(),
@@ -39,14 +46,13 @@ export async function POST(req: NextRequest) {
           message: message.trim(),
           adminEmail,
         })
-      )
-    );
-
-    sendContactConfirmationEmail({
-      toEmail: email.trim().toLowerCase(),
-      toName: name.trim(),
-      subject: subject.trim(),
-    }).catch(() => {});
+      ),
+      sendContactConfirmationEmail({
+        toEmail: email.trim().toLowerCase(),
+        toName: name.trim(),
+        subject: subject.trim(),
+      }).catch((err) => console.error("Contact confirmation email failed:", err)),
+    ]);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

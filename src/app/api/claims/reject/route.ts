@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { normalizeEmail } from "../../../../lib/utils";
 import { sendClaimRejectedEmail } from "../../../../lib/email";
 import { getAuthenticatedUser } from "../../../../lib/auth";
+import { sendCriticalAlert } from "../../../../lib/criticalAlert";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -84,7 +85,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? (err.stack || err.message) : String(err);
+    sendCriticalAlert("500 — /api/claims/reject", msg, "/api/claims/reject").catch(console.error);
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { sendCriticalAlert } from "../../../lib/criticalAlert";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -71,7 +72,9 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+  } catch (err) {
+    const msg = err instanceof Error ? (err.stack || err.message) : String(err);
+    sendCriticalAlert("500 — /api/notify", msg, "/api/notify").catch(console.error);
+    return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
   }
 }

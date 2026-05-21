@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendContactToAdminEmail, sendContactConfirmationEmail } from "../../../lib/email";
+import { checkRateLimit, getClientIp } from "../../../lib/ratelimit";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,6 +21,12 @@ const TYPE_LABELS: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const rl = await checkRateLimit(`requests:${ip}`);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Çok fazla istek. Lütfen bekleyin." }, { status: 429 });
+    }
+
     const { userEmail, type, title, description } = await req.json();
     if (!userEmail || !type || !title || !description) {
       return NextResponse.json({ error: "Eksik alanlar." }, { status: 400 });
@@ -53,7 +60,7 @@ export async function POST(req: NextRequest) {
         toEmail: userEmail,
         toName: userEmail,
         subject: `${TYPE_LABELS[type] || type}: ${title.trim()}`,
-      }).catch(() => {}),
+      }).catch((err) => console.error("Request confirmation email failed:", err)),
     ]);
 
     return NextResponse.json({ success: true });

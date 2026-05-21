@@ -344,16 +344,14 @@ export default function AppHeader() {
               )}
             </div>
 
-            {/* GERİ BİLDİRİM */}
-            {userEmail && (
-              <button
-                onClick={() => setShowFeedback(true)}
-                title={t.feedback.navLabel}
-                className="hidden md:flex items-center gap-1.5 rounded-xl border border-slate-700 px-3 py-2 text-xs font-medium text-slate-400 hover:border-blue-500/40 hover:text-blue-400 transition"
-              >
-                💬 {t.feedback.navLabel}
-              </button>
-            )}
+            {/* DESTEK */}
+            <Link
+              href="/destek"
+              className="hidden md:flex items-center gap-1.5 rounded-xl border border-slate-700 px-3 py-2 text-xs font-medium text-slate-400 hover:border-blue-500/40 hover:text-blue-400 transition"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+              Destek
+            </Link>
 
             {/* DİL SEÇİCİ */}
             <LanguageSwitcher />

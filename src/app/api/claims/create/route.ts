@@ -4,6 +4,7 @@ import { normalizeEmail } from "../../../../lib/utils";
 import { sendClaimReceivedEmail } from "../../../../lib/email";
 import { getAuthenticatedUser } from "../../../../lib/auth";
 import { checkRateLimit, getClientIp } from "../../../../lib/ratelimit";
+import { sendCriticalAlert } from "../../../../lib/criticalAlert";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -182,7 +183,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ claim }, { status: 201 });
-  } catch {
+  } catch (err) {
+    const msg = err instanceof Error ? (err.stack || err.message) : String(err);
+    sendCriticalAlert("500 — /api/claims/create", msg, "/api/claims/create").catch(console.error);
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
   }
 }
