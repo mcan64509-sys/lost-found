@@ -11,7 +11,8 @@ const anthropic = new Anthropic();
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
 const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <support@bulanvarmi.com>";
-const ADMIN_EMAIL = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",")[1]?.trim() || "mcan64509@gmail.com";
+const _adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim()).filter(Boolean);
+const ADMIN_EMAIL = _adminEmails.find((e) => !e.startsWith("support@")) ?? _adminEmails[0] ?? "mcan64509@gmail.com";
 
 export async function GET(req: NextRequest) {
   const bearer = req.headers.get("authorization") || "";
@@ -67,15 +68,21 @@ ${noEmbed.map((i) => `  • "${i.title}"`).join("\n") || "  (yok)"}
 
   let aiText = "";
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 300,
-      system: `Sen BulanVarMı? platformunun admin asistanısın. Günlük platform sağlık raporunu kısa Türkçe yaz.
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 9000);
+    const response = await anthropic.messages.create(
+      {
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 300,
+        system: `Sen BulanVarMı? platformunun admin asistanısın. Günlük platform sağlık raporunu kısa Türkçe yaz.
 Acil durum varsa (çok sayıda şikayet, toplu flag, embedding sorunu) özellikle belirt.
 Her şey normalse "Genel durum iyi." diye başla.
 Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
-      messages: [{ role: "user", content: dataSummary }],
-    });
+        messages: [{ role: "user", content: dataSummary }],
+      },
+      { signal: ac.signal }
+    );
+    clearTimeout(timer);
     const text = response.content.find((b) => b.type === "text");
     aiText = text ? (text as Anthropic.TextBlock).text : "";
   } catch {
@@ -84,11 +91,13 @@ Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
 
   const hasIssues = (pendingReports.count ?? 0) > 0 || flagged.length > 0 || noEmbed.length > 0;
 
+  let emailError: string | null = null;
   if (ADMIN_EMAIL) {
-    await resend.emails.send({
-      from: FROM,
-      to: ADMIN_EMAIL,
-      subject: `${hasIssues ? "⚠️" : "✅"} BulanVarMı? Günlük Platform Raporu`,
+    try {
+      await resend.emails.send({
+        from: FROM,
+        to: ADMIN_EMAIL,
+        subject: `${hasIssues ? "⚠️" : "✅"} BulanVarMı? Günlük Platform Raporu`,
       html: `
         <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f172a;color:#e2e8f0;padding:28px 24px;border-radius:16px;">
           <p style="margin:0 0 4px;font-size:18px;font-weight:800;color:#fff;">BulanVarMı? — Günlük Rapor</p>
@@ -162,11 +171,17 @@ Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
           <p style="margin-top:24px;font-size:11px;color:#475569;">BulanVarMı? otomatik günlük rapor · <a href="${APP_URL}" style="color:#60a5fa;text-decoration:none;">bulanvarmi.com</a></p>
         </div>
       `,
-    });
+      });
+    } catch (err) {
+      emailError = err instanceof Error ? err.message : String(err);
+      console.error("Daily report email failed:", emailError, "to:", ADMIN_EMAIL, "from:", FROM);
+    }
   }
 
   return NextResponse.json({
     ok: true,
+    sentTo: ADMIN_EMAIL,
+    emailError,
     pendingReports: pendingReports.count ?? 0,
     flaggedItems: flagged.length,
     noEmbedItems: noEmbed.length,
