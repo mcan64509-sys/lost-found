@@ -1,6 +1,5 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
-import { withSentryConfig } from "@sentry/nextjs";
 
 const withSerwist = withSerwistInit({
   swSrc: "src/sw.ts",
@@ -35,12 +34,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(withSerwist(nextConfig), {
-  org: "bulanvarm",
-  project: "javascript-nextjs",
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  disableLogger: true,
-  automaticVercelMonitors: false,
-  telemetry: false,
-});
+export default withSerwist(nextConfig);
