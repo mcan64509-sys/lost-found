@@ -97,6 +97,7 @@ function SearchPageContent() {
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [allItems, setAllItems] = useState<SearchItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [debouncedKeyword, setDebouncedKeyword] = useState(() => searchParams.get("q") || "");
   const [visibleCount, setVisibleCount] = useState(12);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isFullMapOpen, setIsFullMapOpen] = useState(false);
@@ -127,6 +128,11 @@ function SearchPageContent() {
   }, []);
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedKeyword(keyword), 400);
+    return () => clearTimeout(t);
+  }, [keyword]);
+
+  useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
     if (!keyword.trim() || keyword.trim().length < 2) return;
     try {
@@ -138,20 +144,31 @@ function SearchPageContent() {
   }, [keyword]);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchItems() {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from("items")
         .select("id, type, title, description, category, location, lat, lng, image_url, created_at, view_count, status, reward_amount, is_urgent, is_featured, priority_level")
         .eq("moderation_status", "approved")
         .order("priority_level", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(600);
-      if (!error) setAllItems(data as SearchItem[]);
-      setLoading(false);
+        .order("created_at", { ascending: false });
+
+      if (debouncedKeyword.trim().length > 1) {
+        const kw = debouncedKeyword.trim();
+        query = query.or(`title.ilike.%${kw}%,description.ilike.%${kw}%,location.ilike.%${kw}%`);
+      }
+      if (category !== CATEGORIES_DB[0]) query = query.eq("category", category);
+      if (activeTab === "lost") query = query.eq("type", "lost");
+      if (activeTab === "found") query = query.eq("type", "found");
+
+      const { data, error } = await query.limit(200);
+      if (!cancelled && !error) setAllItems(data as SearchItem[]);
+      if (!cancelled) setLoading(false);
     }
     fetchItems();
-  }, []);
+    return () => { cancelled = true; };
+  }, [debouncedKeyword, category, activeTab]);
 
   useEffect(() => { setVisibleCount(12); }, [activeTab, category, keyword, selectedLocation, sortBy, dateFrom, dateTo, hideResolved]);
 
