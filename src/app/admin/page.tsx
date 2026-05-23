@@ -104,13 +104,15 @@ const REASON_LABELS: Record<string, string> = {
   diger: "Diğer",
 };
 
+type TabId = "stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests" | "stories" | "announce";
+
 export default function AdminPage() {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [items, setItems] = useState<AdminItem[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [sightings, setSightings] = useState<Sighting[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests" | "stories" | "announce">("stats");
+  const [activeTab, setActiveTab] = useState<TabId>("stats");
   const [pendingStories, setPendingStories] = useState<Story[]>([]);
   const [approvingStory, setApprovingStory] = useState<string | null>(null);
   const [pendingItems, setPendingItems] = useState<AdminItem[]>([]);
@@ -166,18 +168,11 @@ export default function AdminPage() {
     const [{ data: itemData }, { data: sightingData }, usersRes, reportsRes, requestsRes] = await Promise.all([
       supabase.from("items").select("*").order("created_at", { ascending: false }),
       supabase.from("sightings").select("*, items(title)").order("created_at", { ascending: false }).limit(200),
-      fetch("/api/admin/users", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }).then((r) => r.json()),
-      fetch("/api/admin/reports", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }).then((r) => r.json()),
-      fetch("/api/admin/requests", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }).then((r) => r.json()),
+      fetch("/api/admin/users", { headers: { Authorization: `Bearer ${accessToken}` } }).then((r) => r.json()),
+      fetch("/api/admin/reports", { headers: { Authorization: `Bearer ${accessToken}` } }).then((r) => r.json()),
+      fetch("/api/admin/requests", { headers: { Authorization: `Bearer ${accessToken}` } }).then((r) => r.json()),
     ]);
     const reportData = reportsRes.reports ?? [];
-
     const all = (itemData || []) as AdminItem[];
     setItems(all);
     setStats({
@@ -188,8 +183,6 @@ export default function AdminPage() {
       views: all.reduce((acc, i) => acc + (i.view_count || 0), 0),
       pendingReports: (reportData as Report[]).filter((r) => r.status === "pending").length,
     });
-
-    // Recharts için son 14 günlük günlük veri
     const days: DayCount[] = [];
     for (let i = 13; i >= 0; i--) {
       const d = new Date();
@@ -203,27 +196,20 @@ export default function AdminPage() {
       });
     }
     setChartData(days);
-
     setReports(reportData as Report[]);
-
     const sightingsWithTitle = (sightingData || []).map((s: Record<string, unknown>) => ({
       ...(s as Sighting),
       item_title: (s.items as { title?: string } | null)?.title || "—",
     }));
     setSightings(sightingsWithTitle);
-
     setAdminUsers(usersRes.users ?? []);
     setUserRequests(requestsRes.requests ?? []);
-
-    // Load pending + flagged moderation items
     const { data: pendingData } = await supabase
       .from("items")
       .select("*")
       .in("moderation_status", ["pending", "flagged"])
       .order("created_at", { ascending: false });
     setPendingItems((pendingData || []) as AdminItem[]);
-
-    // Load pending stories via admin API (bypasses RLS)
     const { data: { session: s2 } } = await supabase.auth.getSession();
     const storyRes = await fetch("/api/admin/stories", {
       headers: { Authorization: `Bearer ${s2?.access_token || ""}` },
@@ -232,7 +218,6 @@ export default function AdminPage() {
       const storyJson = await storyRes.json();
       setPendingStories((storyJson.stories || []) as Story[]);
     }
-
     setLoading(false);
   }
 
@@ -250,10 +235,7 @@ export default function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/admin/delete-item", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token || ""}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
         body: JSON.stringify({ itemId: deleteTarget.id, reason: deleteReason.trim() }),
       });
       if (res.ok) {
@@ -274,10 +256,7 @@ export default function AdminPage() {
   async function handleToggleFeatured(id: string, current: boolean | null) {
     const newVal = !current;
     const featuredUntil = newVal ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null;
-    const { error } = await supabase
-      .from("items")
-      .update({ is_featured: newVal, featured_until: featuredUntil })
-      .eq("id", id);
+    const { error } = await supabase.from("items").update({ is_featured: newVal, featured_until: featuredUntil }).eq("id", id);
     if (error) { toast.error("Güncellenemedi."); return; }
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_featured: newVal } : i));
     toast.success(newVal ? "⭐ İlan öne çıkarıldı (7 gün)." : "Öne çıkarma kaldırıldı.");
@@ -297,17 +276,12 @@ export default function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/admin/ban", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token || ""}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
         body: JSON.stringify({ targetEmail, ban: !currentBan }),
       });
       const data = await res.json();
       if (res.ok) {
-        setAdminUsers((prev) =>
-          prev.map((u) => u.email === targetEmail ? { ...u, is_banned: !currentBan } : u)
-        );
+        setAdminUsers((prev) => prev.map((u) => u.email === targetEmail ? { ...u, is_banned: !currentBan } : u));
         toast.success(!currentBan ? "Kullanıcı engellendi." : "Engel kaldırıldı.");
       } else {
         toast.error(data.error || "İşlem başarısız.");
@@ -326,10 +300,7 @@ export default function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/admin/delete-user", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token || ""}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
         body: JSON.stringify({ targetUserId: userId, targetEmail: userEmail }),
       });
       const data = await res.json();
@@ -352,17 +323,12 @@ export default function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/admin/blacklist", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token || ""}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
         body: JSON.stringify({ targetEmail, blacklist: !currentBlacklist }),
       });
       const data = await res.json();
       if (res.ok) {
-        setAdminUsers((prev) =>
-          prev.map((u) => u.email === targetEmail ? { ...u, is_blacklisted: !currentBlacklist } : u)
-        );
+        setAdminUsers((prev) => prev.map((u) => u.email === targetEmail ? { ...u, is_blacklisted: !currentBlacklist } : u));
         toast.success(!currentBlacklist ? "E-posta kara listeye alındı." : "Kara listeden çıkarıldı.");
       } else {
         toast.error(data.error || "İşlem başarısız.");
@@ -408,7 +374,7 @@ export default function AdminPage() {
       });
       if (res.ok) {
         setUserRequests((prev) => prev.map((r) => r.id === requestId ? { ...r, status, admin_response: requestResponse[requestId] || null } : r));
-        toast.success(status === "resolved" ? "İstek çözüldü olarak işaretlendi." : status === "in_progress" ? "İşleme alındı." : "Reddedildi.");
+        toast.success(status === "resolved" ? "Çözüldü olarak işaretlendi." : status === "in_progress" ? "İşleme alındı." : "Reddedildi.");
       } else {
         const d = await res.json();
         toast.error(d.error || "Güncellenemedi.");
@@ -428,13 +394,9 @@ export default function AdminPage() {
         headers: { Authorization: `Bearer ${session?.access_token || ""}` },
       });
       const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error || "Gönderilemedi.");
-      } else if (data.emailError) {
-        toast.error(`Email hatası: ${data.emailError}`);
-      } else {
-        toast.success(`Günlük rapor gönderildi → ${data.sentTo}`);
-      }
+      if (!res.ok) toast.error(data.error || "Gönderilemedi.");
+      else if (data.emailError) toast.error(`Email hatası: ${data.emailError}`);
+      else toast.success(`Günlük rapor gönderildi → ${data.sentTo}`);
     } catch {
       toast.error("Bir hata oluştu.");
     } finally {
@@ -451,11 +413,8 @@ export default function AdminPage() {
         headers: { Authorization: `Bearer ${session?.access_token || ""}` },
       });
       const data = await res.json();
-      if (res.ok) {
-        toast.success(`Hatırlatıcılar gönderildi: ${data.sent ?? 0} / ${data.total ?? 0} ilan`);
-      } else {
-        toast.error(data.error || "Gönderilemedi.");
-      }
+      if (res.ok) toast.success(`Hatırlatıcılar gönderildi: ${data.sent ?? 0} / ${data.total ?? 0} ilan`);
+      else toast.error(data.error || "Gönderilemedi.");
     } catch {
       toast.error("Bir hata oluştu.");
     } finally {
@@ -469,22 +428,16 @@ export default function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/admin/reports", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token || ""}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
         body: JSON.stringify({ reportId, action, adminMessage: message || "" }),
       });
       if (res.ok) {
-        const successMsg =
+        toast.success(
           action === "remove_item" ? "İlan kaldırıldı, kullanıcıya bildirim gönderildi." :
-          action === "warn_user" ? "Uyarı mesajı kullanıcıya gönderildi." :
-          "Şikayet reddedildi (asılsız).";
-        toast.success(successMsg);
-        const newStatus = action === "dismiss" ? "dismissed" : "reviewed";
-        setReports((prev) =>
-          prev.map((r) => r.id === reportId ? { ...r, status: newStatus } : r)
+          action === "warn_user" ? "Uyarı mesajı kullanıcıya gönderildi." : "Şikayet reddedildi."
         );
+        const newStatus = action === "dismiss" ? "dismissed" : "reviewed";
+        setReports((prev) => prev.map((r) => r.id === reportId ? { ...r, status: newStatus } : r));
         setStats((prev) => ({ ...prev, pendingReports: Math.max(0, prev.pendingReports - 1) }));
         setEvaluatingReport(null);
         setReportMessage("");
@@ -504,382 +457,470 @@ export default function AdminPage() {
     return (
       <>
         <AppHeader />
-        <main className="min-h-screen bg-slate-950 px-6 py-20 text-white text-center">
-          <h1 className="text-3xl font-bold">Yetkisiz Erişim</h1>
-          <p className="mt-3 text-slate-400">Bu sayfaya erişim yetkiniz yok.</p>
-          <Link href="/" className="mt-6 inline-block text-blue-400 hover:text-blue-300">← Ana Sayfa</Link>
+        <main className="flex min-h-[80vh] flex-col items-center justify-center bg-[#080d1a] text-center px-6">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10">
+            <span className="text-3xl">🔒</span>
+          </div>
+          <h1 className="text-2xl font-bold text-white">Yetkisiz Erişim</h1>
+          <p className="mt-2 text-slate-400">Bu sayfaya erişim yetkiniz bulunmuyor.</p>
+          <Link href="/" className="mt-6 inline-flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-2.5 text-sm text-slate-300 hover:bg-slate-800 transition">
+            ← Ana Sayfaya Dön
+          </Link>
         </main>
       </>
     );
   }
 
+  const navTabs: { id: TabId; label: string; icon: string; count: number; alert?: boolean }[] = [
+    { id: "stats", label: "Genel Bakış", icon: "📊", count: 0 },
+    { id: "items", label: "İlanlar", icon: "📋", count: items.length },
+    { id: "reports", label: "Şikayetler", icon: "🚨", count: stats.pendingReports, alert: stats.pendingReports > 0 },
+    { id: "users", label: "Kullanıcılar", icon: "👥", count: adminUsers.length },
+    { id: "sightings", label: "Gördüm", icon: "👁", count: sightings.length },
+    { id: "moderation", label: "Moderasyon", icon: "🛡", count: pendingItems.length, alert: pendingItems.length > 0 },
+    { id: "requests", label: "İstekler", icon: "💬", count: userRequests.filter((r) => r.status === "pending").length },
+    { id: "stories", label: "Hikayeler", icon: "✨", count: pendingStories.length },
+    { id: "announce", label: "Duyuru", icon: "📢", count: 0 },
+  ];
+
   return (
     <>
       <AppHeader />
-      <main className="min-h-screen bg-slate-950 px-6 py-10 text-white animate-fade-in">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-8 flex items-center justify-between">
+
+      {/* Admin identity strip */}
+      <div className="sticky top-0 z-30 border-b border-[#1a2744] bg-[#07101f]/95 backdrop-blur-md">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 text-sm font-black shadow-lg shadow-blue-900/30">
+              A
+            </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Admin Paneli</h1>
-              <p className="mt-1 text-slate-500">Site yönetimi · {adminEmail}</p>
-            </div>
-            <div className="flex gap-2">
-              <Link href="/admin/profiles" className="rounded-xl border border-purple-500/30 bg-purple-500/10 px-4 py-2 text-sm text-purple-300 hover:bg-purple-500/20 transition">
-                👤 Profiller
-              </Link>
-              <Link href="/" className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-white hover:bg-slate-800 transition">← Ana Sayfa</Link>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-white">Yönetim Merkezi</span>
+                <span className="rounded border border-blue-500/30 bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold tracking-widest text-blue-400">
+                  ADMIN
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500">{adminEmail}</p>
             </div>
           </div>
-
-          {/* Tab bar */}
-          <div className="mb-6 flex flex-wrap gap-1 rounded-2xl border border-slate-800 bg-slate-900/60 p-1 backdrop-blur-sm">
-            {([
-              ["stats", "📊 İstatistikler", 0],
-              ["items", "📋 İlanlar", items.length],
-              ["reports", "⚑ Şikayetler", stats.pendingReports],
-              ["users", "👥 Kullanıcılar", adminUsers.length],
-              ["sightings", "👁 Gördüm", sightings.length],
-              ["moderation", "🛡 Moderasyon", pendingItems.length],
-              ["requests", "💬 İstekler", userRequests.filter((r) => r.status === "pending").length],
-              ["stories", "🎉 Hikayeler", pendingStories.length],
-              ["announce", "📢 Duyuru", 0],
-            ] as const).map(([tab, label, count]) => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`relative flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === tab ? "bg-slate-700 text-white shadow-md" : "text-slate-400 hover:text-white hover:bg-slate-800/50"}`}>
-                {label}
-                {count > 0 && (
-                  <span className={`ml-1.5 inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
-                    tab === "reports" && count > 0 ? "bg-red-500 text-white animate-pulse" :
-                    "bg-slate-700 text-slate-300"
-                  }`}>
-                    {count}
-                  </span>
-                )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {stats.pendingReports > 0 && (
+              <button
+                onClick={() => setActiveTab("reports")}
+                className="flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+                {stats.pendingReports} şikayet
               </button>
-            ))}
+            )}
+            {pendingItems.length > 0 && (
+              <button
+                onClick={() => setActiveTab("moderation")}
+                className="flex items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                {pendingItems.length} moderasyon
+              </button>
+            )}
+            <Link href="/admin/profiles" className="rounded-lg border border-slate-700/60 px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition">
+              👤 Profiller
+            </Link>
+            <Link href="/" className="rounded-lg border border-slate-700/60 px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition">
+              ← Siteye Dön
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <main className="min-h-screen bg-[#080d1a]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6">
+
+          {/* Tab navigation */}
+          <div className="mb-6 flex gap-0.5 overflow-x-auto rounded-2xl border border-[#1a2744] bg-[#07101f] p-1">
+            {navTabs.map(({ id, label, icon, count, alert }) => {
+              const isActive = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className={`relative flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-150 ${
+                    isActive
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-900/40"
+                      : "text-slate-500 hover:bg-slate-800/50 hover:text-white"
+                  }`}
+                >
+                  <span className="text-sm">{icon}</span>
+                  <span className="hidden sm:inline">{label}</span>
+                  {count > 0 && (
+                    <span className={`inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none ${
+                      alert ? "bg-red-500 text-white" :
+                      isActive ? "bg-white/20 text-white" :
+                      "bg-slate-700 text-slate-300"
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
+          {/* Loading skeleton */}
           {loading ? (
-            <div className="text-slate-400">Yükleniyor...</div>
+            <div className="animate-pulse space-y-4">
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="h-24 rounded-2xl bg-slate-800/40" />
+                ))}
+              </div>
+              <div className="h-64 rounded-2xl bg-slate-800/40" />
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="h-48 rounded-2xl bg-slate-800/40" />
+                <div className="h-48 rounded-2xl bg-slate-800/40" />
+              </div>
+            </div>
+
           ) : activeTab === "stats" ? (
-            <div className="space-y-8">
-              {/* Stat kartları */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 stagger">
+            <div className="space-y-6">
+              {/* KPI cards */}
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
                 {[
-                  { label: "Toplam İlan", value: stats.total, color: "text-white", border: "border-slate-800" },
-                  { label: "Kayıp", value: stats.lost, color: "text-amber-300", border: "border-amber-500/20" },
-                  { label: "Bulundu", value: stats.found, color: "text-emerald-300", border: "border-emerald-500/20" },
-                  { label: "Çözüldü", value: stats.resolved, color: "text-green-300", border: "border-green-500/20" },
-                  { label: "Görüntülenme", value: stats.views, color: "text-blue-300", border: "border-blue-500/20" },
-                ].map((s) => (
-                  <div key={s.label} className={`group rounded-2xl border ${s.border} bg-slate-900 p-5 hover:bg-slate-800/50 transition-all duration-200 animate-fade-in-up`}>
-                    <p className="text-xs text-slate-500">{s.label}</p>
-                    <p className={`mt-2 text-3xl font-black transition-transform duration-200 group-hover:scale-105 ${s.color}`}>{s.value.toLocaleString("tr-TR")}</p>
+                  { icon: "📋", label: "Toplam İlan", value: stats.total, cls: "border-[#1a2744] bg-[#0d1a2e]", txt: "text-white" },
+                  { icon: "🔍", label: "Kayıp", value: stats.lost, cls: "border-amber-500/20 bg-amber-500/5", txt: "text-amber-300" },
+                  { icon: "✅", label: "Bulundu", value: stats.found, cls: "border-emerald-500/20 bg-emerald-500/5", txt: "text-emerald-300" },
+                  { icon: "🎉", label: "Çözüldü", value: stats.resolved, cls: "border-green-500/20 bg-green-500/5", txt: "text-green-300" },
+                  { icon: "👁", label: "Görüntülenme", value: stats.views, cls: "border-purple-500/20 bg-purple-500/5", txt: "text-purple-300" },
+                  {
+                    icon: stats.pendingReports > 0 ? "⚠️" : "✅",
+                    label: "Bekleyen Şikayet",
+                    value: stats.pendingReports,
+                    cls: stats.pendingReports > 0 ? "border-red-500/30 bg-red-500/10" : "border-[#1a2744] bg-[#0d1a2e]",
+                    txt: stats.pendingReports > 0 ? "text-red-300" : "text-slate-400",
+                  },
+                ].map(({ icon, label, value, cls, txt }) => (
+                  <div key={label} className={`rounded-2xl border p-4 ${cls}`}>
+                    <div className="mb-3 text-xl">{icon}</div>
+                    <p className={`text-2xl font-black ${txt}`}>{value.toLocaleString("tr-TR")}</p>
+                    <p className="mt-1 text-[11px] text-slate-500">{label}</p>
                   </div>
                 ))}
               </div>
 
-              {/* Grafik */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-                <h2 className="mb-6 text-lg font-bold">Son 14 Gün — Günlük İlan Sayısı</h2>
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                    <XAxis dataKey="day" tick={{ fill: "#64748b", fontSize: 11 }} />
-                    <YAxis tick={{ fill: "#64748b", fontSize: 11 }} allowDecimals={false} />
+              {/* Chart */}
+              <div className="rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-6">
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-base font-bold text-white">İlan Aktivitesi</h2>
+                    <p className="text-xs text-slate-500">Son 14 gün — günlük yeni ilan sayısı</p>
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-slate-500">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-sm bg-amber-500" />Kayıp
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500" />Bulundu
+                    </span>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={chartData} margin={{ top: 0, right: 0, left: -24, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1a2744" vertical={false} />
+                    <XAxis dataKey="day" tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "#475569", fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                     <Tooltip
-                      contentStyle={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 10, color: "#e2e8f0" }}
-                      labelStyle={{ color: "#94a3b8" }}
+                      contentStyle={{ background: "#07101f", border: "1px solid #1a2744", borderRadius: 12, color: "#e2e8f0", fontSize: 13 }}
+                      labelStyle={{ color: "#94a3b8", marginBottom: 4 }}
+                      cursor={{ fill: "rgba(59,130,246,0.05)" }}
                     />
-                    <Bar dataKey="kayip" name="Kayıp" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="bulundu" name="Bulundu" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="kayip" name="Kayıp" fill="#f59e0b" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    <Bar dataKey="bulundu" name="Bulundu" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={28} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
 
-              {/* Admin Araçları */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-                <h2 className="mb-4 text-lg font-bold">Admin Araçları</h2>
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={handleSendExpiryReminders}
-                    disabled={sendingReminders}
-                    className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition disabled:opacity-50"
-                  >
-                    {sendingReminders ? "Gönderiliyor..." : "⏰ Bitiş Hatırlatmalarını Gönder"}
-                  </button>
-                  <button
-                    onClick={handleSendDailyReport}
-                    disabled={sendingDailyReport}
-                    className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm font-semibold text-blue-400 hover:bg-blue-500/20 transition disabled:opacity-50"
-                  >
-                    {sendingDailyReport ? "Gönderiliyor..." : "📊 Günlük Raporu Gönder"}
-                  </button>
+              {/* Bottom row */}
+              <div className="grid gap-6 lg:grid-cols-2">
+                {/* Category distribution */}
+                <div className="rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-5">
+                  <h2 className="mb-4 text-sm font-bold text-white">Kategori Dağılımı</h2>
+                  <div className="space-y-3">
+                    {Object.entries(
+                      items.reduce((acc: Record<string, number>, item) => {
+                        const cat = item.category || "Belirtilmemiş";
+                        acc[cat] = (acc[cat] || 0) + 1;
+                        return acc;
+                      }, {})
+                    )
+                      .sort((a, b) => b[1] - a[1])
+                      .slice(0, 8)
+                      .map(([cat, count]) => (
+                        <div key={cat} className="flex items-center gap-3">
+                          <span className="w-32 shrink-0 truncate text-xs text-slate-400">{cat}</span>
+                          <div className="flex-1 overflow-hidden rounded-full bg-slate-800 h-1.5">
+                            <div
+                              className="h-1.5 rounded-full bg-blue-500 transition-all duration-500"
+                              style={{ width: `${Math.max(4, Math.round((count / stats.total) * 100))}%` }}
+                            />
+                          </div>
+                          <span className="w-6 shrink-0 text-right text-xs font-bold text-slate-400">{count}</span>
+                        </div>
+                      ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Kategori dağılımı */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6">
-                <h2 className="mb-4 text-lg font-bold">Kategori Dağılımı</h2>
-                <div className="space-y-2">
-                  {Object.entries(
-                    items.reduce((acc: Record<string, number>, item) => {
-                      const cat = item.category || "Belirtilmemiş";
-                      acc[cat] = (acc[cat] || 0) + 1;
-                      return acc;
-                    }, {})
-                  )
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 8)
-                    .map(([cat, count]) => (
-                      <div key={cat} className="flex items-center gap-3">
-                        <span className="w-36 truncate text-sm text-slate-400">{cat}</span>
-                        <div className="flex-1 rounded-full bg-slate-800 h-2">
-                          <div
-                            className="h-2 rounded-full bg-blue-500"
-                            style={{ width: `${Math.round((count / stats.total) * 100)}%` }}
-                          />
-                        </div>
-                        <span className="w-8 text-right text-xs text-slate-500">{count}</span>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
-          ) : activeTab === "items" ? (
-            <div className="space-y-2">
-              {items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900 px-4 py-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${item.type === "lost" ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"}`}>
-                        {item.type === "lost" ? "Kayıp" : "Bulundu"}
-                      </span>
-                      {item.status === "resolved" && (
-                        <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-green-500/20 text-green-300">Çözüldü</span>
-                      )}
-                      <Link href={`/items/${item.id}`} className="truncate text-sm font-medium text-white hover:text-blue-300">{item.title}</Link>
-                    </div>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      {item.created_by_email} · {item.category} · 👁 {item.view_count || 0} · {new Date(item.created_at).toLocaleDateString("tr-TR")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => handleToggleFeatured(item.id, item.is_featured)}
-                      className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
-                        item.is_featured
-                          ? "border-yellow-500/40 bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/10"
-                          : "border-slate-700 bg-slate-800 text-slate-400 hover:border-yellow-500/30 hover:text-yellow-400"
-                      }`}
-                      title={item.is_featured ? "Öne çıkarmayı kaldır" : "Öne çıkar"}
-                    >
-                      {item.is_featured ? "⭐ Featured" : "⭐"}
-                    </button>
-                    <button
-                      onClick={() => handleToggleUrgent(item.id, item.is_urgent)}
-                      className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
-                        item.is_urgent
-                          ? "border-red-500/40 bg-red-500/20 text-red-400 hover:bg-red-500/10"
-                          : "border-slate-700 bg-slate-800 text-slate-400 hover:border-red-500/30 hover:text-red-400"
-                      }`}
-                      title={item.is_urgent ? "Acili kaldır" : "Acil işaretle"}
-                    >
-                      🔴
-                    </button>
-                    <button
-                      onClick={() => handleDeleteItem(item.id)}
-                      disabled={deleting === item.id}
-                      className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/20 disabled:opacity-50"
-                    >
-                      {deleting === item.id ? "..." : "Sil"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : activeTab === "users" ? (
-            <div className="space-y-2">
-              {adminUsers.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
-                  Henüz kullanıcı yok.
-                </div>
-              ) : (
-                adminUsers.map((u) => {
-                  const initials = u.full_name
-                    ? u.full_name.trim().split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
-                    : (u.email?.[0] ?? "?").toUpperCase();
-                  return (
-                    <div key={u.email} className={`flex flex-wrap items-center gap-3 rounded-2xl border px-4 py-3 ${u.is_banned ? "border-red-500/20 bg-red-500/5" : u.is_blacklisted ? "border-orange-500/20 bg-orange-500/5" : "border-slate-800 bg-slate-900"}`}>
-                      <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full bg-slate-700 text-sm font-bold text-white overflow-hidden">
-                        {u.avatar_url ? (
-                          <Image src={u.avatar_url} alt={u.full_name || u.email} width={36} height={36} className="h-9 w-9 rounded-full object-cover" unoptimized />
-                        ) : initials}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-white truncate">{u.full_name || "—"}</p>
-                          {u.is_banned && (
-                            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-red-500/20 text-red-300">Engelli</span>
-                          )}
-                          {u.is_blacklisted && (
-                            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-orange-500/20 text-orange-300">Kara Liste</span>
-                          )}
-                          {ADMIN_EMAILS.includes(u.email.toLowerCase()) && (
-                            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-blue-500/20 text-blue-300">Admin</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500 truncate">{u.email}</p>
-                      </div>
-                      <div className="shrink-0 text-center hidden sm:block">
-                        <p className="text-sm font-bold text-white">{u.item_count}</p>
-                        <p className="text-[10px] text-slate-500">İlan</p>
-                      </div>
-                      <div className="shrink-0 text-center hidden sm:block">
-                        <p className="text-sm font-bold text-green-400">{u.resolved_count}</p>
-                        <p className="text-[10px] text-slate-500">Çözüldü</p>
-                      </div>
-                      <div className="shrink-0 text-right hidden md:block">
-                        <p className="text-xs text-slate-500">{new Date(u.created_at).toLocaleDateString("tr-TR")}</p>
-                      </div>
-                      <Link
-                        href={`/users/${encodeURIComponent(u.email)}`}
-                        className="shrink-0 rounded-xl border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800"
+                {/* Quick actions */}
+                <div className="rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-5">
+                  <h2 className="mb-4 text-sm font-bold text-white">Hızlı İşlemler</h2>
+                  <div className="space-y-2">
+                    {[
+                      {
+                        icon: "⏰",
+                        title: sendingReminders ? "Gönderiliyor..." : "Bitiş Hatırlatmaları",
+                        desc: "Yakında sona erecek ilanlar için hatırlatma gönder",
+                        onClick: handleSendExpiryReminders,
+                        disabled: sendingReminders,
+                        accent: "hover:border-amber-500/30 hover:bg-amber-500/5",
+                      },
+                      {
+                        icon: "📊",
+                        title: sendingDailyReport ? "Gönderiliyor..." : "Günlük Platform Raporu",
+                        desc: "Admin e-postasına AI destekli platform özeti gönder",
+                        onClick: handleSendDailyReport,
+                        disabled: sendingDailyReport,
+                        accent: "hover:border-blue-500/30 hover:bg-blue-500/5",
+                      },
+                    ].map(({ icon, title, desc, onClick, disabled, accent }) => (
+                      <button
+                        key={title}
+                        onClick={onClick}
+                        disabled={disabled}
+                        className={`flex w-full items-center gap-3 rounded-xl border border-[#1a2744] bg-[#0a0f1e] px-4 py-3 text-left transition ${accent} disabled:cursor-not-allowed disabled:opacity-50`}
                       >
-                        Profil
-                      </Link>
-                      {u.email.toLowerCase() !== adminEmail && (
-                        <>
-                          <button
-                            onClick={() => handleToggleBan(u.email, u.is_banned)}
-                            disabled={togglingBan === u.email}
-                            className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
-                              u.is_banned
-                                ? "border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20"
-                                : "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                            }`}
-                          >
-                            {togglingBan === u.email ? "..." : u.is_banned ? "Engeli Kaldır" : "Engelle"}
-                          </button>
-                          <button
-                            onClick={() => handleToggleBlacklist(u.email, u.is_blacklisted)}
-                            disabled={blacklisting === u.email}
-                            className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-medium transition disabled:opacity-50 ${
-                              u.is_blacklisted
-                                ? "border-slate-600 bg-slate-800 text-slate-400 hover:bg-slate-700"
-                                : "border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
-                            }`}
-                          >
-                            {blacklisting === u.email ? "..." : u.is_blacklisted ? "Kara Listeden Çıkar" : "Kara Liste"}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(u.id, u.email)}
-                            disabled={deletingUser === u.email}
-                            className="shrink-0 rounded-xl border border-red-600/40 bg-red-600/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-600/20 transition disabled:opacity-50"
-                          >
-                            {deletingUser === u.email ? "..." : "Hesabı Sil"}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          ) : activeTab === "sightings" ? (
-            /* Sightings tab */
-            <div className="space-y-3">
-              {/* Özet */}
-              <div className="grid gap-4 sm:grid-cols-3 mb-2">
-                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-                  <p className="text-xs text-slate-500">Toplam Bildirim</p>
-                  <p className="mt-1 text-2xl font-black text-amber-400">{sightings.length}</p>
-                </div>
-                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-                  <p className="text-xs text-slate-500">Farklı İlan</p>
-                  <p className="mt-1 text-2xl font-black text-white">
-                    {new Set(sightings.map((s) => s.item_id)).size}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-                  <p className="text-xs text-slate-500">Farklı Bildiren</p>
-                  <p className="mt-1 text-2xl font-black text-blue-400">
-                    {new Set(sightings.map((s) => s.reporter_email)).size}
-                  </p>
+                        <span className="text-2xl">{icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-white">{title}</p>
+                          <p className="text-xs text-slate-500">{desc}</p>
+                        </div>
+                        <span className="shrink-0 text-slate-600">→</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
+            </div>
 
-              {sightings.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
-                  Henüz "Gördüm" bildirimi yok.
+          ) : activeTab === "items" ? (
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm text-slate-400">
+                  <span className="font-bold text-white">{items.length}</span> ilan
+                </p>
+              </div>
+              <div className="overflow-hidden rounded-2xl border border-[#1a2744]">
+                <div className="hidden sm:grid grid-cols-[80px_1fr_140px_80px_90px_160px] gap-3 border-b border-[#1a2744] bg-[#07101f] px-4 py-2.5">
+                  {["Tür", "Başlık / Sahip", "Kategori", "Görüntü", "Tarih", "İşlemler"].map((h) => (
+                    <span key={h} className="text-[10px] font-bold uppercase tracking-wider text-slate-600">{h}</span>
+                  ))}
                 </div>
-              ) : (
-                sightings.map((s) => (
-                  <div key={s.id} className="rounded-2xl border border-amber-500/15 bg-amber-500/5 px-4 py-3.5">
-                    <div className="flex items-start justify-between gap-4 flex-wrap">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="rounded px-2 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300">
-                            👁 Gördüm
-                          </span>
-                          <Link
-                            href={`/items/${s.item_id}`}
-                            className="text-sm font-semibold text-white hover:text-amber-300 truncate max-w-xs"
-                          >
-                            {s.item_title}
+                <div className="divide-y divide-[#1a2744]">
+                  {items.map((item) => (
+                    <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[80px_1fr_140px_80px_90px_160px] gap-3 items-center bg-[#0d1a2e] px-4 py-3 hover:bg-[#0f1f38] transition-colors">
+                      <div>
+                        <span className={`inline-block rounded-md px-2 py-0.5 text-[10px] font-bold ${item.type === "lost" ? "bg-amber-500/15 text-amber-300" : "bg-emerald-500/15 text-emerald-300"}`}>
+                          {item.type === "lost" ? "Kayıp" : "Bulundu"}
+                        </span>
+                        {item.status === "resolved" && (
+                          <span className="mt-1 block rounded-md px-2 py-0.5 text-[10px] font-bold bg-green-500/15 text-green-300">Çözüldü</span>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {item.is_featured && <span className="text-[10px] text-yellow-400">⭐</span>}
+                          {item.is_urgent && <span className="text-[10px] text-red-400">🔴</span>}
+                          <Link href={`/items/${item.id}`} className="truncate text-sm font-medium text-white hover:text-blue-300">
+                            {item.title}
                           </Link>
                         </div>
-                        <p className="text-xs text-slate-500">
-                          <span className="text-slate-400">{s.reporter_email}</span>
-                          {" · "}
-                          {new Date(s.created_at).toLocaleString("tr-TR")}
-                        </p>
-                        {s.location_text && (
-                          <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-300">
-                            <span className="text-amber-400">📍</span>
-                            {s.location_text}
-                          </p>
-                        )}
-                        {s.lat != null && s.lng != null && (
-                          <a
-                            href={`https://www.openstreetmap.org/?mlat=${s.lat}&mlon=${s.lng}#map=16/${s.lat}/${s.lng}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-1 inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                          >
-                            🗺 {s.lat.toFixed(5)}, {s.lng.toFixed(5)} — Haritada Gör ↗
-                          </a>
-                        )}
-                        {s.note && (
-                          <p className="mt-1.5 text-xs text-slate-400 italic border-l-2 border-slate-700 pl-2">
-                            "{s.note}"
-                          </p>
-                        )}
+                        <p className="truncate text-[11px] text-slate-500">{item.created_by_email}</p>
                       </div>
-                      <Link
-                        href={`/items/${s.item_id}`}
-                        className="shrink-0 rounded-xl border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition"
-                      >
-                        İlana Git →
-                      </Link>
+                      <p className="truncate text-xs text-slate-400">{item.category || "—"}</p>
+                      <p className="text-xs text-slate-400">👁 {(item.view_count || 0).toLocaleString()}</p>
+                      <p className="text-xs text-slate-500">{new Date(item.created_at).toLocaleDateString("tr-TR")}</p>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleToggleFeatured(item.id, item.is_featured)}
+                          title={item.is_featured ? "Öne çıkarmayı kaldır" : "Öne çıkar"}
+                          className={`rounded-lg border px-2 py-1 text-[11px] font-semibold transition ${item.is_featured ? "border-yellow-500/40 bg-yellow-500/15 text-yellow-400" : "border-[#1a2744] bg-[#0a0f1e] text-slate-500 hover:text-yellow-400"}`}
+                        >⭐</button>
+                        <button
+                          onClick={() => handleToggleUrgent(item.id, item.is_urgent)}
+                          title={item.is_urgent ? "Acili kaldır" : "Acil işaretle"}
+                          className={`rounded-lg border px-2 py-1 text-[11px] font-semibold transition ${item.is_urgent ? "border-red-500/40 bg-red-500/15 text-red-400" : "border-[#1a2744] bg-[#0a0f1e] text-slate-500 hover:text-red-400"}`}
+                        >🔴</button>
+                        <button
+                          onClick={() => handleDeleteItem(item.id)}
+                          disabled={deleting === item.id}
+                          className="rounded-lg border border-red-500/20 bg-red-500/10 px-2 py-1 text-[11px] text-red-400 hover:bg-red-500/20 transition disabled:opacity-50"
+                        >{deleting === item.id ? "..." : "Sil"}</button>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          ) : activeTab === "users" ? (
+            <div>
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm text-slate-400">
+                  <span className="font-bold text-white">{adminUsers.length}</span> kullanıcı
+                </p>
+              </div>
+              {adminUsers.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[#1a2744] p-12 text-center text-slate-500">Henüz kullanıcı yok.</div>
+              ) : (
+                <div className="overflow-hidden rounded-2xl border border-[#1a2744]">
+                  <div className="hidden md:grid grid-cols-[40px_1fr_70px_70px_100px_auto] gap-3 border-b border-[#1a2744] bg-[#07101f] px-4 py-2.5">
+                    {["", "Kullanıcı", "İlan", "Çözüldü", "Kayıt", "İşlemler"].map((h) => (
+                      <span key={h} className="text-[10px] font-bold uppercase tracking-wider text-slate-600">{h}</span>
+                    ))}
                   </div>
-                ))
+                  <div className="divide-y divide-[#1a2744]">
+                    {adminUsers.map((u) => {
+                      const initials = u.full_name
+                        ? u.full_name.trim().split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
+                        : (u.email?.[0] ?? "?").toUpperCase();
+                      return (
+                        <div key={u.email} className={`grid grid-cols-1 md:grid-cols-[40px_1fr_70px_70px_100px_auto] gap-3 items-center px-4 py-3 transition-colors ${u.is_banned ? "bg-red-500/5" : u.is_blacklisted ? "bg-orange-500/5" : "bg-[#0d1a2e] hover:bg-[#0f1f38]"}`}>
+                          <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-white overflow-hidden">
+                            {u.avatar_url ? (
+                              <Image src={u.avatar_url} alt={u.full_name || u.email} width={36} height={36} className="h-9 w-9 rounded-full object-cover" unoptimized />
+                            ) : initials}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-sm font-semibold text-white truncate">{u.full_name || "—"}</p>
+                              {u.is_banned && <span className="rounded px-1.5 py-0.5 text-[9px] font-bold bg-red-500/20 text-red-300">Engelli</span>}
+                              {u.is_blacklisted && <span className="rounded px-1.5 py-0.5 text-[9px] font-bold bg-orange-500/20 text-orange-300">Kara Liste</span>}
+                              {ADMIN_EMAILS.includes(u.email.toLowerCase()) && <span className="rounded px-1.5 py-0.5 text-[9px] font-bold bg-blue-500/20 text-blue-300">Admin</span>}
+                            </div>
+                            <p className="text-[11px] text-slate-500 truncate">{u.email}</p>
+                          </div>
+                          <p className="text-sm font-bold text-white">{u.item_count}</p>
+                          <p className="text-sm font-bold text-emerald-400">{u.resolved_count}</p>
+                          <p className="text-xs text-slate-500">{new Date(u.created_at).toLocaleDateString("tr-TR")}</p>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Link href={`/users/${encodeURIComponent(u.email)}`} className="rounded-lg border border-[#1a2744] px-2.5 py-1 text-[11px] text-slate-400 hover:bg-slate-800 transition">
+                              Profil
+                            </Link>
+                            {u.email.toLowerCase() !== adminEmail && (
+                              <>
+                                <button
+                                  onClick={() => handleToggleBan(u.email, u.is_banned)}
+                                  disabled={togglingBan === u.email}
+                                  className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${u.is_banned ? "border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20" : "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"}`}
+                                >
+                                  {togglingBan === u.email ? "..." : u.is_banned ? "Engel Kaldır" : "Engelle"}
+                                </button>
+                                <button
+                                  onClick={() => handleToggleBlacklist(u.email, u.is_blacklisted)}
+                                  disabled={blacklisting === u.email}
+                                  className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${u.is_blacklisted ? "border-[#1a2744] bg-slate-800 text-slate-400" : "border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"}`}
+                                >
+                                  {blacklisting === u.email ? "..." : u.is_blacklisted ? "Kara Listeden Çıkar" : "Kara Liste"}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(u.id, u.email)}
+                                  disabled={deletingUser === u.email}
+                                  className="rounded-lg border border-red-600/30 bg-red-600/10 px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-600/20 transition disabled:opacity-50"
+                                >
+                                  {deletingUser === u.email ? "..." : "Sil"}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
+
+          ) : activeTab === "sightings" ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: "Toplam Bildirim", value: sightings.length, color: "text-amber-300" },
+                  { label: "Farklı İlan", value: new Set(sightings.map((s) => s.item_id)).size, color: "text-white" },
+                  { label: "Farklı Bildiren", value: new Set(sightings.map((s) => s.reporter_email)).size, color: "text-blue-300" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-4">
+                    <p className="text-xs text-slate-500">{label}</p>
+                    <p className={`mt-1.5 text-2xl font-black ${color}`}>{value}</p>
+                  </div>
+                ))}
+              </div>
+              {sightings.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[#1a2744] p-12 text-center text-slate-500">Henüz "Gördüm" bildirimi yok.</div>
+              ) : (
+                <div className="space-y-2">
+                  {sightings.map((s) => (
+                    <div key={s.id} className="rounded-2xl border border-amber-500/10 bg-amber-500/5 px-4 py-3.5">
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="rounded px-2 py-0.5 text-[10px] font-bold bg-amber-500/20 text-amber-300">👁 Gördüm</span>
+                            <Link href={`/items/${s.item_id}`} className="text-sm font-semibold text-white hover:text-amber-300 truncate max-w-xs">
+                              {s.item_title}
+                            </Link>
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            <span className="text-slate-400">{s.reporter_email}</span> · {new Date(s.created_at).toLocaleString("tr-TR")}
+                          </p>
+                          {s.location_text && (
+                            <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-300">
+                              <span className="text-amber-400">📍</span>{s.location_text}
+                            </p>
+                          )}
+                          {s.lat != null && s.lng != null && (
+                            <a href={`https://www.openstreetmap.org/?mlat=${s.lat}&mlon=${s.lng}#map=16/${s.lat}/${s.lng}`} target="_blank" rel="noopener noreferrer"
+                              className="mt-1 inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300">
+                              🗺 {s.lat.toFixed(5)}, {s.lng.toFixed(5)} — Haritada Gör ↗
+                            </a>
+                          )}
+                          {s.note && (
+                            <p className="mt-1.5 border-l-2 border-slate-700 pl-2 text-xs italic text-slate-400">"{s.note}"</p>
+                          )}
+                        </div>
+                        <Link href={`/items/${s.item_id}`} className="shrink-0 rounded-xl border border-[#1a2744] px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition">
+                          İlana Git →
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
           ) : activeTab === "moderation" ? (
             <div className="space-y-3">
-              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-400">
-                <p className="font-semibold text-white mb-1">🛡 Moderasyon Kuyruğu</p>
-                <p>Yeni ilanlar <code className="text-xs bg-slate-800 px-1.5 py-0.5 rounded">pending</code>, AI tarafından bayraklananlar <code className="text-xs bg-slate-800 px-1.5 py-0.5 rounded">flagged</code> olarak burada görünür.</p>
+              <div className="flex items-start gap-3 rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-4">
+                <span className="text-lg">🛡</span>
+                <div>
+                  <p className="text-sm font-semibold text-white">Moderasyon Kuyruğu</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Yeni ilanlar <code className="rounded bg-slate-800 px-1 py-0.5">pending</code>, AI tarafından bayraklananlar{" "}
+                    <code className="rounded bg-slate-800 px-1 py-0.5">flagged</code> olarak burada görünür.
+                  </p>
+                </div>
               </div>
               {pendingItems.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
-                  Onay bekleyen ilan yok.
-                </div>
+                <div className="rounded-2xl border border-dashed border-[#1a2744] p-12 text-center text-slate-500">Onay bekleyen ilan yok. ✓</div>
               ) : (
                 pendingItems.map((item) => (
-                  <div key={item.id} className={`flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 ${item.moderation_status === "flagged" ? "border-red-500/30 bg-red-500/5" : "border-amber-500/20 bg-amber-500/5"}`}>
+                  <div key={item.id} className={`flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 ${item.moderation_status === "flagged" ? "border-red-500/25 bg-red-500/5" : "border-amber-500/15 bg-amber-500/5"}`}>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${item.type === "lost" ? "bg-amber-500/20 text-amber-300" : "bg-emerald-500/20 text-emerald-300"}`}>
@@ -890,74 +931,61 @@ export default function AdminPage() {
                         )}
                         <Link href={`/items/${item.id}`} className="truncate text-sm font-medium text-white hover:text-blue-300">{item.title}</Link>
                       </div>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {item.created_by_email} · {item.category} · {new Date(item.created_at).toLocaleDateString("tr-TR")}
-                      </p>
+                      <p className="mt-0.5 text-xs text-slate-500">{item.created_by_email} · {item.category} · {new Date(item.created_at).toLocaleDateString("tr-TR")}</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => handleModerateItem(item.id, "approve")}
                         disabled={moderating === item.id}
-                        className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50"
-                      >
-                        {moderating === item.id ? "..." : "Onayla"}
-                      </button>
+                        className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition"
+                      >{moderating === item.id ? "..." : "Onayla"}</button>
                       <button
                         onClick={() => handleModerateItem(item.id, "reject")}
                         disabled={moderating === item.id}
-                        className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50"
-                      >
-                        {moderating === item.id ? "..." : "Reddet & Sil"}
-                      </button>
+                        className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-500/20 disabled:opacity-50 transition"
+                      >{moderating === item.id ? "..." : "Reddet & Sil"}</button>
                     </div>
                   </div>
                 ))
               )}
             </div>
+
           ) : activeTab === "requests" ? (
-            /* Requests tab */
-            <div className="space-y-3 animate-fade-in-up">
+            <div className="space-y-3">
               {(() => {
-                const REQUEST_TYPE_LABELS: Record<string, string> = {
+                const TYPE_LABELS: Record<string, string> = {
                   feature_request: "💡 Özellik İsteği",
                   bug_report: "🐛 Hata Bildirimi",
                   complaint: "⚑ Şikayet",
                   other: "📝 Diğer",
                 };
-                const STATUS_COLORS: Record<string, string> = {
+                const STATUS_CLS: Record<string, string> = {
                   pending: "bg-amber-500/20 text-amber-300",
                   in_progress: "bg-blue-500/20 text-blue-300",
                   resolved: "bg-green-500/20 text-green-300",
                   dismissed: "bg-slate-700 text-slate-400",
                 };
-                const STATUS_LABELS: Record<string, string> = {
-                  pending: "Bekliyor",
-                  in_progress: "İşlemde",
-                  resolved: "Çözüldü",
-                  dismissed: "Reddedildi",
+                const STATUS_LBL: Record<string, string> = {
+                  pending: "Bekliyor", in_progress: "İşlemde", resolved: "Çözüldü", dismissed: "Reddedildi",
                 };
                 if (userRequests.length === 0) {
-                  return (
-                    <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
-                      Henüz kullanıcı isteği yok.
-                    </div>
-                  );
+                  return <div className="rounded-2xl border border-dashed border-[#1a2744] p-12 text-center text-slate-500">Henüz kullanıcı isteği yok.</div>;
                 }
                 return userRequests.map((req) => (
-                  <div key={req.id} className={`rounded-2xl border p-4 ${req.status === "pending" ? "border-amber-500/20 bg-amber-500/5" : "border-slate-800 bg-slate-900"}`}>
+                  <div key={req.id} className={`rounded-2xl border p-4 ${req.status === "pending" ? "border-amber-500/15 bg-amber-500/5" : "border-[#1a2744] bg-[#0d1a2e]"}`}>
                     <div className="flex items-start gap-4 flex-wrap">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_COLORS[req.status] ?? ""}`}>
-                            {STATUS_LABELS[req.status] ?? req.status}
+                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_CLS[req.status] ?? ""}`}>
+                            {STATUS_LBL[req.status] ?? req.status}
                           </span>
-                          <span className="text-xs font-semibold text-slate-300">{REQUEST_TYPE_LABELS[req.type] ?? req.type}</span>
+                          <span className="text-xs font-semibold text-slate-300">{TYPE_LABELS[req.type] ?? req.type}</span>
                         </div>
                         <p className="text-sm font-semibold text-white">{req.title}</p>
                         <p className="mt-0.5 text-xs text-slate-500">{req.user_email} · {new Date(req.created_at).toLocaleDateString("tr-TR")}</p>
                         <p className="mt-2 text-xs text-slate-300 leading-relaxed">{req.description}</p>
                         {req.admin_response && (
-                          <p className="mt-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs text-blue-300">
+                          <p className="mt-2 rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs text-blue-300">
                             Admin yanıtı: {req.admin_response}
                           </p>
                         )}
@@ -970,28 +998,19 @@ export default function AdminPage() {
                           value={requestResponse[req.id] ?? ""}
                           onChange={(e) => setRequestResponse((prev) => ({ ...prev, [req.id]: e.target.value }))}
                           rows={2}
-                          className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none resize-none"
+                          className="w-full rounded-xl border border-[#1a2744] bg-[#07101f] px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none resize-none"
                         />
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => handleRequestAction(req.id, "in_progress")}
-                            disabled={updatingRequest === req.id}
-                            className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-400 hover:bg-blue-500/20 transition disabled:opacity-50"
-                          >
+                          <button onClick={() => handleRequestAction(req.id, "in_progress")} disabled={updatingRequest === req.id}
+                            className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-semibold text-blue-400 hover:bg-blue-500/20 transition disabled:opacity-50">
                             {updatingRequest === req.id ? "..." : "İşleme Al"}
                           </button>
-                          <button
-                            onClick={() => handleRequestAction(req.id, "resolved")}
-                            disabled={updatingRequest === req.id}
-                            className="rounded-xl border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-semibold text-green-400 hover:bg-green-500/20 transition disabled:opacity-50"
-                          >
+                          <button onClick={() => handleRequestAction(req.id, "resolved")} disabled={updatingRequest === req.id}
+                            className="rounded-xl border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-xs font-semibold text-green-400 hover:bg-green-500/20 transition disabled:opacity-50">
                             {updatingRequest === req.id ? "..." : "✓ Çözüldü"}
                           </button>
-                          <button
-                            onClick={() => handleRequestAction(req.id, "dismissed")}
-                            disabled={updatingRequest === req.id}
-                            className="rounded-xl border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-700 transition disabled:opacity-50"
-                          >
+                          <button onClick={() => handleRequestAction(req.id, "dismissed")} disabled={updatingRequest === req.id}
+                            className="rounded-xl border border-[#1a2744] bg-slate-800 px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-700 transition disabled:opacity-50">
                             {updatingRequest === req.id ? "..." : "Reddet"}
                           </button>
                         </div>
@@ -1001,23 +1020,17 @@ export default function AdminPage() {
                 ));
               })()}
             </div>
+
           ) : activeTab === "stories" ? (
-            /* Stories approval tab */
-            <div className="space-y-3 animate-fade-in-up">
+            <div className="space-y-3">
               {pendingStories.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
-                  Onay bekleyen hikaye yok.
-                </div>
+                <div className="rounded-2xl border border-dashed border-[#1a2744] p-12 text-center text-slate-500">Onay bekleyen hikaye yok. ✓</div>
               ) : (
                 pendingStories.map((s) => (
-                  <div key={s.id} className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
-                    <div className="flex items-start justify-between gap-4 mb-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-slate-500 mb-1">{s.user_email} · {new Date(s.created_at).toLocaleDateString("tr-TR")}</p>
-                        <p className="text-sm font-semibold text-white mb-1">"{s.item_title}"</p>
-                        <p className="text-sm text-slate-300 whitespace-pre-line">{s.story}</p>
-                      </div>
-                    </div>
+                  <div key={s.id} className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-4">
+                    <p className="text-xs text-slate-500 mb-1">{s.user_email} · {new Date(s.created_at).toLocaleDateString("tr-TR")}</p>
+                    <p className="text-sm font-semibold text-white mb-2">"{s.item_title}"</p>
+                    <p className="text-sm text-slate-300 whitespace-pre-line mb-3">{s.story}</p>
                     <div className="flex gap-2">
                       <button
                         disabled={approvingStory === s.id}
@@ -1034,9 +1047,7 @@ export default function AdminPage() {
                           setApprovingStory(null);
                         }}
                         className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 transition disabled:opacity-50"
-                      >
-                        {approvingStory === s.id ? "..." : "✓ Onayla"}
-                      </button>
+                      >{approvingStory === s.id ? "..." : "✓ Onayla"}</button>
                       <button
                         disabled={approvingStory === s.id}
                         onClick={async () => {
@@ -1051,29 +1062,24 @@ export default function AdminPage() {
                           else toast.error("Silinemedi.");
                           setApprovingStory(null);
                         }}
-                        className="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition disabled:opacity-50"
-                      >
-                        ✗ Reddet
-                      </button>
+                        className="rounded-xl border border-[#1a2744] bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition disabled:opacity-50"
+                      >✗ Reddet</button>
                     </div>
                   </div>
                 ))
               )}
             </div>
+
           ) : activeTab === "reports" ? (
-            /* Reports tab */
-            <div className="space-y-3 animate-fade-in-up">
+            <div className="space-y-3">
               {reports.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-800 p-10 text-center text-slate-500">
-                  Henüz şikayet yok.
-                </div>
+                <div className="rounded-2xl border border-dashed border-[#1a2744] p-12 text-center text-slate-500">Henüz şikayet yok. ✓</div>
               ) : (
                 reports.map((report) => {
                   const isEvaluating = evaluatingReport === report.id;
                   const isPending = report.status === "pending";
                   return (
-                    <div key={report.id} className={`rounded-2xl border transition-all ${isPending ? "border-red-500/20 bg-red-500/5" : "border-slate-800 bg-slate-900 opacity-60"}`}>
-                      {/* Report summary */}
+                    <div key={report.id} className={`rounded-2xl border transition-all ${isPending ? "border-red-500/20 bg-red-500/5" : "border-[#1a2744] bg-[#0d1a2e] opacity-60"}`}>
                       <div className="flex items-start justify-between gap-4 p-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -1092,18 +1098,18 @@ export default function AdminPage() {
                             </Link>
                           ) : (
                             <Link href={`/users/${encodeURIComponent(report.item_owner_email || report.reported_user_email || "")}`} target="_blank" className="text-sm font-semibold text-white hover:text-red-300">
-                              👤 Profil: {report.item_owner_email || report.reported_user_email} ↗
+                              👤 {report.item_owner_email || report.reported_user_email} ↗
                             </Link>
                           )}
                           <p className="mt-0.5 text-xs text-slate-500">
                             Şikayet eden: <span className="text-slate-400">{report.reporter_email}</span>
                             {report.item_owner_email && report.item_id && (
-                              <> · İlan sahibi: <span className="text-slate-400">{report.item_owner_email}</span></>
+                              <> · Sahip: <span className="text-slate-400">{report.item_owner_email}</span></>
                             )}
                             {" · "}{new Date(report.created_at).toLocaleDateString("tr-TR")}
                           </p>
                           {report.details && (
-                            <p className="mt-2 rounded-lg border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-xs text-slate-300 italic">
+                            <p className="mt-2 rounded-xl border border-[#1a2744] bg-slate-800/50 px-3 py-2 text-xs italic text-slate-400">
                               &quot;{report.details}&quot;
                             </p>
                           )}
@@ -1111,56 +1117,38 @@ export default function AdminPage() {
                         {isPending && (
                           <button
                             onClick={() => {
-                              if (isEvaluating) {
-                                setEvaluatingReport(null);
-                                setReportMessage("");
-                              } else {
-                                setEvaluatingReport(report.id);
-                                setReportMessage(`"${report.item_title}" ilanı hakkında aldığımız şikayeti inceledik. `);
-                              }
+                              if (isEvaluating) { setEvaluatingReport(null); setReportMessage(""); }
+                              else { setEvaluatingReport(report.id); setReportMessage(`"${report.item_title}" ilanı hakkında aldığımız şikayeti inceledik. `); }
                             }}
-                            className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${isEvaluating ? "border-slate-600 bg-slate-800 text-slate-400" : "border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"}`}
-                          >
-                            {isEvaluating ? "İptal" : "Değerlendir ▾"}
-                          </button>
+                            className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${isEvaluating ? "border-[#1a2744] bg-slate-800 text-slate-400" : "border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"}`}
+                          >{isEvaluating ? "İptal" : "Değerlendir ▾"}</button>
                         )}
                       </div>
-
-                      {/* Evaluation panel */}
                       {isEvaluating && isPending && (
-                        <div className="border-t border-slate-700/50 px-4 pb-4 pt-3 space-y-3">
+                        <div className="border-t border-[#1a2744] px-4 pb-4 pt-3 space-y-3">
                           <div>
                             <label className="mb-1.5 block text-xs font-semibold text-slate-400">
-                              Kullanıcıya gönderilecek admin mesajı <span className="text-slate-600">(opsiyonel — reddetmede gönderilmez)</span>
+                              Kullanıcıya gönderilecek mesaj <span className="text-slate-600">(opsiyonel)</span>
                             </label>
                             <textarea
                               value={reportMessage}
                               onChange={(e) => setReportMessage(e.target.value)}
                               rows={3}
-                              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
+                              className="w-full rounded-xl border border-[#1a2744] bg-[#07101f] px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none resize-none"
                               placeholder="Admin mesajı yazın..."
                             />
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            <button
-                              onClick={() => handleReportAction(report.id, "remove_item", reportMessage)}
-                              disabled={updatingReport === report.id}
-                              className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition disabled:opacity-50"
-                            >
-                              {updatingReport === report.id ? "..." : "🗑 İlanı Kaldır + Bildirim Gönder"}
+                            <button onClick={() => handleReportAction(report.id, "remove_item", reportMessage)} disabled={updatingReport === report.id}
+                              className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/20 transition disabled:opacity-50">
+                              {updatingReport === report.id ? "..." : "🗑 İlanı Kaldır + Bildirim"}
                             </button>
-                            <button
-                              onClick={() => handleReportAction(report.id, "warn_user", reportMessage)}
-                              disabled={updatingReport === report.id}
-                              className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition disabled:opacity-50"
-                            >
-                              {updatingReport === report.id ? "..." : "⚠️ İlanı Bırak + Uyarı Gönder"}
+                            <button onClick={() => handleReportAction(report.id, "warn_user", reportMessage)} disabled={updatingReport === report.id}
+                              className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition disabled:opacity-50">
+                              {updatingReport === report.id ? "..." : "⚠️ İlanı Bırak + Uyarı"}
                             </button>
-                            <button
-                              onClick={() => handleReportAction(report.id, "dismiss")}
-                              disabled={updatingReport === report.id}
-                              className="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-700 transition disabled:opacity-50"
-                            >
+                            <button onClick={() => handleReportAction(report.id, "dismiss")} disabled={updatingReport === report.id}
+                              className="rounded-xl border border-[#1a2744] bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-700 transition disabled:opacity-50">
                               {updatingReport === report.id ? "..." : "✗ Asılsız / Reddet"}
                             </button>
                           </div>
@@ -1171,23 +1159,22 @@ export default function AdminPage() {
                 })
               )}
             </div>
-          ) : activeTab === "announce" ? (
-            <div className="max-w-xl space-y-5 animate-fade-in-up">
-              <div>
-                <h2 className="text-base font-bold text-white mb-1">Duyuru Gönder</h2>
-                <p className="text-xs text-slate-500">Kullanıcılara tek seferlik uygulama bildirimi ve/veya e-posta gönder.</p>
-              </div>
 
+          ) : activeTab === "announce" ? (
+            <div className="max-w-xl space-y-5">
+              <div className="rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-5">
+                <h2 className="text-sm font-bold text-white mb-0.5">Duyuru Gönder</h2>
+                <p className="text-xs text-slate-500">Kullanıcılara uygulama bildirimi ve/veya e-posta gönder.</p>
+              </div>
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-slate-400">Konu / Başlık</label>
                 <input
                   value={announceSubject}
                   onChange={(e) => setAnnounceSubject(e.target.value)}
                   placeholder="Örn: Yeni özellik duyurusu"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none"
+                  className="w-full rounded-xl border border-[#1a2744] bg-[#0d1a2e] px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:border-blue-500/50 focus:outline-none"
                 />
               </div>
-
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-slate-400">Mesaj</label>
                 <textarea
@@ -1195,25 +1182,21 @@ export default function AdminPage() {
                   onChange={(e) => setAnnounceMessage(e.target.value)}
                   rows={5}
                   placeholder="Kullanıcılara gönderilecek mesajı yazın..."
-                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
+                  className="w-full rounded-xl border border-[#1a2744] bg-[#0d1a2e] px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:border-blue-500/50 focus:outline-none resize-none"
                 />
               </div>
-
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-slate-400">Alıcılar</label>
                 <div className="flex gap-2 mb-2">
-                  <button
-                    onClick={() => setAnnounceTargets("all")}
-                    className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${announceTargets === "all" ? "border-blue-500 bg-blue-500/20 text-blue-400" : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-500"}`}
-                  >
-                    Tüm kullanıcılar ({adminUsers.length})
-                  </button>
-                  <button
-                    onClick={() => setAnnounceTargets("custom")}
-                    className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${announceTargets === "custom" ? "border-blue-500 bg-blue-500/20 text-blue-400" : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-500"}`}
-                  >
-                    Belirli kişiler
-                  </button>
+                  {(["all", "custom"] as const).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setAnnounceTargets(t)}
+                      className={`rounded-xl border px-4 py-2 text-xs font-semibold transition ${announceTargets === t ? "border-blue-500 bg-blue-500/20 text-blue-400" : "border-[#1a2744] bg-[#0d1a2e] text-slate-400 hover:border-slate-600"}`}
+                    >
+                      {t === "all" ? `Tüm kullanıcılar (${adminUsers.length})` : "Belirli kişiler"}
+                    </button>
+                  ))}
                 </div>
                 {announceTargets === "custom" && (
                   <textarea
@@ -1221,25 +1204,24 @@ export default function AdminPage() {
                     onChange={(e) => setAnnounceCustomEmails(e.target.value)}
                     rows={3}
                     placeholder={"E-posta adreslerini virgülle ayırın\nornek@mail.com, diger@mail.com"}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none"
+                    className="w-full rounded-xl border border-[#1a2744] bg-[#0d1a2e] px-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none resize-none"
                   />
                 )}
               </div>
-
               <div>
                 <label className="mb-2 block text-xs font-semibold text-slate-400">Gönderim Türü</label>
                 <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={announceSendNotif} onChange={(e) => setAnnounceSendNotif(e.target.checked)} className="accent-blue-500 w-4 h-4" />
-                    <span className="text-sm text-slate-300">Uygulama bildirimi</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={announceSendEmail} onChange={(e) => setAnnounceSendEmail(e.target.checked)} className="accent-blue-500 w-4 h-4" />
-                    <span className="text-sm text-slate-300">E-posta</span>
-                  </label>
+                  {[
+                    { label: "Uygulama bildirimi", checked: announceSendNotif, set: setAnnounceSendNotif },
+                    { label: "E-posta", checked: announceSendEmail, set: setAnnounceSendEmail },
+                  ].map(({ label, checked, set }) => (
+                    <label key={label} className="flex cursor-pointer items-center gap-2">
+                      <input type="checkbox" checked={checked} onChange={(e) => set(e.target.checked)} className="accent-blue-500 h-4 w-4" />
+                      <span className="text-sm text-slate-300">{label}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
-
               <button
                 disabled={announcing || !announceSubject.trim() || !announceMessage.trim()}
                 onClick={async () => {
@@ -1257,12 +1239,8 @@ export default function AdminPage() {
                     const d = await res.json();
                     if (res.ok) {
                       toast.success(`Gönderildi — ${d.recipients} kişi${d.emailSent ? `, ${d.emailSent} e-posta` : ""}${d.notifSent ? `, ${d.notifSent} bildirim` : ""}`);
-                      setAnnounceSubject("");
-                      setAnnounceMessage("");
-                      setAnnounceCustomEmails("");
-                    } else {
-                      toast.error(d.error || "Gönderilemedi.");
-                    }
+                      setAnnounceSubject(""); setAnnounceMessage(""); setAnnounceCustomEmails("");
+                    } else toast.error(d.error || "Gönderilemedi.");
                   } catch {
                     toast.error("Bir hata oluştu.");
                   } finally {
@@ -1280,28 +1258,25 @@ export default function AdminPage() {
 
       {/* Delete item modal */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-            <h2 className="mb-1 text-lg font-bold text-white">İlanı Sil</h2>
-            <p className="mb-4 text-sm text-slate-400">
-              <span className="font-semibold text-white">&ldquo;{deleteTarget.title}&rdquo;</span> ilanını siliyorsunuz.
-              İlan sahibine ({deleteTarget.ownerEmail}) uygulama bildirimi ve e-posta gönderilecek.
-            </p>
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-6 shadow-2xl">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-lg">🗑</div>
+              <div>
+                <h2 className="text-base font-bold text-white">İlanı Sil</h2>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  <span className="text-white">&ldquo;{deleteTarget.title}&rdquo;</span> · {deleteTarget.ownerEmail} adresine bildirim gönderilecek.
+                </p>
+              </div>
+            </div>
             <p className="mb-2 text-xs font-semibold text-slate-400">Silme sebebi</p>
             <div className="mb-3 flex flex-wrap gap-2">
               {["Spam / Reklam", "Yanıltıcı / Sahte ilan", "Uygunsuz içerik", "Platform kuralları ihlali"].map((r) => (
                 <button
                   key={r}
                   onClick={() => setDeleteReason(r)}
-                  className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
-                    deleteReason === r
-                      ? "border-red-500 bg-red-500/20 text-red-400"
-                      : "border-slate-700 bg-slate-800 text-slate-400 hover:border-slate-500"
-                  }`}
-                >
-                  {r}
-                </button>
+                  className={`rounded-xl border px-3 py-1.5 text-xs font-medium transition ${deleteReason === r ? "border-red-500 bg-red-500/20 text-red-400" : "border-[#1a2744] bg-slate-800 text-slate-400 hover:border-slate-600"}`}
+                >{r}</button>
               ))}
             </div>
             <textarea
@@ -1309,23 +1284,18 @@ export default function AdminPage() {
               onChange={(e) => setDeleteReason(e.target.value)}
               placeholder="Veya özel sebep yazın..."
               rows={2}
-              className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-slate-500 focus:outline-none resize-none mb-4"
+              className="mb-4 w-full rounded-xl border border-[#1a2744] bg-[#07101f] px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none resize-none"
             />
-
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition"
-              >
-                İptal
-              </button>
+                className="flex-1 rounded-xl border border-[#1a2744] bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition"
+              >İptal</button>
               <button
                 onClick={confirmDeleteItem}
                 disabled={!deleteReason.trim() || deleting === deleteTarget.id}
                 className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {deleting === deleteTarget.id ? "Siliniyor..." : "Kalıcı Olarak Sil"}
-              </button>
+              >{deleting === deleteTarget.id ? "Siliniyor..." : "Kalıcı Olarak Sil"}</button>
             </div>
           </div>
         </div>
