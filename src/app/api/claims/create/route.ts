@@ -115,27 +115,8 @@ export async function POST(req: NextRequest) {
 
     const itemTitle = itemData?.title || "İlan";
 
-    if (normalizedOwnerEmail) {
-      // Email notification
-      sendClaimReceivedEmail({
-        ownerEmail: normalizedOwnerEmail,
-        claimantName: claimant_name.trim(),
-        itemTitle,
-        itemId: item_id,
-      }).catch(() => {});
-
-      // Push notification to owner (non-critical)
-      supabase.from("notifications").insert({
-        user_email: normalizedOwnerEmail,
-        type: "new_claim",
-        title: `🎉 Yeni buluntu talebi: ${itemTitle}`,
-        message: `${claimant_name.trim()} bu eşyayı bulduğunu bildirdi. Mesajlar bölümünden iletişime geçin.`,
-        item_id,
-        is_read: false,
-      }).then(null, () => {});
-    }
-
     // Create conversation + send claim details as first message
+    let conversationId: string | null = null;
     if (normalizedOwnerEmail && claimer_email && normalizedOwnerEmail !== claimer_email) {
       const { data: existingConvs } = await supabase
         .from("conversations")
@@ -145,7 +126,7 @@ export async function POST(req: NextRequest) {
           `and(owner_email.eq.${normalizedOwnerEmail},claimant_email.eq.${claimer_email}),and(owner_email.eq.${claimer_email},claimant_email.eq.${normalizedOwnerEmail})`
         );
 
-      let conversationId = existingConvs?.[0]?.id;
+      conversationId = existingConvs?.[0]?.id ?? null;
 
       if (!conversationId) {
         const { data: newConv } = await supabase
@@ -158,12 +139,12 @@ export async function POST(req: NextRequest) {
           })
           .select("id")
           .single();
-        conversationId = newConv?.id;
+        conversationId = newConv?.id ?? null;
       }
 
       if (conversationId) {
         const msgLines = [
-          `🎉 Bu eşyayı bulduğumu bildirmek istiyorum!`,
+          `📬 Bu eşyanın sahibi olduğunu bildirmek istiyorum!`,
           ``,
           `👤 İsim: ${claimant_name.trim()}`,
           `📍 Konum: ${lost_location.trim()}`,
@@ -180,6 +161,27 @@ export async function POST(req: NextRequest) {
           is_system: false,
         });
       }
+    }
+
+    if (normalizedOwnerEmail) {
+      // Email notification
+      sendClaimReceivedEmail({
+        ownerEmail: normalizedOwnerEmail,
+        claimantName: claimant_name.trim(),
+        itemTitle,
+        itemId: item_id,
+      }).catch(() => {});
+
+      // In-app notification with conversation link
+      supabase.from("notifications").insert({
+        user_email: normalizedOwnerEmail,
+        type: "new_claim",
+        title: `📬 Eşya benim talebi: ${itemTitle}`,
+        message: `${claimant_name.trim()} bulundu ilanınıza yanıt verdi ve "eşya benim" talebi gönderdi.`,
+        item_id,
+        conversation_id: conversationId || null,
+        is_read: false,
+      }).then(null, () => {});
     }
 
     return NextResponse.json({ claim }, { status: 201 });

@@ -45,6 +45,7 @@ type Notification = {
   title: string;
   message: string;
   item_id: string;
+  conversation_id?: string | null;
   is_read: boolean;
   created_at: string;
 };
@@ -449,17 +450,32 @@ export default function AppHeader() {
                         </div>
                       ) : (
                         notifications.map((n) => (
-                          <button
+                          <div
                             key={n.id}
-                            onClick={() => { setNotifOpen(false); router.push(`/items/${n.item_id}`); }}
-                            className={`w-full border-b border-slate-800 px-4 py-3 text-left transition last:border-0 hover:bg-slate-800 ${!n.is_read ? "bg-blue-500/5 border-l-2 border-l-blue-500" : ""}`}
+                            className={`border-b border-slate-800 last:border-0 ${!n.is_read ? "bg-blue-500/5 border-l-2 border-l-blue-500" : ""}`}
                           >
-                            <p className="text-xs font-semibold text-white">{n.title}</p>
-                            <p className="mt-0.5 text-xs leading-5 text-slate-400">{n.message}</p>
-                            <p className="mt-1 text-[10px] text-slate-600">
-                              {new Date(n.created_at).toLocaleDateString()}
-                            </p>
-                          </button>
+                            <button
+                              onClick={() => { setNotifOpen(false); router.push(`/items/${n.item_id}`); }}
+                              className="w-full px-4 pt-3 pb-2 text-left hover:bg-slate-800 transition"
+                            >
+                              <p className="text-xs font-semibold text-white">{n.title}</p>
+                              <p className="mt-0.5 text-xs leading-5 text-slate-400">{n.message}</p>
+                              <p className="mt-1 text-[10px] text-slate-600">
+                                {new Date(n.created_at).toLocaleDateString()}
+                              </p>
+                            </button>
+                            {n.type === "new_claim" && n.conversation_id && (
+                              <div className="px-4 pb-3">
+                                <button
+                                  onClick={() => { setNotifOpen(false); router.push(`/messages/${n.conversation_id}`); }}
+                                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3 py-1.5 text-[11px] font-semibold text-white transition"
+                                >
+                                  <MessageCircle className="w-3 h-3" />
+                                  Mesaja Git
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         ))
                       )}
                     </div>
