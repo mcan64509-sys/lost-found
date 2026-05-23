@@ -14,13 +14,7 @@ const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <support@bulanvarmi.
 const _adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim()).filter(Boolean);
 const ADMIN_EMAIL = _adminEmails.find((e) => !e.startsWith("support@")) ?? _adminEmails[0] ?? "mcan64509@gmail.com";
 
-export async function GET(req: NextRequest) {
-  const bearer = req.headers.get("authorization") || "";
-  const secret = new URL(req.url).searchParams.get("secret");
-  if (bearer !== `Bearer ${process.env.CRON_SECRET}` && secret !== process.env.CRON_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+async function runReport() {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   const [pendingReports, flaggedItems, noEmbedItems, totalItems, totalUsers] = await Promise.all([
@@ -186,4 +180,24 @@ Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
     flaggedItems: flagged.length,
     noEmbedItems: noEmbed.length,
   });
+}
+
+const ADMIN_EMAILS_LIST = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+
+export async function GET(req: NextRequest) {
+  const bearer = req.headers.get("authorization") || "";
+  const secret = new URL(req.url).searchParams.get("secret");
+  if (bearer !== `Bearer ${process.env.CRON_SECRET}` && secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return runReport();
+}
+
+export async function POST(req: NextRequest) {
+  const token = req.headers.get("authorization")?.replace("Bearer ", "") || "";
+  const { data: { user } } = await supabase.auth.getUser(token);
+  if (!user?.email || !ADMIN_EMAILS_LIST.includes(user.email.toLowerCase())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return runReport();
 }

@@ -131,6 +131,7 @@ export default function AdminPage() {
     pendingReports: 0,
   });
   const [sendingReminders, setSendingReminders] = useState(false);
+  const [sendingDailyReport, setSendingDailyReport] = useState(false);
   const [chartData, setChartData] = useState<DayCount[]>([]);
   const [userRequests, setUserRequests] = useState<UserRequest[]>([]);
   const [updatingRequest, setUpdatingRequest] = useState<string | null>(null);
@@ -418,6 +419,29 @@ export default function AdminPage() {
     setUpdatingRequest(null);
   }
 
+  async function handleSendDailyReport() {
+    setSendingDailyReport(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/cron/error-report", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token || ""}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Gönderilemedi.");
+      } else if (data.emailError) {
+        toast.error(`Email hatası: ${data.emailError}`);
+      } else {
+        toast.success(`Günlük rapor gönderildi → ${data.sentTo}`);
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSendingDailyReport(false);
+    }
+  }
+
   async function handleSendExpiryReminders() {
     setSendingReminders(true);
     try {
@@ -583,6 +607,13 @@ export default function AdminPage() {
                     className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition disabled:opacity-50"
                   >
                     {sendingReminders ? "Gönderiliyor..." : "⏰ Bitiş Hatırlatmalarını Gönder"}
+                  </button>
+                  <button
+                    onClick={handleSendDailyReport}
+                    disabled={sendingDailyReport}
+                    className="rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2.5 text-sm font-semibold text-blue-400 hover:bg-blue-500/20 transition disabled:opacity-50"
+                  >
+                    {sendingDailyReport ? "Gönderiliyor..." : "📊 Günlük Raporu Gönder"}
                   </button>
                 </div>
               </div>
