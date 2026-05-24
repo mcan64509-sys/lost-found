@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import AppHeader from "../../components/AppHeader";
@@ -104,7 +105,25 @@ const REASON_LABELS: Record<string, string> = {
   diger: "Diğer",
 };
 
-type TabId = "stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests" | "stories" | "announce";
+type TabId = "stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests" | "stories" | "announce" | "support";
+
+type SupportSession = {
+  id: string;
+  user_email: string;
+  user_name: string | null;
+  status: "waiting" | "active" | "closed";
+  created_at: string;
+  updated_at: string;
+};
+
+type SupportMessage = {
+  id: string;
+  session_id: string;
+  sender_type: "user" | "admin";
+  sender_email: string;
+  content: string;
+  created_at: string;
+};
 
 export default function AdminPage() {
   const [authorized, setAuthorized] = useState<boolean | null>(null);
@@ -146,6 +165,17 @@ export default function AdminPage() {
   const [announceSendNotif, setAnnounceSendNotif] = useState(true);
   const [announcing, setAnnouncing] = useState(false);
 
+  // Canlı Destek
+  const [supportSessions, setSupportSessions] = useState<SupportSession[]>([]);
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<SupportSession | null>(null);
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [supportInput, setSupportInput] = useState("");
+  const [sendingSupport, setSendingSupport] = useState(false);
+  const [closingSession, setClosingSession] = useState(false);
+  const supportBottomRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -157,6 +187,18 @@ export default function AdminPage() {
       setAuthorized(true);
       setAdminEmail(email);
       loadData(session?.access_token);
+
+      // URL param: ?tab=support
+      const tabParam = searchParams?.get("tab");
+      if (tabParam === "support") {
+        setActiveTab("support");
+        loadSupportSessions(session?.access_token || "");
+        const sessionParam = searchParams?.get("session");
+        if (sessionParam) {
+          // Session'ı yükle
+          setTimeout(() => openSupportSession({ id: sessionParam } as SupportSession, session?.access_token || ""), 500);
+        }
+      }
     };
     init();
   }, []);
@@ -219,6 +261,105 @@ export default function AdminPage() {
       setPendingStories((storyJson.stories || []) as Story[]);
     }
     setLoading(false);
+  }
+
+  async function loadSupportSessions(token: string) {
+    setSupportLoading(true);
+    try {
+      const res = await fetch("/api/support/sessions", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setSupportSessions(data.sessions ?? []);
+    } catch {
+    } finally {
+      setSupportLoading(false);
+    }
+  }
+
+  async function openSupportSession(session: SupportSession, token?: string) {
+    const { data: { session: s } } = await supabase.auth.getSession();
+    const t = token || s?.access_token || "";
+    setSelectedSession(session);
+    const res = await fetch(`/api/support/messages?sessionId=${session.id}`, {
+      headers: { Authorization: `Bearer ${t}` },
+    });
+    const data = await res.json();
+    setSupportMessages(data.messages ?? []);
+    setTimeout(() => supportBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+
+    // Realtime subscription
+    const ch = supabase
+      .channel(`admin-support-${session.id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "support_messages",
+        filter: `session_id=eq.${session.id}`,
+      }, (payload) => {
+        setSupportMessages((prev) => {
+          const msg = payload.new as SupportMessage;
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+        setTimeout(() => supportBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+      })
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "support_sessions",
+        filter: `id=eq.${session.id}`,
+      }, (payload) => {
+        const updated = payload.new as SupportSession;
+        setSelectedSession(updated);
+        setSupportSessions((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(ch); };
+  }
+
+  async function sendSupportReply() {
+    if (!supportInput.trim() || !selectedSession) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || "";
+    setSendingSupport(true);
+    const text = supportInput.trim();
+    setSupportInput("");
+    try {
+      await fetch("/api/support/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ sessionId: selectedSession.id, content: text }),
+      });
+      // Session'ı active yap (UI'da güncelle)
+      if (selectedSession.status === "waiting") {
+        setSupportSessions((prev) =>
+          prev.map((s) => s.id === selectedSession.id ? { ...s, status: "active" } : s)
+        );
+        setSelectedSession((prev) => prev ? { ...prev, status: "active" } : prev);
+      }
+    } catch {
+    } finally {
+      setSendingSupport(false);
+    }
+  }
+
+  async function closeSupportSession(sessionId: string) {
+    const { data: { session } } = await supabase.auth.getSession();
+    setClosingSession(true);
+    await fetch("/api/support/close", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+      body: JSON.stringify({ sessionId }),
+    }).catch(() => {});
+    setSupportSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    if (selectedSession?.id === sessionId) {
+      setSelectedSession(null);
+      setSupportMessages([]);
+    }
+    setClosingSession(false);
+    toast.success("Oturum sonlandırıldı.");
   }
 
   function handleDeleteItem(id: string) {
@@ -481,6 +622,7 @@ export default function AdminPage() {
     { id: "requests", label: "İstekler", icon: "💬", count: userRequests.filter((r) => r.status === "pending").length },
     { id: "stories", label: "Hikayeler", icon: "✨", count: pendingStories.length },
     { id: "announce", label: "Duyuru", icon: "📢", count: 0 },
+    { id: "support", label: "Canlı Destek", icon: "🎧", count: supportSessions.filter((s) => s.status === "waiting").length, alert: supportSessions.some((s) => s.status === "waiting") },
   ];
 
   return (
@@ -543,7 +685,13 @@ export default function AdminPage() {
               return (
                 <button
                   key={id}
-                  onClick={() => setActiveTab(id)}
+                  onClick={async () => {
+                    setActiveTab(id);
+                    if (id === "support" && supportSessions.length === 0) {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      loadSupportSessions(session?.access_token || "");
+                    }
+                  }}
                   className={`relative flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-150 ${
                     isActive
                       ? "bg-blue-600 text-white shadow-lg shadow-blue-900/40"
@@ -1251,6 +1399,129 @@ export default function AdminPage() {
               >
                 {announcing ? "Gönderiliyor..." : "📢 Gönder"}
               </button>
+            </div>
+          ) : activeTab === "support" ? (
+            <div className="mt-6 flex gap-4 h-[calc(100vh-260px)] min-h-[400px]">
+              {/* Session listesi */}
+              <div className="w-72 shrink-0 flex flex-col gap-2 overflow-y-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-sm font-bold text-white">Aktif Oturumlar</h2>
+                  <button
+                    onClick={async () => {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      loadSupportSessions(session?.access_token || "");
+                    }}
+                    className="text-xs text-slate-400 hover:text-white transition"
+                  >
+                    Yenile
+                  </button>
+                </div>
+                {supportLoading ? (
+                  <p className="text-sm text-slate-500">Yükleniyor...</p>
+                ) : supportSessions.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">
+                    Bekleyen destek talebi yok.
+                  </div>
+                ) : (
+                  supportSessions.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => openSupportSession(s)}
+                      className={`text-left rounded-xl border p-3 transition ${
+                        selectedSession?.id === s.id
+                          ? "border-blue-500 bg-blue-500/10"
+                          : "border-slate-700 bg-slate-900 hover:border-slate-600"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-white truncate">{s.user_name || s.user_email}</p>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          s.status === "waiting" ? "bg-yellow-500/20 text-yellow-300" : "bg-green-500/20 text-green-300"
+                        }`}>
+                          {s.status === "waiting" ? "Bekliyor" : "Aktif"}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1 truncate">{s.user_email}</p>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        {new Date(s.updated_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              {/* Chat alanı */}
+              <div className="flex-1 flex flex-col rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden">
+                {!selectedSession ? (
+                  <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">
+                    Soldaki listeden bir oturum seçin.
+                  </div>
+                ) : (
+                  <>
+                    {/* Chat header */}
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-slate-700 bg-slate-800">
+                      <div>
+                        <p className="font-semibold text-white">{selectedSession.user_name || selectedSession.user_email}</p>
+                        <p className="text-xs text-slate-400">{selectedSession.user_email}</p>
+                      </div>
+                      <button
+                        onClick={() => closeSupportSession(selectedSession.id)}
+                        disabled={closingSession}
+                        className="rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50"
+                      >
+                        {closingSession ? "Kapatılıyor..." : "Oturumu Kapat"}
+                      </button>
+                    </div>
+
+                    {/* Mesajlar */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                      {supportMessages.length === 0 && (
+                        <p className="text-sm text-slate-500 text-center">Henüz mesaj yok. İlk mesajı siz gönderin.</p>
+                      )}
+                      {supportMessages.map((m) => (
+                        <div key={m.id} className={`flex ${m.sender_type === "admin" ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[70%] rounded-xl px-3 py-2 text-sm ${
+                            m.sender_type === "admin"
+                              ? "bg-blue-600 text-white"
+                              : "bg-slate-800 text-slate-200"
+                          }`}>
+                            {m.sender_type === "user" && (
+                              <p className="text-[10px] text-slate-400 mb-1">{m.sender_email}</p>
+                            )}
+                            {m.content}
+                            <p className={`mt-1 text-[10px] ${m.sender_type === "admin" ? "text-blue-200" : "text-slate-500"}`}>
+                              {new Date(m.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      <div ref={supportBottomRef} />
+                    </div>
+
+                    {/* Input */}
+                    {selectedSession.status !== "closed" && (
+                      <div className="flex gap-2 p-3 border-t border-slate-700 bg-slate-800">
+                        <input
+                          type="text"
+                          value={supportInput}
+                          onChange={(e) => setSupportInput(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && sendSupportReply()}
+                          placeholder="Yanıt yaz..."
+                          className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-500 placeholder-slate-500"
+                          disabled={sendingSupport}
+                        />
+                        <button
+                          onClick={sendSupportReply}
+                          disabled={!supportInput.trim() || sendingSupport}
+                          className="rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 px-4 py-2 text-sm font-semibold text-white transition"
+                        >
+                          {sendingSupport ? "..." : "Gönder"}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           ) : null}
         </div>
