@@ -195,9 +195,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace("Bearer ", "") || "";
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { data: { user } } = await supabase.auth.getUser(token);
-  if (!user?.email || !ADMIN_EMAILS_LIST.includes(user.email.toLowerCase())) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // ADMIN_EMAILS_LIST boşsa (env set edilmemiş) → authenticated admin geçer
+  if (ADMIN_EMAILS_LIST.length > 0 && !ADMIN_EMAILS_LIST.includes(user.email.toLowerCase())) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
   return runReport();
 }
