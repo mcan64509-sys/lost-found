@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getAuthenticatedUser } from "../../../../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,19 +10,18 @@ const supabase = createClient(
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
   .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
-export async function POST(req: Request) {
-  const authHeader = req.headers.get("authorization") || "";
-  const token = authHeader.replace("Bearer ", "").trim();
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function POST(req: NextRequest) {
+  const [user, body] = await Promise.all([
+    getAuthenticatedUser(req),
+    req.json(),
+  ]);
 
-  const { data: { user } } = await supabase.auth.getUser(token);
   if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { sessionId } = await req.json();
+  const { sessionId } = body;
   if (!sessionId) return NextResponse.json({ error: "sessionId gerekli" }, { status: 400 });
 
-  const userEmail = user.email.toLowerCase().trim();
-  const isAdmin = ADMIN_EMAILS.includes(userEmail);
+  const isAdmin = ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(user.email);
 
   const { data: session } = await supabase
     .from("support_sessions")
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   if (!session) return NextResponse.json({ error: "Session bulunamadı" }, { status: 404 });
-  if (!isAdmin && session.user_email !== userEmail) {
+  if (!isAdmin && session.user_email !== user.email) {
     return NextResponse.json({ error: "Yetki yok" }, { status: 403 });
   }
 

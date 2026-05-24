@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getAuthenticatedUser } from "../../../../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,15 +10,11 @@ const supabase = createClient(
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
   .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
-export async function GET(req: Request) {
-  const authHeader = req.headers.get("authorization") || "";
-  const token = authHeader.replace("Bearer ", "").trim();
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: { user } } = await supabase.auth.getUser(token);
+export async function GET(req: NextRequest) {
+  const user = await getAuthenticatedUser(req);
   if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const isAdmin = ADMIN_EMAILS.includes(user.email.toLowerCase().trim());
+  const isAdmin = ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(user.email);
   if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { status } = Object.fromEntries(new URL(req.url).searchParams);
@@ -28,11 +25,7 @@ export async function GET(req: Request) {
     .order("updated_at", { ascending: false })
     .limit(100);
 
-  if (status) {
-    query = query.eq("status", status);
-  } else {
-    query = query.in("status", ["waiting", "active"]);
-  }
+  query = status ? query.eq("status", status) : query.in("status", ["waiting", "active"]);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
