@@ -37,17 +37,42 @@ export default function ChatWidget() {
   const [sendingSupport, setSendingSupport] = useState(false);
   const [accessToken, setAccessToken] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [adminName, setAdminName] = useState("");
   const [startingSupport, setStartingSupport] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const supportInputRef = useRef<HTMLInputElement>(null);
 
-  // Auth token + email al
+  // Auth token + email al, mevcut destek oturumunu kontrol et (auto-resume)
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setAccessToken(session?.access_token || "");
-      setUserEmail(session?.user?.email || "");
+      const email = session?.user?.email || "";
+      setUserEmail(email);
+
+      if (!email) return;
+      // Aktif veya bekleyen oturum var mı?
+      const { data: existing } = await supabase
+        .from("support_sessions")
+        .select("id, status, admin_name")
+        .eq("user_email", email)
+        .in("status", ["waiting", "active"])
+        .maybeSingle();
+
+      if (existing) {
+        setSessionId(existing.id);
+        setSupportMode(existing.status as SupportMode);
+        setAdminName(existing.admin_name || "");
+        if (existing.status === "active") {
+          const { data: msgs } = await supabase
+            .from("support_messages")
+            .select("*")
+            .eq("session_id", existing.id)
+            .order("created_at", { ascending: true });
+          setSupportMessages(msgs || []);
+        }
+      }
     });
   }, []);
 
@@ -77,9 +102,10 @@ export default function ChatWidget() {
         table: "support_sessions",
         filter: `id=eq.${sessionId}`,
       }, (payload) => {
-        const updated = payload.new as { status: string };
+        const updated = payload.new as { status: string; admin_name?: string };
         if (updated.status === "active") {
           setSupportMode("active");
+          setAdminName(updated.admin_name || "");
           setUnread(true);
         } else if (updated.status === "closed") {
           setSupportMode("closed");
@@ -121,11 +147,10 @@ export default function ChatWidget() {
       const data = await res.json();
       if (data.sessionId) {
         setSessionId(data.sessionId);
-        setSupportMode(data.status === "active" ? "active" : "waiting");
-        // Mevcut mesajları yükle
-        if (data.status === "active" && accessToken) {
-          loadSupportMessages(data.sessionId);
-        }
+        const mode: SupportMode = data.status === "active" ? "active" : "waiting";
+        setSupportMode(mode);
+        if (data.admin_name) setAdminName(data.admin_name);
+        if (mode === "active") loadSupportMessages(data.sessionId);
       }
     } catch {
     } finally {
@@ -134,12 +159,12 @@ export default function ChatWidget() {
   }
 
   async function loadSupportMessages(sid: string) {
-    if (!accessToken) return;
-    const res = await fetch(`/api/support/messages?sessionId=${sid}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    const data = await res.json();
-    setSupportMessages(data.messages ?? []);
+    const { data } = await supabase
+      .from("support_messages")
+      .select("*")
+      .eq("session_id", sid)
+      .order("created_at", { ascending: true });
+    setSupportMessages(data || []);
   }
 
   async function sendSupportMessage() {
@@ -250,7 +275,7 @@ export default function ChatWidget() {
               </p>
               <p className="text-xs text-slate-400">
                 {supportMode === "waiting" && "Destek temsilcisi bekleniyor..."}
-                {supportMode === "active" && "Destek temsilcisi bağlandı"}
+                {supportMode === "active" && (adminName ? `${adminName} (ADMİN) bağlandı` : "Destek temsilcisi bağlandı")}
                 {supportMode === "closed" && "Oturum sonlandı"}
                 {supportMode === "idle" && "Yardıma hazırım"}
               </p>
@@ -308,7 +333,9 @@ export default function ChatWidget() {
             <>
               <div className="overflow-y-auto p-4 space-y-3 max-h-72">
                 {supportMessages.length === 0 && (
-                  <p className="text-xs text-slate-500 text-center">Destek temsilcisi bağlandı. Mesajınızı yazın.</p>
+                  <p className="text-xs text-slate-500 text-center">
+                    {adminName ? `${adminName} (ADMİN) bağlandı. Mesajınızı yazın.` : "Destek temsilcisi bağlandı. Mesajınızı yazın."}
+                  </p>
                 )}
                 {supportMessages.map((m) => (
                   <div key={m.id} className={`flex ${m.sender_type === "user" ? "justify-end" : "justify-start"}`}>
@@ -316,7 +343,9 @@ export default function ChatWidget() {
                       m.sender_type === "user" ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-200"
                     }`}>
                       {m.sender_type === "admin" && (
-                        <p className="text-[10px] text-green-400 font-semibold mb-1">Destek Temsilcisi</p>
+                        <p className="text-[10px] text-green-400 font-semibold mb-1">
+                          {adminName ? `${adminName} (ADMİN)` : "Destek Temsilcisi"}
+                        </p>
                       )}
                       {m.content}
                     </div>
