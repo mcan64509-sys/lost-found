@@ -35,16 +35,18 @@ export default function ChatWidget() {
   const [supportInput, setSupportInput] = useState("");
   const [sendingSupport, setSendingSupport] = useState(false);
   const [accessToken, setAccessToken] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [startingSupport, setStartingSupport] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const supportInputRef = useRef<HTMLInputElement>(null);
 
-  // Auth token al
+  // Auth token + email al
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setAccessToken(session?.access_token || "");
+      setUserEmail(session?.user?.email || "");
     });
   }, []);
 
@@ -136,18 +138,16 @@ export default function ChatWidget() {
   }
 
   async function sendSupportMessage() {
-    if (!supportInput.trim() || !sessionId || !accessToken || sendingSupport) return;
+    if (!supportInput.trim() || !sessionId || sendingSupport) return;
     const text = supportInput.trim();
     setSupportInput("");
     setSendingSupport(true);
     try {
-      await fetch("/api/support/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ sessionId, content: text }),
+      await supabase.from("support_messages").insert({
+        session_id: sessionId,
+        sender_type: "user",
+        sender_email: userEmail || "anonim",
+        content: text,
       });
     } catch {
     } finally {

@@ -318,19 +318,18 @@ export default function AdminPage() {
   }
 
   async function sendSupportReply() {
-    if (!supportInput.trim() || !selectedSession) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token || "";
+    if (!supportInput.trim() || !selectedSession || !adminEmail) return;
     setSendingSupport(true);
     const text = supportInput.trim();
     setSupportInput("");
     try {
-      await fetch("/api/support/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ sessionId: selectedSession.id, content: text }),
+      await supabase.from("support_messages").insert({
+        session_id: selectedSession.id,
+        sender_type: "admin",
+        sender_email: adminEmail,
+        content: text,
       });
-      // Session'ı active yap (UI'da güncelle)
+      // DB trigger session'ı aktif eder; UI'ı da güncelle
       if (selectedSession.status === "waiting") {
         setSupportSessions((prev) =>
           prev.map((s) => s.id === selectedSession.id ? { ...s, status: "active" } : s)
