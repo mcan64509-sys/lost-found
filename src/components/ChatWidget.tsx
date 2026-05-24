@@ -220,7 +220,7 @@ export default function ChatWidget() {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-[60] w-80 sm:w-96 flex flex-col bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="fixed bottom-24 right-6 z-[60] w-80 sm:w-96 flex flex-col bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden max-h-[calc(100vh-8rem)]">
 
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 bg-slate-800 border-b border-slate-700">
@@ -289,7 +289,7 @@ export default function ChatWidget() {
           {/* === AKTİF DESTEK CHAT === */}
           {supportMode === "active" && (
             <>
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-80">
+              <div className="overflow-y-auto p-4 space-y-3 max-h-72">
                 {supportMessages.length === 0 && (
                   <p className="text-xs text-slate-500 text-center">Destek temsilcisi bağlandı. Mesajınızı yazın.</p>
                 )}
@@ -332,7 +332,7 @@ export default function ChatWidget() {
           {/* === AI CHAT (normal mod) === */}
           {supportMode === "idle" && (
             <>
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-72">
+              <div className="overflow-y-auto p-4 space-y-3 max-h-60">
                 {messages.length === 0 && (
                   <div className="space-y-3">
                     <p className="text-sm text-slate-400 text-center">Merhaba! Kayıp eşya konusunda nasıl yardımcı olabilirim?</p>
