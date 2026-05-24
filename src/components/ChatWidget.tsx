@@ -7,6 +7,7 @@ import { supabase } from "../lib/supabase";
 type Message = { role: "user" | "assistant"; content: string };
 type SupportMessage = {
   id: string;
+  session_id?: string;
   sender_type: "user" | "admin";
   sender_email: string;
   content: string;
