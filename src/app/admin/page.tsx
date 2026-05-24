@@ -527,10 +527,19 @@ export default function AdminPage() {
   async function handleSendDailyReport() {
     setSendingDailyReport(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // refreshSession garantili taze token sağlar
+      const { data: refreshData } = await supabase.auth.refreshSession();
+      const token = refreshData.session?.access_token;
+      if (!token) {
+        toast.error("Oturum bulunamadı, lütfen yeniden giriş yapın.");
+        return;
+      }
       const res = await fetch("/api/cron/error-report", {
         method: "POST",
-        headers: { Authorization: `Bearer ${session?.access_token || ""}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
       });
       const data = await res.json();
       if (!res.ok) toast.error(data.error || "Gönderilemedi.");
