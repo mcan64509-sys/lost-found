@@ -73,7 +73,7 @@ export default function ChatWidget() {
       {/* Floating button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-105"
+        className="fixed bottom-6 right-6 z-[60] w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-105"
         aria-label="Yardım asistanı"
       >
         {open ? (
@@ -90,7 +90,7 @@ export default function ChatWidget() {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-80 sm:w-96 flex flex-col bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="fixed bottom-24 right-6 z-[60] w-80 sm:w-96 flex flex-col bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 bg-slate-800 border-b border-slate-700">
             <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
