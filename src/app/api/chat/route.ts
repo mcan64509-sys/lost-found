@@ -12,8 +12,12 @@ Kullanıcılara şu konularda yardım edebilirsin:
 - Pratik ipuçları (iyi bir ilan nasıl yazılır, hangi bilgileri eklemeli)
 - Yasal bilgiler (kayıp eşya bildirimi, kayıp büroları)
 
-Kısa, net ve yardımsever ol. Türkçe yanıt ver. Cevapların 2-4 cümleyi geçmesin, gerekirse madde listesi kullan.
-Platform dışı konularda (siyaset, tıp, hukuki danışmanlık vb.) kibarca platform konularına yönlendir.`;
+YAZIM KURALLARI:
+- Sade, düz metin kullan. Markdown işaretleri kullanma (** * # gibi).
+- Emoji kullanma.
+- Kısa ve net ol, 2-4 cümle yeterli.
+- Türkçe yaz.
+- Platform dışı konularda kibarca platform konularına yönlendir.`;
 
 export async function POST(req: Request) {
   try {
