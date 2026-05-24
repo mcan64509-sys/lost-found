@@ -93,7 +93,11 @@ export default function ChatWidget() {
         const msg = payload.new as SupportMessage;
         setSupportMessages((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
-          return [...prev, msg];
+          // Optimistic temp mesajını gerçeğiyle değiştir
+          const withoutTemp = prev.filter(
+            (m) => !(m.id.startsWith("tmp-") && m.sender_type === msg.sender_type && m.content === msg.content)
+          );
+          return [...withoutTemp, msg];
         });
         if (!open) setUnread(true);
       })
@@ -141,17 +145,29 @@ export default function ChatWidget() {
     if (!supportInput.trim() || !sessionId || sendingSupport) return;
     const text = supportInput.trim();
     setSupportInput("");
-    setSendingSupport(true);
+
+    // Optimistic: hemen göster
+    const tempId = `tmp-${Date.now()}`;
+    const tempMsg: SupportMessage = {
+      id: tempId,
+      session_id: sessionId,
+      sender_type: "user",
+      sender_email: userEmail || "anonim",
+      content: text,
+      created_at: new Date().toISOString(),
+    };
+    setSupportMessages((prev) => [...prev, tempMsg]);
+
     try {
-      await supabase.from("support_messages").insert({
+      const { error } = await supabase.from("support_messages").insert({
         session_id: sessionId,
         sender_type: "user",
         sender_email: userEmail || "anonim",
         content: text,
       });
+      if (error) setSupportMessages((prev) => prev.filter((m) => m.id !== tempId));
     } catch {
-    } finally {
-      setSendingSupport(false);
+      setSupportMessages((prev) => prev.filter((m) => m.id !== tempId));
     }
   }
 

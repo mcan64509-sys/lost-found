@@ -298,7 +298,10 @@ export default function AdminPage() {
         setSupportMessages((prev) => {
           const msg = payload.new as SupportMessage;
           if (prev.some((m) => m.id === msg.id)) return prev;
-          return [...prev, msg];
+          const withoutTemp = prev.filter(
+            (m) => !(m.id.startsWith("tmp-") && m.sender_type === msg.sender_type && m.content === msg.content)
+          );
+          return [...withoutTemp, msg];
         });
         setTimeout(() => supportBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
       })
@@ -319,17 +322,32 @@ export default function AdminPage() {
 
   async function sendSupportReply() {
     if (!supportInput.trim() || !selectedSession || !adminEmail) return;
-    setSendingSupport(true);
     const text = supportInput.trim();
     setSupportInput("");
+
+    // Optimistic: hemen göster
+    const tempId = `tmp-${Date.now()}`;
+    setSupportMessages((prev) => [...prev, {
+      id: tempId,
+      session_id: selectedSession.id,
+      sender_type: "admin" as const,
+      sender_email: adminEmail,
+      content: text,
+      created_at: new Date().toISOString(),
+    }]);
+    setTimeout(() => supportBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 20);
+
     try {
-      await supabase.from("support_messages").insert({
+      const { error } = await supabase.from("support_messages").insert({
         session_id: selectedSession.id,
         sender_type: "admin",
         sender_email: adminEmail,
         content: text,
       });
-      // DB trigger session'ı aktif eder; UI'ı da güncelle
+      if (error) {
+        setSupportMessages((prev) => prev.filter((m) => m.id !== tempId));
+        return;
+      }
       if (selectedSession.status === "waiting") {
         setSupportSessions((prev) =>
           prev.map((s) => s.id === selectedSession.id ? { ...s, status: "active" } : s)
@@ -337,8 +355,7 @@ export default function AdminPage() {
         setSelectedSession((prev) => prev ? { ...prev, status: "active" } : prev);
       }
     } catch {
-    } finally {
-      setSendingSupport(false);
+      setSupportMessages((prev) => prev.filter((m) => m.id !== tempId));
     }
   }
 
