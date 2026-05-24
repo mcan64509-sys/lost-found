@@ -194,15 +194,24 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "") || "";
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const authHeader = req.headers.get("authorization") || "";
+  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : authHeader.trim();
+  if (!token) return NextResponse.json({ error: "Token eksik" }, { status: 401 });
 
-  const { data: { user } } = await supabase.auth.getUser(token);
-  if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let userEmail: string | null = null;
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user?.email) {
+      return NextResponse.json({ error: "Geçersiz token", detail: error?.message }, { status: 401 });
+    }
+    userEmail = user.email.toLowerCase().trim();
+  } catch (e) {
+    return NextResponse.json({ error: "Token doğrulanamadı", detail: String(e) }, { status: 401 });
+  }
 
-  // ADMIN_EMAILS_LIST boşsa (env set edilmemiş) → authenticated admin geçer
-  if (ADMIN_EMAILS_LIST.length > 0 && !ADMIN_EMAILS_LIST.includes(user.email.toLowerCase())) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // ADMIN_EMAILS_LIST boşsa (env set edilmemiş) → authenticated herhangi admin geçer
+  if (ADMIN_EMAILS_LIST.length > 0 && !ADMIN_EMAILS_LIST.includes(userEmail)) {
+    return NextResponse.json({ error: "Yetkisiz email", email: userEmail, allowed: ADMIN_EMAILS_LIST }, { status: 403 });
   }
 
   return runReport();
