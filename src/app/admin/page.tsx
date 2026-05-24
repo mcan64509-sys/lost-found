@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import AppHeader from "../../components/AppHeader";
@@ -174,7 +173,6 @@ export default function AdminPage() {
   const [sendingSupport, setSendingSupport] = useState(false);
   const [closingSession, setClosingSession] = useState(false);
   const supportBottomRef = useRef<HTMLDivElement>(null);
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     const init = async () => {
@@ -189,13 +187,13 @@ export default function AdminPage() {
       loadData(session?.access_token);
 
       // URL param: ?tab=support
-      const tabParam = searchParams?.get("tab");
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get("tab");
       if (tabParam === "support") {
         setActiveTab("support");
         loadSupportSessions(session?.access_token || "");
-        const sessionParam = searchParams?.get("session");
+        const sessionParam = urlParams.get("session");
         if (sessionParam) {
-          // Session'ı yükle
           setTimeout(() => openSupportSession({ id: sessionParam } as SupportSession, session?.access_token || ""), 500);
         }
       }
