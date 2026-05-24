@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import AppHeader from "../../../components/AppHeader";
 import ConfirmDialog from "../../../components/ConfirmDialog";
 import { normalizeEmail } from "../../../lib/utils";
-import { ImageIcon, Loader2 } from "lucide-react";
+import { ImageIcon, Loader2, ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 
 function formatDateTime(value: string) {
   const date = new Date(value);
@@ -47,6 +47,13 @@ export default function ConversationDetailPage() {
 
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+
+  type Template = { id: string; content: string; is_default: boolean; user_id: string | null };
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [newTemplate, setNewTemplate] = useState("");
+  const [addingTemplate, setAddingTemplate] = useState(false);
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -165,6 +172,16 @@ export default function ConversationDetailPage() {
           setAccessToken(session?.access_token || "");
           setConversation(conversationData);
           setMessages(messageData);
+        }
+
+        // Load message templates
+        if (session?.access_token) {
+          fetch("/api/message-templates", {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          })
+            .then((r) => r.json())
+            .then((d) => { if (isMounted && d.templates) setTemplates(d.templates); })
+            .catch(() => {});
         }
 
         await markMessagesAsRead(currentUserEmail);
@@ -293,6 +310,42 @@ export default function ConversationDetailPage() {
       toast.error("Görsel gönderilemedi.");
     } finally {
       setUploadingImage(false);
+    }
+  }
+
+  async function handleAddTemplate() {
+    if (!newTemplate.trim() || !accessToken) return;
+    setAddingTemplate(true);
+    try {
+      const res = await fetch("/api/message-templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ content: newTemplate.trim() }),
+      });
+      const data = await res.json();
+      if (data.template) {
+        setTemplates((prev) => [...prev, data.template]);
+        setNewTemplate("");
+      }
+    } catch {
+    } finally {
+      setAddingTemplate(false);
+    }
+  }
+
+  async function handleDeleteTemplate(id: string) {
+    if (!accessToken) return;
+    setDeletingTemplateId(id);
+    try {
+      await fetch("/api/message-templates", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ id }),
+      });
+      setTemplates((prev) => prev.filter((t) => t.id !== id));
+    } catch {
+    } finally {
+      setDeletingTemplateId(null);
     }
   }
 
@@ -510,6 +563,56 @@ export default function ConversationDetailPage() {
               )}
             </div>
 
+            {/* Şablon paneli */}
+            {showTemplates && (
+              <div className="border-t border-slate-800 bg-slate-950 px-4 py-3 space-y-2">
+                <p className="text-xs text-slate-500 font-medium mb-2">Hızlı yanıtlar</p>
+                <div className="flex flex-wrap gap-2">
+                  {templates.map((t) => (
+                    <div key={t.id} className="group flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => { setNewMessage(t.content); setShowTemplates(false); inputRef.current?.focus(); }}
+                        className="rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 text-xs text-slate-300 transition text-left"
+                      >
+                        {t.content}
+                      </button>
+                      {!t.is_default && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTemplate(t.id)}
+                          disabled={deletingTemplateId === t.id}
+                          className="hidden group-hover:flex items-center justify-center w-5 h-5 rounded text-slate-500 hover:text-red-400 transition"
+                          title="Şablonu sil"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newTemplate}
+                    onChange={(e) => setNewTemplate(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddTemplate()}
+                    placeholder="Yeni şablon ekle..."
+                    maxLength={500}
+                    className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddTemplate}
+                    disabled={!newTemplate.trim() || addingTemplate}
+                    className="flex items-center gap-1 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 px-3 py-1.5 text-xs text-white font-medium transition"
+                  >
+                    <Plus className="w-3 h-3" /> Ekle
+                  </button>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSendMessage} className="border-t border-slate-800 p-4">
               <div className="flex gap-2">
                 <label className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-xl border border-slate-700 bg-slate-800 text-slate-400 hover:text-white hover:border-slate-600 transition cursor-pointer">
@@ -523,6 +626,18 @@ export default function ConversationDetailPage() {
                     disabled={uploadingImage || sending}
                   />
                 </label>
+                <button
+                  type="button"
+                  onClick={() => setShowTemplates((v) => !v)}
+                  title="Hazır mesajlar"
+                  className={`flex-shrink-0 flex items-center gap-1 h-11 px-3 rounded-xl border transition text-xs font-medium ${
+                    showTemplates
+                      ? "border-blue-500 bg-blue-600/20 text-blue-400"
+                      : "border-slate-700 bg-slate-800 text-slate-400 hover:text-white hover:border-slate-600"
+                  }`}
+                >
+                  Şablonlar {showTemplates ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                </button>
                 <input
                   ref={inputRef}
                   type="text"

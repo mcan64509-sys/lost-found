@@ -249,6 +249,44 @@ export async function sendContactConfirmationEmail({
   });
 }
 
+export async function sendExpiryReminderSmartEmail({
+  ownerEmail,
+  itemTitle,
+  itemId,
+  daysLeft,
+  renewToken,
+}: {
+  ownerEmail: string;
+  itemTitle: string;
+  itemId: string;
+  daysLeft: number;
+  renewToken: string;
+}) {
+  const renewUrl = `${APP_URL}/api/items/renew-magic?token=${renewToken}`;
+  const urgency = daysLeft === 1 ? "🔴" : daysLeft <= 3 ? "🟡" : "🟠";
+  const daysText = daysLeft === 1 ? "yarın" : `${daysLeft} gün sonra`;
+
+  return send({
+    from: FROM,
+    to: ownerEmail,
+    subject: `${urgency} İlanınız ${daysText} sona eriyor — ${itemTitle}`,
+    html: baseTemplate(`
+      <h1 style="font-size:20px;font-weight:700;margin:0 0 12px;color:#fbbf24;">${urgency} İlanınız ${daysText} sona eriyor</h1>
+      <p style="color:#94a3b8;line-height:1.6;margin:0 0 8px;">
+        "<strong style="color:#e2e8f0;">${itemTitle}</strong>" başlıklı ilanınız <strong style="color:#fbbf24;">${daysText}</strong> sona erecek.
+      </p>
+      <p style="color:#94a3b8;line-height:1.6;margin:0 0 20px;">
+        Aşağıdaki butona tıklayarak ilanınızı 60 gün daha uzatabilirsiniz (giriş yapmanıza gerek yok).
+      </p>
+      <a href="${renewUrl}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 26px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;margin-right:12px;">
+        ✅ Tek Tıkla Uzat (60 gün)
+      </a>
+      ${itemButton(itemId, "İlanı Görüntüle")}
+      <p style="margin-top:16px;font-size:11px;color:#475569;">Bu bağlantı 7 gün geçerlidir.</p>
+    `),
+  });
+}
+
 export async function sendAlertMatchEmail({
   userEmail,
   keyword,

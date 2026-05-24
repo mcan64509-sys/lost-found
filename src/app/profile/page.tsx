@@ -74,7 +74,7 @@ function getInitials(name?: string, email?: string) {
   return "?";
 }
 
-type ActiveTab = "items" | "incoming" | "outgoing" | "favorites" | "email_prefs" | "account";
+type ActiveTab = "items" | "incoming" | "outgoing" | "favorites" | "email_prefs" | "account" | "stats";
 
 type EmailPrefs = {
   notify_claims: boolean;
@@ -142,6 +142,14 @@ export default function ProfilePage() {
   const [apiKey, setApiKey] = useState("");
   const [generatingApiKey, setGeneratingApiKey] = useState(false);
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
+
+  // Item stats
+  const [itemStats, setItemStats] = useState<{
+    id: string; title: string; type: string; status: string;
+    view_count: number; favorite_count: number; claim_count: number;
+    created_at: string; expires_at: string | null;
+  }[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   // 2FA
   const [mfaFactors, setMfaFactors] = useState<{ id: string; factor_type: string; status: string }[]>([]);
@@ -614,6 +622,21 @@ export default function ProfilePage() {
     setReferralsLoading(false);
   }
 
+  async function loadStats() {
+    setStatsLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/stats/my-items", {
+        headers: { Authorization: `Bearer ${session?.access_token ?? ""}` },
+      });
+      const data = await res.json();
+      setItemStats(data.stats ?? []);
+    } catch {
+    } finally {
+      setStatsLoading(false);
+    }
+  }
+
   async function handleGenerateApiKey() {
     if (!user) return;
     setGeneratingApiKey(true);
@@ -910,6 +933,19 @@ export default function ProfilePage() {
               }`}
             >
               Bildirimler
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab("stats");
+                if (itemStats.length === 0 && !statsLoading) {
+                  loadStats();
+                }
+              }}
+              className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition ${
+                activeTab === "stats" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              İstatistikler
             </button>
             <button
               onClick={() => {
@@ -1590,6 +1626,77 @@ export default function ProfilePage() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* İstatistikler tab */}
+          {activeTab === "stats" && (
+            <section className="mt-6">
+              <p className="mb-6 text-slate-400">İlanlarının görüntülenme, favori ve talep istatistikleri.</p>
+              {statsLoading ? (
+                <div className="flex justify-center py-16 text-slate-400">Yükleniyor...</div>
+              ) : itemStats.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-900/50 p-10 text-center">
+                  <p className="text-slate-400">Henüz ilanın yok.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Summary cards */}
+                  <div className="grid grid-cols-3 gap-4">
+                    {[
+                      { label: "Toplam Görüntülenme", value: itemStats.reduce((s, i) => s + i.view_count, 0), color: "text-blue-400" },
+                      { label: "Toplam Favori", value: itemStats.reduce((s, i) => s + i.favorite_count, 0), color: "text-pink-400" },
+                      { label: "Toplam Talep", value: itemStats.reduce((s, i) => s + i.claim_count, 0), color: "text-green-400" },
+                    ].map((card) => (
+                      <div key={card.label} className="rounded-2xl border border-slate-700 bg-slate-900 p-4 text-center">
+                        <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
+                        <p className="mt-1 text-xs text-slate-400">{card.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Per-item table */}
+                  <div className="overflow-x-auto rounded-2xl border border-slate-700">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-700 bg-slate-900">
+                          <th className="px-4 py-3 text-left font-medium text-slate-400">İlan</th>
+                          <th className="px-4 py-3 text-right font-medium text-slate-400">Görüntülenme</th>
+                          <th className="px-4 py-3 text-right font-medium text-slate-400">Favori</th>
+                          <th className="px-4 py-3 text-right font-medium text-slate-400">Talep</th>
+                          <th className="px-4 py-3 text-center font-medium text-slate-400">Durum</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {itemStats.map((item, idx) => (
+                          <tr key={item.id} className={`border-b border-slate-800 ${idx % 2 === 0 ? "bg-slate-950" : "bg-slate-900/50"}`}>
+                            <td className="px-4 py-3">
+                              <Link href={`/items/${item.id}`} className="font-medium text-white hover:text-blue-400 transition-colors line-clamp-1">
+                                {item.title}
+                              </Link>
+                              <p className="text-xs text-slate-500 mt-0.5">
+                                {item.type === "lost" ? "Kayıp" : "Bulundu"} · {new Date(item.created_at).toLocaleDateString("tr-TR")}
+                              </p>
+                            </td>
+                            <td className="px-4 py-3 text-right text-blue-400 font-semibold">{item.view_count}</td>
+                            <td className="px-4 py-3 text-right text-pink-400 font-semibold">{item.favorite_count}</td>
+                            <td className="px-4 py-3 text-right text-green-400 font-semibold">{item.claim_count}</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                                item.status === "active" ? "bg-green-500/20 text-green-300" :
+                                item.status === "resolved" ? "bg-blue-500/20 text-blue-300" :
+                                "bg-slate-700 text-slate-400"
+                              }`}>
+                                {item.status === "active" ? "Aktif" : item.status === "resolved" ? "Çözüldü" : "Süresi Doldu"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </section>
