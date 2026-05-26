@@ -240,6 +240,12 @@ export default function FoundReportPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ itemId: newItem.id, title, description, category: finalCategory, location }),
         }).catch(() => {});
+
+        fetch("/api/items/trigger-moderation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${data.session?.access_token ?? ""}` },
+          body: JSON.stringify({ itemId: newItem.id }),
+        }).catch(() => {});
       }
 
       try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }

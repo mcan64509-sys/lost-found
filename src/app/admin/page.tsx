@@ -136,6 +136,7 @@ export default function AdminPage() {
   const [approvingStory, setApprovingStory] = useState<string | null>(null);
   const [pendingItems, setPendingItems] = useState<AdminItem[]>([]);
   const [moderating, setModerating] = useState<string | null>(null);
+  const [bulkModerating, setBulkModerating] = useState(false);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminEmail, setAdminEmail] = useState("");
   const [togglingBan, setTogglingBan] = useState<string | null>(null);
@@ -494,6 +495,27 @@ export default function AdminPage() {
     } finally {
       setBlacklisting(null);
     }
+  }
+
+  async function handleBulkApprove() {
+    const pendingOnly = pendingItems.filter((i) => i.moderation_status === "pending");
+    if (pendingOnly.length === 0) { toast.error("Onaylanacak pending ilan yok."); return; }
+    if (!confirm(`${pendingOnly.length} pending ilanı toplu onayla?`)) return;
+    setBulkModerating(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    const results = await Promise.allSettled(
+      pendingOnly.map((item) =>
+        fetch("/api/admin/moderate-item", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+          body: JSON.stringify({ itemId: item.id, action: "approve" }),
+        })
+      )
+    );
+    const approved = results.filter((r) => r.status === "fulfilled").length;
+    setPendingItems((prev) => prev.filter((i) => i.moderation_status !== "pending"));
+    toast.success(`${approved} ilan onaylandı.`);
+    setBulkModerating(false);
   }
 
   async function handleModerateItem(itemId: string, action: "approve" | "reject") {
@@ -1079,15 +1101,24 @@ export default function AdminPage() {
 
           ) : activeTab === "moderation" ? (
             <div className="space-y-3">
-              <div className="flex items-start gap-3 rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-4">
-                <span className="text-lg">🛡</span>
-                <div>
+              <div className="flex items-center gap-3 rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-4">
+                <span className="text-lg shrink-0">🛡</span>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white">Moderasyon Kuyruğu</p>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Yeni ilanlar <code className="rounded bg-slate-800 px-1 py-0.5">pending</code>, AI tarafından bayraklananlar{" "}
                     <code className="rounded bg-slate-800 px-1 py-0.5">flagged</code> olarak burada görünür.
                   </p>
                 </div>
+                {pendingItems.filter((i) => i.moderation_status === "pending").length > 0 && (
+                  <button
+                    onClick={handleBulkApprove}
+                    disabled={bulkModerating}
+                    className="shrink-0 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition disabled:opacity-50"
+                  >
+                    {bulkModerating ? "Onaylanıyor..." : `Hepsini Onayla (${pendingItems.filter((i) => i.moderation_status === "pending").length})`}
+                  </button>
+                )}
               </div>
               {pendingItems.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-[#1a2744] p-12 text-center text-slate-500">Onay bekleyen ilan yok. ✓</div>
