@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import AppHeader from "../../components/AppHeader";
+import PushNotificationButton from "../../components/PushNotificationButton";
 import { supabase } from "../../lib/supabase";
 import { toast } from "sonner";
 import {
@@ -688,6 +689,7 @@ export default function AdminPage() {
                 {pendingItems.length} moderasyon
               </button>
             )}
+            <PushNotificationButton />
             <Link href="/admin/profiles" className="rounded-lg border border-slate-700/60 px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-800 hover:text-white transition">
               👤 Profiller
             </Link>
