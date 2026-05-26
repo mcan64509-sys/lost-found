@@ -17,8 +17,9 @@ const ADMIN_EMAIL = _adminEmails.find((e) => !e.startsWith("support@")) ?? _admi
 
 async function runReport(alertOnly = false) {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-  const [pendingReports, flaggedItems, noEmbedItems, totalItems, totalUsers] = await Promise.all([
+  const [pendingReports, flaggedItems, noEmbedItems, totalItems, totalUsers, waitingSessions] = await Promise.all([
     supabase
       .from("reports")
       .select("id, reason, details, reporter_email, created_at, items(title)", { count: "exact" })
@@ -37,14 +38,23 @@ async function runReport(alertOnly = false) {
       .gte("created_at", since),
     supabase.from("items").select("*", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("profiles").select("*", { count: "exact", head: true }),
+    // 1 saatten fazla yanıtsız bekleyen destek oturumları
+    supabase
+      .from("support_sessions")
+      .select("id, user_email, user_name, created_at")
+      .eq("status", "waiting")
+      .lte("updated_at", oneHourAgo)
+      .order("created_at", { ascending: true }),
   ]);
 
   type ReportRow = { id: string; reason: string; details?: string; reporter_email: string; items?: { title?: string } | null };
   type ItemRow = { id: string; title: string; category?: string; location?: string };
+  type WaitingSession = { id: string; user_email: string; user_name: string | null; created_at: string };
 
   const reports = (pendingReports.data || []) as ReportRow[];
   const flagged = (flaggedItems.data || []) as ItemRow[];
   const noEmbed = (noEmbedItems.data || []) as ItemRow[];
+  const waiting = (waitingSessions.data || []) as WaitingSession[];
 
   const dataSummary = `
 Platform özeti:
@@ -59,6 +69,9 @@ ${flagged.map((i) => `  • "${i.title}" (${i.category ?? "-"}, ${i.location ?? 
 
 Son 24 saatte embedding hatası şüpheli (embedding=null): ${noEmbed.length}
 ${noEmbed.map((i) => `  • "${i.title}"`).join("\n") || "  (yok)"}
+
+1+ saat yanıtsız bekleyen destek talepleri: ${waiting.length}
+${waiting.map((s) => `  • ${s.user_name || s.user_email}`).join("\n") || "  (yok)"}
 `;
 
   let aiText = "";
@@ -70,7 +83,7 @@ ${noEmbed.map((i) => `  • "${i.title}"`).join("\n") || "  (yok)"}
         model: "claude-haiku-4-5-20251001",
         max_tokens: 300,
         system: `Sen BulanVarMı? platformunun admin asistanısın. Günlük platform sağlık raporunu kısa Türkçe yaz.
-Acil durum varsa (çok sayıda şikayet, toplu flag, embedding sorunu) özellikle belirt.
+Acil durum varsa (çok sayıda şikayet, toplu flag, embedding sorunu, yanıtsız destek) özellikle belirt.
 Her şey normalse "Genel durum iyi." diye başla.
 Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
         messages: [{ role: "user", content: dataSummary }],
@@ -84,7 +97,7 @@ Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
     aiText = "AI özeti oluşturulamadı.";
   }
 
-  const hasIssues = (pendingReports.count ?? 0) > 0 || flagged.length > 0 || noEmbed.length > 0;
+  const hasIssues = (pendingReports.count ?? 0) > 0 || flagged.length > 0 || noEmbed.length > 0 || waiting.length > 0;
 
   // alertOnly modunda sorun yoksa e-posta gönderme
   if (alertOnly && !hasIssues) {
@@ -154,7 +167,7 @@ Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
 
           ${
             noEmbed.length > 0
-              ? `<div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:20px;">
+              ? `<div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:14px;">
               <p style="margin:0 0 10px;color:#94a3b8;font-size:13px;font-weight:700;">🔧 Embedding Hatası Şüpheli (${noEmbed.length})</p>
               ${noEmbed
                 .map(
@@ -166,9 +179,24 @@ Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
               : ""
           }
 
+          ${
+            waiting.length > 0
+              ? `<div style="background:#1e293b;border-radius:12px;padding:16px;margin-bottom:20px;">
+              <p style="margin:0 0 10px;color:#a78bfa;font-size:13px;font-weight:700;">🎧 Yanıtsız Destek Talepleri (${waiting.length})</p>
+              ${waiting
+                .map(
+                  (s) =>
+                    `<div style="border-top:1px solid #0f172a;padding:8px 0;"><span style="color:#e2e8f0;font-size:13px;">${s.user_name || s.user_email}</span><span style="color:#64748b;font-size:11px;margin-left:8px;">${new Date(s.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })} bekleniyor</span></div>`
+                )
+                .join("")}
+              <a href="${APP_URL}/admin?tab=support" style="display:inline-block;margin-top:10px;background:#7c3aed;color:#fff;padding:8px 16px;border-radius:10px;text-decoration:none;font-weight:600;font-size:12px;">Destek Paneline Git →</a>
+            </div>`
+              : ""
+          }
+
           <a href="${APP_URL}/admin" style="display:inline-block;background:#2563eb;color:#fff;padding:11px 22px;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;">Admin Paneline Git →</a>
 
-          <p style="margin-top:24px;font-size:11px;color:#475569;">BulanVarMı? otomatik günlük rapor · <a href="${APP_URL}" style="color:#60a5fa;text-decoration:none;">bulanvarmi.com</a></p>
+          <p style="margin-top:24px;font-size:11px;color:#475569;">BulanVarMı? otomatik rapor · <a href="${APP_URL}" style="color:#60a5fa;text-decoration:none;">bulanvarmi.com</a></p>
         </div>
       `,
       });
@@ -176,6 +204,31 @@ Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
       emailError = err instanceof Error ? err.message : String(err);
       console.error("Daily report email failed:", emailError, "to:", ADMIN_EMAIL, "from:", FROM);
     }
+  }
+
+  // Push bildirimi — sorun varsa telefona da gönder
+  if (hasIssues && ADMIN_EMAIL && process.env.CRON_SECRET) {
+    const issueParts = [
+      (pendingReports.count ?? 0) > 0 && `${pendingReports.count} şikayet`,
+      flagged.length > 0 && `${flagged.length} flagged ilan`,
+      waiting.length > 0 && `${waiting.length} yanıtsız destek`,
+      noEmbed.length > 0 && `${noEmbed.length} embedding hatası`,
+    ].filter(Boolean).join(", ");
+
+    await fetch(`${APP_URL}/api/push/send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-internal-secret": process.env.CRON_SECRET,
+      },
+      body: JSON.stringify({
+        userEmail: ADMIN_EMAIL,
+        title: "⚠️ BulanVarMı? Acil Durum",
+        body: issueParts,
+        url: "/admin",
+        tag: "platform-alert",
+      }),
+    }).catch(() => {});
   }
 
   return NextResponse.json({

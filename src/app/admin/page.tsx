@@ -915,9 +915,9 @@ export default function AdminPage() {
                         </div>
                         <p className="truncate text-[11px] text-slate-500">{item.created_by_email}</p>
                       </div>
-                      <p className="truncate text-xs text-slate-400">{item.category || "—"}</p>
+                      <p className="truncate text-xs text-slate-400"><span className="sm:hidden text-slate-600 mr-1">Kategori:</span>{item.category || "—"}</p>
                       <p className="text-xs text-slate-400">👁 {(item.view_count || 0).toLocaleString()}</p>
-                      <p className="text-xs text-slate-500">{new Date(item.created_at).toLocaleDateString("tr-TR")}</p>
+                      <p className="text-xs text-slate-500"><span className="sm:hidden text-slate-600 mr-1">Tarih:</span>{new Date(item.created_at).toLocaleDateString("tr-TR")}</p>
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => handleToggleFeatured(item.id, item.is_featured)}
@@ -978,9 +978,9 @@ export default function AdminPage() {
                             </div>
                             <p className="text-[11px] text-slate-500 truncate">{u.email}</p>
                           </div>
-                          <p className="text-sm font-bold text-white">{u.item_count}</p>
-                          <p className="text-sm font-bold text-emerald-400">{u.resolved_count}</p>
-                          <p className="text-xs text-slate-500">{new Date(u.created_at).toLocaleDateString("tr-TR")}</p>
+                          <p className="text-sm font-bold text-white"><span className="md:hidden text-[11px] text-slate-600 mr-1 font-normal">İlan:</span>{u.item_count}</p>
+                          <p className="text-sm font-bold text-emerald-400"><span className="md:hidden text-[11px] text-slate-600 mr-1 font-normal">Çözüldü:</span>{u.resolved_count}</p>
+                          <p className="text-xs text-slate-500"><span className="md:hidden text-slate-600 mr-1">Kayıt:</span>{new Date(u.created_at).toLocaleDateString("tr-TR")}</p>
                           <div className="flex flex-wrap items-center gap-1.5">
                             <Link href={`/users/${encodeURIComponent(u.email)}`} className="rounded-lg border border-[#1a2744] px-2.5 py-1 text-[11px] text-slate-400 hover:bg-slate-800 transition">
                               Profil
