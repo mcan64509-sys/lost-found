@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendCriticalAlert } from "../../../../lib/criticalAlert";
 
@@ -7,16 +7,10 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
+const ADMIN_EMAILS = ((process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS) || "")
   .split(",")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
-
-function isAdmin(req: NextRequest): boolean {
-  const auth = req.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return false;
-  return ADMIN_EMAILS.length > 0;
-}
 
 async function getAdminEmail(req: NextRequest): Promise<string | null> {
   const auth = req.headers.get("authorization");

@@ -17,10 +17,15 @@ export async function POST(req: NextRequest) {
   let event: Stripe.Event;
 
   try {
-    if (webhookSecret && sig) {
+    if (!webhookSecret) {
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json({ error: "Webhook secret eksik" }, { status: 500 });
+      }
+      event = JSON.parse(body);
+    } else if (sig) {
       event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
     } else {
-      event = JSON.parse(body);
+      return NextResponse.json({ error: "İmza eksik" }, { status: 400 });
     }
   } catch (err) {
     await sendCriticalAlert(

@@ -207,10 +207,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Yeni ilan kanalına bildirimi — /api/telegram/notify?secret=xxx&itemId=xxx
+// Yeni ilan kanalına bildirimi — ?itemId=xxx + x-agent-secret header (veya eski ?secret=xxx)
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const secret = searchParams.get("secret");
+  const secret = req.headers.get("x-agent-secret") || searchParams.get("secret");
   const itemId = searchParams.get("itemId");
 
   if (secret !== process.env.CRON_SECRET || !itemId) {

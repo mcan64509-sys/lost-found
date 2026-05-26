@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
@@ -12,7 +12,7 @@ const anthropic = new Anthropic();
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
 const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <support@bulanvarmi.com>";
-const _adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim()).filter(Boolean);
+const _adminEmails = ((process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS) || "").split(",").map((e) => e.trim()).filter(Boolean);
 const ADMIN_EMAIL = _adminEmails.find((e) => !e.startsWith("support@")) ?? _adminEmails[0] ?? "mcan64509@gmail.com";
 
 async function runReport(alertOnly = false) {
@@ -241,7 +241,7 @@ Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
   });
 }
 
-const ADMIN_EMAILS_LIST = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+const ADMIN_EMAILS_LIST = ((process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS) || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);

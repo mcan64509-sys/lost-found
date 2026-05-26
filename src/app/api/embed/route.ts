@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
       fetch(`${base}/api/agent/match`, { method: "POST", headers: agentHeaders, body: agentBody }).catch(() => {});
       fetch(`${base}/api/agent/moderate`, { method: "POST", headers: agentHeaders, body: agentBody }).catch(() => {});
-      fetch(`${base}/api/telegram?secret=${process.env.CRON_SECRET}&itemId=${itemId}`).catch(() => {});
+      fetch(`${base}/api/telegram?itemId=${itemId}`, { headers: { "x-agent-secret": process.env.CRON_SECRET || "" } }).catch(() => {});
     }
 
     return NextResponse.json({ success: true });
