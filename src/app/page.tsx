@@ -122,13 +122,10 @@ export default function HomePage() {
       .limit(6)
       .then(({ data }) => { if (data) setFeaturedItems(data as FeaturedItem[]); });
 
-    supabase
-      .from("success_stories")
-      .select("id, item_title, story, created_at")
-      .eq("approved", true)
-      .order("created_at", { ascending: false })
-      .limit(3)
-      .then(({ data }) => { if (data) setStories(data as Story[]); });
+    fetch("/api/stories")
+      .then((r) => r.json())
+      .then((d) => { if (d.stories?.length) setStories((d.stories as Story[]).slice(0, 3)); })
+      .catch(() => {});
   }, []);
 
   return (
