@@ -15,7 +15,7 @@ const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <support@bulanvarmi.
 const _adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim()).filter(Boolean);
 const ADMIN_EMAIL = _adminEmails.find((e) => !e.startsWith("support@")) ?? _adminEmails[0] ?? "mcan64509@gmail.com";
 
-async function runReport() {
+async function runReport(alertOnly = false) {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   const [pendingReports, flaggedItems, noEmbedItems, totalItems, totalUsers] = await Promise.all([
@@ -85,6 +85,11 @@ Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
   }
 
   const hasIssues = (pendingReports.count ?? 0) > 0 || flagged.length > 0 || noEmbed.length > 0;
+
+  // alertOnly modunda sorun yoksa e-posta gönderme
+  if (alertOnly && !hasIssues) {
+    return NextResponse.json({ ok: true, skipped: true, reason: "no_issues" });
+  }
 
   let emailError: string | null = null;
   if (ADMIN_EMAIL) {
@@ -186,12 +191,14 @@ Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
 const ADMIN_EMAILS_LIST = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
 export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
   const bearer = req.headers.get("authorization") || "";
-  const secret = new URL(req.url).searchParams.get("secret");
+  const secret = url.searchParams.get("secret");
   if (bearer !== `Bearer ${process.env.CRON_SECRET}` && secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return runReport();
+  const alertOnly = url.searchParams.get("alertOnly") === "1";
+  return runReport(alertOnly);
 }
 
 export async function POST(req: NextRequest) {
