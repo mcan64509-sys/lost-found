@@ -175,7 +175,7 @@ export default function MyItemsPage() {
         onCancel={() => setConfirmDeleteId(null)}
       />
 
-      <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
+      <main className="min-h-screen bg-slate-950 px-6 py-10 pb-24 md:pb-10 text-white">
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>

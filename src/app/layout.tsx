@@ -3,6 +3,7 @@ import { Toaster } from "sonner";
 import type { Metadata, Viewport } from "next";
 import { LanguageProvider } from "../contexts/LanguageContext";
 import ChatWidget from "../components/ChatWidget";
+import BottomNav from "../components/BottomNav";
 
 export const viewport: Viewport = {
   themeColor: "#020617",
@@ -57,6 +58,7 @@ export default function RootLayout({
           {children}
           <Toaster position="top-center" expand={true} />
           <ChatWidget />
+          <BottomNav />
         </LanguageProvider>
       </body>
     </html>

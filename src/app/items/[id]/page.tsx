@@ -677,7 +677,7 @@ export default function ItemDetailPage() {
         onCancel={() => setConfirmDelete(false)}
       />
 
-      <main className="min-h-screen bg-slate-950 px-6 py-10 text-white">
+      <main className="min-h-screen bg-slate-950 px-6 py-10 pb-28 md:pb-10 text-white">
         <div className="mx-auto max-w-6xl">
           <div className="mb-6 flex flex-wrap items-center gap-3">
             <Link href="/" className="rounded-xl border border-slate-700 px-4 py-2 text-sm text-white transition hover:bg-slate-900">
@@ -1457,6 +1457,65 @@ export default function ItemDetailPage() {
             </div>
           )}
         </div>
+
+        {/* ── MOBİL YAPIŞIK EYLEM ÇUBUĞU ── */}
+        {!loading && item && (
+          <div className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-[#1a2744] bg-slate-950/95 backdrop-blur-md px-4 py-3 flex items-center gap-2" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
+            <button
+              onClick={handleToggleFavorite}
+              disabled={togglingFav}
+              className={`flex items-center justify-center gap-1.5 h-10 w-10 flex-shrink-0 rounded-xl border transition ${
+                isFavorited ? "border-amber-500/40 bg-amber-500/20 text-amber-300" : "border-slate-700 bg-slate-800 text-slate-400"
+              }`}
+            >
+              {isFavorited ? "★" : "☆"}
+            </button>
+            <button
+              onClick={handleShare}
+              className="flex items-center justify-center gap-1.5 h-10 w-10 flex-shrink-0 rounded-xl border border-slate-700 bg-slate-800 text-slate-400 transition hover:text-white"
+            >
+              {shareSuccess ? "✓" : "↗"}
+            </button>
+
+            {!isOwner && item.status !== "resolved" && (
+              <>
+                {item.type === "found" ? (
+                  <button
+                    onClick={() => { setClaimContext("found"); setShowClaimModal(true); }}
+                    className="flex-1 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-blue-500/20 hover:from-blue-500 hover:to-indigo-500 transition"
+                  >
+                    🙋 Bu eşya benim!
+                  </button>
+                ) : (
+                  <div className="flex flex-1 gap-2">
+                    <button
+                      onClick={() => setShowSightingModal(true)}
+                      className="flex-1 h-10 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-xs font-bold text-slate-950 shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition"
+                    >
+                      👁 Gördüm
+                    </button>
+                    <button
+                      onClick={() => { setClaimContext("lost"); setShowClaimModal(true); }}
+                      className="flex-1 h-10 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition"
+                    >
+                      🎉 Buldum!
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {isOwner && item.status !== "resolved" && (
+              <button
+                onClick={() => setConfirmClose(true)}
+                disabled={closingItem}
+                className="flex-1 h-10 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-500 transition disabled:opacity-50"
+              >
+                {item.type === "lost" ? "✅ Bulundu / Kapat" : "✅ Ulaşıldı / Kapat"}
+              </button>
+            )}
+          </div>
+        )}
       </main>
     </AuthGuard>
   );

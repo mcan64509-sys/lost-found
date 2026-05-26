@@ -254,7 +254,7 @@ function SearchPageContent() {
   return (
     <>
       <AppHeader />
-      <main className="min-h-screen bg-slate-950 text-white animate-fade-in">
+      <main className="min-h-screen bg-slate-950 text-white animate-fade-in pb-20 md:pb-0">
 
         {/* ── ÜSTTEKI BAŞLIK & ARAMA ── */}
         <div className="border-b border-slate-800/60 bg-slate-900/30">
