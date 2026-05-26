@@ -1424,9 +1424,9 @@ export default function AdminPage() {
               </button>
             </div>
           ) : activeTab === "support" ? (
-            <div className="mt-6 flex gap-4 h-[calc(100vh-260px)] min-h-[400px]">
-              {/* Session listesi */}
-              <div className="w-72 shrink-0 flex flex-col gap-2 overflow-y-auto">
+            <div className="mt-6 flex flex-col lg:flex-row gap-4 lg:h-[calc(100vh-260px)] min-h-[400px]">
+              {/* Session listesi — mobilde seçim varsa gizle */}
+              <div className={`lg:w-72 lg:shrink-0 flex-col gap-2 overflow-y-auto ${selectedSession ? "hidden lg:flex" : "flex"}`}>
                 <div className="flex items-center justify-between mb-2">
                   <h2 className="text-sm font-bold text-white">Aktif Oturumlar</h2>
                   <button
@@ -1473,8 +1473,8 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* Chat alanı */}
-              <div className="flex-1 flex flex-col rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden">
+              {/* Chat alanı — mobilde seçim yoksa gizle */}
+              <div className={`flex-1 flex-col rounded-2xl border border-slate-700 bg-slate-900 overflow-hidden min-h-[500px] lg:min-h-0 ${selectedSession ? "flex" : "hidden lg:flex"}`}>
                 {!selectedSession ? (
                   <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">
                     Soldaki listeden bir oturum seçin.
@@ -1482,15 +1482,23 @@ export default function AdminPage() {
                 ) : (
                   <>
                     {/* Chat header */}
-                    <div className="flex items-center justify-between px-5 py-3 border-b border-slate-700 bg-slate-800">
-                      <div>
-                        <p className="font-semibold text-white">{selectedSession.user_name || selectedSession.user_email}</p>
-                        <p className="text-xs text-slate-400">{selectedSession.user_email}</p>
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-800 gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <button
+                          onClick={() => setSelectedSession(null)}
+                          className="lg:hidden shrink-0 text-slate-400 hover:text-white transition text-sm"
+                        >
+                          ← Geri
+                        </button>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-white truncate">{selectedSession.user_name || selectedSession.user_email}</p>
+                          <p className="text-xs text-slate-400 truncate">{selectedSession.user_email}</p>
+                        </div>
                       </div>
                       <button
                         onClick={() => closeSupportSession(selectedSession.id)}
                         disabled={closingSession}
-                        className="rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50"
+                        className="shrink-0 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50"
                       >
                         {closingSession ? "Kapatılıyor..." : "Oturumu Kapat"}
                       </button>
