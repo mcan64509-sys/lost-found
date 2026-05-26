@@ -24,6 +24,7 @@ import {
   X,
   HelpCircle,
 } from "lucide-react";
+import PushNotificationButton from "./PushNotificationButton";
 
 type HeaderUser = {
   id: string;
@@ -558,6 +559,9 @@ export default function AppHeader() {
                           </span>
                         )}
                       </Link>
+                      <div className="px-1.5 py-1">
+                        <PushNotificationButton />
+                      </div>
                       <div className="border-t border-slate-800 mt-1 pt-1">
                         <button onClick={handleLogout}
                           className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition">

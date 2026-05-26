@@ -397,15 +397,17 @@ export default function MyItemsPage() {
                       </div>
                     </Link>
 
-                    <div className="px-5 pb-4">
-                      <button
-                        onClick={() => handleRenewItem(item.id)}
-                        disabled={renewingItemId === item.id}
-                        className="w-full rounded-xl border border-slate-700 bg-slate-800 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white disabled:opacity-50"
-                      >
-                        {renewingItemId === item.id ? t.myItems.renewing : t.myItems.renew}
-                      </button>
-                    </div>
+                    {item.expires_at && new Date(item.expires_at) > new Date() && item.status !== "expired" && (
+                      <div className="px-5 pb-4">
+                        <button
+                          onClick={() => handleRenewItem(item.id)}
+                          disabled={renewingItemId === item.id}
+                          className="w-full rounded-xl border border-slate-700 bg-slate-800 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-700 hover:text-white disabled:opacity-50"
+                        >
+                          {renewingItemId === item.id ? t.myItems.renewing : t.myItems.renew}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}

@@ -16,6 +16,12 @@ const _adminEmails = ((process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN
 const ADMIN_EMAIL = _adminEmails.find((e) => !e.startsWith("support@")) ?? _adminEmails[0] ?? "mcan64509@gmail.com";
 
 async function runReport(alertOnly = false) {
+  // Takılı kalmış aktif destek oturumlarını temizle
+  fetch(`${APP_URL}/api/support/cleanup`, {
+    method: "POST",
+    headers: { "x-internal-secret": process.env.CRON_SECRET || "" },
+  }).catch(() => {});
+
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 

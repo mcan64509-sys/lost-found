@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { sendExpiryReminderSmartEmail } from "../../../../lib/email";
 import crypto from "crypto";
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -83,6 +85,21 @@ async function processExpiryReminders() {
           item_id: item.id,
           is_read: false,
         });
+
+        // Push bildirimi
+        if (process.env.CRON_SECRET) {
+          fetch(`${APP_URL}/api/push/send`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-internal-secret": process.env.CRON_SECRET },
+            body: JSON.stringify({
+              userEmail: item.created_by_email,
+              title: `⏰ İlanınız ${daysLeft} gün içinde sona eriyor`,
+              body: item.title,
+              url: `/items/${item.id}`,
+              tag: `expiry-${item.id}-${daysLeft}d`,
+            }),
+          }).catch(() => {});
+        }
 
         sent++;
       } catch {
