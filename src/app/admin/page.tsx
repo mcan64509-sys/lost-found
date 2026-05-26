@@ -175,6 +175,10 @@ export default function AdminPage() {
   const [sendingSupport, setSendingSupport] = useState(false);
   const [closingSession, setClosingSession] = useState(false);
   const supportBottomRef = useRef<HTMLDivElement>(null);
+  const [joinModal, setJoinModal] = useState<SupportSession | null>(null);
+  const [joinName, setJoinName] = useState("");
+  const [joinRole, setJoinRole] = useState<"Müşteri Temsilcisi" | "Admin">("Müşteri Temsilcisi");
+  const [adminDisplayName, setAdminDisplayName] = useState("");
 
   useEffect(() => {
     const init = async () => {
@@ -201,6 +205,16 @@ export default function AdminPage() {
       }
     };
     init();
+  }, []);
+
+  useEffect(() => {
+    const savedName = localStorage.getItem("admin_support_name") || "";
+    const savedRole = (localStorage.getItem("admin_support_role") as "Müşteri Temsilcisi" | "Admin") || "Müşteri Temsilcisi";
+    if (savedName) {
+      setJoinName(savedName);
+      setJoinRole(savedRole);
+      setAdminDisplayName(`${savedRole} - ${savedName}`);
+    }
   }, []);
 
   async function loadData(token?: string) {
@@ -277,7 +291,11 @@ export default function AdminPage() {
     }
   }
 
-  async function openSupportSession(session: SupportSession, token?: string) {
+  async function openSupportSession(session: SupportSession, token?: string, skipModal = false) {
+    if (!skipModal && session.status === "waiting") {
+      setJoinModal(session);
+      return;
+    }
     const { data: { session: s } } = await supabase.auth.getSession();
     const t = token || s?.access_token || "";
     setSelectedSession(session);
@@ -322,6 +340,18 @@ export default function AdminPage() {
     return () => { supabase.removeChannel(ch); };
   }
 
+  async function confirmJoin() {
+    if (!joinModal || !joinName.trim()) return;
+    const displayName = `${joinRole} - ${joinName.trim()}`;
+    setAdminDisplayName(displayName);
+    localStorage.setItem("admin_support_name", joinName.trim());
+    localStorage.setItem("admin_support_role", joinRole);
+    await supabase.from("support_sessions").update({ admin_name: displayName }).eq("id", joinModal.id);
+    const session = { ...joinModal };
+    setJoinModal(null);
+    await openSupportSession(session, undefined, true);
+  }
+
   async function sendSupportReply() {
     if (!supportInput.trim() || !selectedSession || !adminEmail) return;
     const text = supportInput.trim();
@@ -351,6 +381,11 @@ export default function AdminPage() {
         return;
       }
       if (selectedSession.status === "waiting") {
+        await supabase.from("support_sessions").update({
+          status: "active",
+          admin_email: adminEmail,
+          admin_name: adminDisplayName || adminEmail,
+        }).eq("id", selectedSession.id);
         setSupportSessions((prev) =>
           prev.map((s) => s.id === selectedSession.id ? { ...s, status: "active" } : s)
         );
@@ -1590,6 +1625,62 @@ export default function AdminPage() {
           ) : null}
         </div>
       </main>
+
+      {/* Join support session modal */}
+      {joinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-6 shadow-2xl">
+            <h2 className="text-base font-bold text-white mb-1">Oturuma Katıl</h2>
+            <p className="text-xs text-slate-400 mb-5">
+              <span className="text-white">{joinModal.user_name || joinModal.user_email}</span> bekliyor
+            </p>
+
+            <p className="text-xs font-semibold text-slate-400 mb-2">Rolünüz</p>
+            <div className="flex gap-2 mb-4">
+              {(["Müşteri Temsilcisi", "Admin"] as const).map((role) => (
+                <button
+                  key={role}
+                  onClick={() => setJoinRole(role)}
+                  className={`flex-1 rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${
+                    joinRole === role
+                      ? "border-blue-500 bg-blue-500/20 text-blue-300"
+                      : "border-[#1a2744] bg-slate-800 text-slate-400 hover:border-slate-600"
+                  }`}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-xs font-semibold text-slate-400 mb-2">Adınız</p>
+            <input
+              type="text"
+              value={joinName}
+              onChange={(e) => setJoinName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && joinName.trim() && confirmJoin()}
+              placeholder="Adınızı yazın..."
+              autoFocus
+              className="w-full mb-5 rounded-xl border border-[#1a2744] bg-[#07101f] px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+            />
+
+            <div className="text-xs text-slate-500 mb-4 bg-slate-800/50 rounded-xl px-3 py-2">
+              Görünecek isim: <span className="text-white font-semibold">{joinRole} - {joinName.trim() || "..."}</span>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setJoinModal(null)}
+                className="flex-1 rounded-xl border border-[#1a2744] bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition"
+              >İptal</button>
+              <button
+                onClick={confirmJoin}
+                disabled={!joinName.trim()}
+                className="flex-1 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >Oturumu Onayla →</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete item modal */}
       {deleteTarget && (

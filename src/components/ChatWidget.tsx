@@ -275,7 +275,7 @@ export default function ChatWidget() {
               </p>
               <p className="text-xs text-slate-400">
                 {supportMode === "waiting" && "Destek temsilcisi bekleniyor..."}
-                {supportMode === "active" && (adminName ? `${adminName} (ADMİN) bağlandı` : "Destek temsilcisi bağlandı")}
+                {supportMode === "active" && (adminName ? `${adminName} bağlandı` : "Destek temsilcisi bağlandı")}
                 {supportMode === "closed" && "Oturum sonlandı"}
                 {supportMode === "idle" && "Yardıma hazırım"}
               </p>
@@ -334,7 +334,7 @@ export default function ChatWidget() {
               <div className="overflow-y-auto p-4 space-y-3 max-h-72">
                 {supportMessages.length === 0 && (
                   <p className="text-xs text-slate-500 text-center">
-                    {adminName ? `${adminName} (ADMİN) bağlandı. Mesajınızı yazın.` : "Destek temsilcisi bağlandı. Mesajınızı yazın."}
+                    {adminName ? `${adminName} bağlandı. Mesajınızı yazın.` : "Destek temsilcisi bağlandı. Mesajınızı yazın."}
                   </p>
                 )}
                 {supportMessages.map((m) => (
@@ -344,7 +344,7 @@ export default function ChatWidget() {
                     }`}>
                       {m.sender_type === "admin" && (
                         <p className="text-[10px] text-green-400 font-semibold mb-1">
-                          {adminName ? `${adminName} (ADMİN)` : "Destek Temsilcisi"}
+                          {adminName || "Destek Temsilcisi"}
                         </p>
                       )}
                       {m.content}
@@ -411,14 +411,21 @@ export default function ChatWidget() {
 
               {/* Canlı destek butonu */}
               <div className="px-3 py-2 border-t border-slate-800">
-                <button
-                  onClick={startSupport}
-                  disabled={startingSupport}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg border border-green-600/40 bg-green-600/10 hover:bg-green-600/20 text-green-400 text-xs font-medium py-2 transition disabled:opacity-50"
-                >
-                  {startingSupport ? <Loader2 className="w-3 h-3 animate-spin" /> : <HeadphonesIcon className="w-3 h-3" />}
-                  Canlı Destek Talebi Oluştur
-                </button>
+                {userEmail ? (
+                  <button
+                    onClick={startSupport}
+                    disabled={startingSupport}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg border border-green-600/40 bg-green-600/10 hover:bg-green-600/20 text-green-400 text-xs font-medium py-2 transition disabled:opacity-50"
+                  >
+                    {startingSupport ? <Loader2 className="w-3 h-3 animate-spin" /> : <HeadphonesIcon className="w-3 h-3" />}
+                    Canlı Destek Talebi Oluştur
+                  </button>
+                ) : (
+                  <p className="text-center text-xs text-slate-500 py-1">
+                    Canlı destek için{" "}
+                    <a href="/auth/login" className="text-blue-400 hover:underline">giriş yapın</a>
+                  </p>
+                )}
               </div>
 
               <form onSubmit={handleAiSubmit} className="flex items-center gap-2 px-3 py-3 border-t border-slate-700 bg-slate-800">

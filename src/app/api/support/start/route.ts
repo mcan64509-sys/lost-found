@@ -39,9 +39,7 @@ export async function POST(req: Request) {
   }
 
   if (!userEmail) {
-    const body = await req.json().catch(() => ({}));
-    userEmail = body.email || "anonim@bulanvarmi.com";
-    userName = body.name || "Anonim Kullanıcı";
+    return NextResponse.json({ error: "Canlı destek için giriş yapmanız gerekiyor." }, { status: 401 });
   }
 
   // Zaten bekleyen/aktif session var mı?
