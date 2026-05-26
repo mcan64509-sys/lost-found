@@ -20,13 +20,6 @@ type FeaturedItem = {
   reward_amount: number | null;
 };
 
-type Story = {
-  id: string;
-  item_title: string;
-  story: string;
-  created_at: string;
-};
-
 type NearbyItem = {
   id: string;
   title: string;
@@ -65,7 +58,6 @@ export default function HomePage() {
   const [geoError, setGeoError] = useState(false);
   const [geoAsked, setGeoAsked] = useState(false);
   const [featuredItems, setFeaturedItems] = useState<FeaturedItem[]>([]);
-  const [stories, setStories] = useState<Story[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setIsAuthed(!!data.session));
@@ -122,10 +114,6 @@ export default function HomePage() {
       .limit(6)
       .then(({ data }) => { if (data) setFeaturedItems(data as FeaturedItem[]); });
 
-    fetch("/api/stories")
-      .then((r) => r.json())
-      .then((d) => { if (d.stories?.length) setStories((d.stories as Story[]).slice(0, 3)); })
-      .catch(() => {});
   }, []);
 
   return (
@@ -189,36 +177,6 @@ export default function HomePage() {
           </div>
         </section>
 
-
-        {/* ── MUTLU SONLAR ── */}
-        {stories.length > 0 && (
-          <section className="mx-auto max-w-7xl px-4 pb-6 animate-fade-in-up">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-base">💚</span>
-                <h2 className="text-sm font-bold text-white">Mutlu Sonlar</h2>
-                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">{stories.length}</span>
-              </div>
-              <Link href="/hikayeler" className="text-xs text-slate-500 hover:text-slate-300 transition">
-                Tümünü gör →
-              </Link>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4" style={{ scrollbarWidth: "none" }}>
-              {stories.map((story) => (
-                <div
-                  key={story.id}
-                  className="flex-shrink-0 w-64 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4"
-                >
-                  <p className="text-xs font-semibold text-emerald-400 mb-2 truncate">✓ {story.item_title}</p>
-                  <p className="text-xs text-slate-400 leading-relaxed line-clamp-3">{story.story}</p>
-                  <p className="mt-2 text-[10px] text-slate-600">
-                    {new Date(story.created_at).toLocaleDateString("tr-TR")}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* ── YAKINIMDAKI İLANLAR ── */}
         <section className="mx-auto max-w-7xl px-4 pb-8 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
