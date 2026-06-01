@@ -141,7 +141,7 @@ export default function AdminPage() {
   const [adminEmail, setAdminEmail] = useState("");
   const [togglingBan, setTogglingBan] = useState<string | null>(null);
   const [banDurationModal, setBanDurationModal] = useState<{ email: string } | null>(null);
-  const [banDurationDays, setBanDurationDays] = useState<number | null>(null);
+  const [banDurationDays, setBanDurationDays] = useState<number | null | undefined>(undefined);
   const [banReason, setBanReason] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; ownerEmail: string } | null>(null);
@@ -487,7 +487,7 @@ export default function AdminPage() {
       toast.error("Bir hata oluştu.");
     } finally {
       setTogglingBan(null);
-      setBanDurationDays(null);
+      setBanDurationDays(undefined);
       setBanReason("");
     }
   }
@@ -1063,7 +1063,7 @@ export default function AdminPage() {
                                   </button>
                                 ) : (
                                   <button
-                                    onClick={() => { setBanDurationModal({ email: u.email }); setBanDurationDays(null); }}
+                                    onClick={() => { setBanDurationModal({ email: u.email }); setBanDurationDays(undefined); setBanReason(""); }}
                                     disabled={togglingBan === u.email}
                                     className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-500/20 transition disabled:opacity-50"
                                   >
@@ -1702,7 +1702,7 @@ export default function AdminPage() {
       {/* Ban duration modal */}
       {banDurationModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-6 shadow-2xl">
+          <div className="w-full max-w-sm rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-6 shadow-2xl overflow-y-auto max-h-[90vh]">
             <div className="mb-4 flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-lg">🚫</div>
               <div>
@@ -1735,6 +1735,7 @@ export default function AdminPage() {
                 onChange={(e) => setBanReason(e.target.value)}
                 placeholder="Örn: Sahte ilan oluşturma, spam davranışı, kural ihlali..."
                 rows={3}
+                autoFocus
                 className="w-full rounded-xl border border-[#1a2744] bg-slate-800/80 px-3 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none focus:border-red-500/50 resize-none transition"
               />
               <p className="mt-1 text-[11px] text-slate-600">Bu sebep kullanıcıya gönderilecek e-postada yer alacak.</p>
