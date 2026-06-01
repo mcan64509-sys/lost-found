@@ -78,6 +78,8 @@ export default function ItemDetailPage() {
   const [reportReason, setReportReason] = useState("");
   const [reportDetails, setReportDetails] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
+  const [renewingItem, setRenewingItem] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const [showSightingModal, setShowSightingModal] = useState(false);
   const [showSocialImageModal, setShowSocialImageModal] = useState(false);
   const [showStoryInvite, setShowStoryInvite] = useState(false);
@@ -567,6 +569,42 @@ export default function ItemDetailPage() {
     }
   }
 
+  async function handleRenewItem() {
+    if (!item) return;
+    try {
+      setRenewingItem(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/items/renew", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token ?? ""}` },
+        body: JSON.stringify({ itemId: item.id }),
+      });
+      if (res.ok) {
+        toast.success("İlan yenilendi! 30 gün daha aktif.");
+        setOpenMenu(false);
+      } else {
+        const d = await res.json();
+        toast.error(d.error || "Yenileme başarısız.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setRenewingItem(false);
+    }
+  }
+
+  function handleShareWhatsApp() {
+    const url = `${window.location.origin}/items/${id}`;
+    const text = `${item?.title} — BulanVarMı?\n${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  }
+
+  function handleShareTwitter() {
+    const url = `${window.location.origin}/items/${id}`;
+    const text = `${item?.type === "lost" ? "🔍 Kayıp" : "✅ Bulundu"}: ${item?.title}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, "_blank");
+  }
+
   async function handleShare() {
     const url = `${window.location.origin}/items/${id}`;
     const shareData = { title: item?.title || "Lost & Found İlanı", text: item?.description || "", url };
@@ -713,6 +751,15 @@ export default function ItemDetailPage() {
                         >
                           İlanı düzenle
                         </button>
+                        {item.status !== "resolved" && (
+                          <button
+                            onClick={handleRenewItem}
+                            disabled={renewingItem}
+                            className="mt-1 w-full rounded-xl px-3 py-2 text-left text-sm text-blue-300 transition hover:bg-slate-800 disabled:opacity-60"
+                          >
+                            {renewingItem ? "Yenileniyor..." : "İlanı Yenile (30 gün)"}
+                          </button>
+                        )}
                         {item.status !== "resolved" && (
                           <button
                             onClick={() => { setOpenMenu(false); setConfirmClose(true); }}

@@ -142,6 +142,7 @@ export default function AdminPage() {
   const [togglingBan, setTogglingBan] = useState<string | null>(null);
   const [banDurationModal, setBanDurationModal] = useState<{ email: string } | null>(null);
   const [banDurationDays, setBanDurationDays] = useState<number | null>(null);
+  const [banReason, setBanReason] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; ownerEmail: string } | null>(null);
   const [deleteReason, setDeleteReason] = useState("");
@@ -464,7 +465,7 @@ export default function AdminPage() {
     toast.success(newVal ? "🔴 Acil işareti eklendi." : "Acil işareti kaldırıldı.");
   }
 
-  async function handleToggleBan(targetEmail: string, currentBan: boolean, durationDays?: number | null) {
+  async function handleToggleBan(targetEmail: string, currentBan: boolean, durationDays?: number | null, reason?: string) {
     setTogglingBan(targetEmail);
     setBanDurationModal(null);
     try {
@@ -472,7 +473,7 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/ban", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
-        body: JSON.stringify({ targetEmail, ban: !currentBan, banDurationDays: durationDays ?? null }),
+        body: JSON.stringify({ targetEmail, ban: !currentBan, banDurationDays: durationDays ?? null, banReason: reason || null }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -487,6 +488,7 @@ export default function AdminPage() {
     } finally {
       setTogglingBan(null);
       setBanDurationDays(null);
+      setBanReason("");
     }
   }
 
@@ -1726,14 +1728,25 @@ export default function AdminPage() {
                 >{label}</button>
               ))}
             </div>
+            <div className="mb-4">
+              <label className="text-xs font-semibold text-slate-400 mb-1.5 block">Engelleme Sebebi <span className="text-red-400">*</span></label>
+              <textarea
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                placeholder="Örn: Sahte ilan oluşturma, spam davranışı, kural ihlali..."
+                rows={3}
+                className="w-full rounded-xl border border-[#1a2744] bg-slate-800/80 px-3 py-2.5 text-sm text-white placeholder:text-slate-600 outline-none focus:border-red-500/50 resize-none transition"
+              />
+              <p className="mt-1 text-[11px] text-slate-600">Bu sebep kullanıcıya gönderilecek e-postada yer alacak.</p>
+            </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setBanDurationModal(null)}
+                onClick={() => { setBanDurationModal(null); setBanReason(""); }}
                 className="flex-1 rounded-xl border border-[#1a2744] bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition"
               >İptal</button>
               <button
-                onClick={() => handleToggleBan(banDurationModal.email, false, banDurationDays)}
-                disabled={banDurationDays === undefined}
+                onClick={() => handleToggleBan(banDurationModal.email, false, banDurationDays, banReason)}
+                disabled={banDurationDays === undefined || !banReason.trim()}
                 className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >Engelle</button>
             </div>

@@ -107,9 +107,53 @@ function SearchPageContent() {
     try { return JSON.parse(localStorage.getItem("searchHistory") || "[]"); } catch { return []; }
   });
 
+  const [savingAlert, setSavingAlert] = useState(false);
+
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const isFirstRender = useRef(true);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  function timeAgo(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 60) return `${m || 1} dk önce`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h} saat önce`;
+    const d = Math.floor(h / 24);
+    if (d < 30) return `${d} gün önce`;
+    return new Date(dateStr).toLocaleDateString("tr-TR");
+  }
+
+  async function handleSaveAlert() {
+    try {
+      setSavingAlert(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error("Uyarı kaydetmek için giriş yapmalısın."); return; }
+      const res = await fetch("/api/alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          keyword: debouncedKeyword || keyword,
+          category: category === CATEGORIES_DB[0] ? "" : category,
+          item_type: activeTab,
+          location_name: locationEnabled ? selectedLocation.name : "",
+          lat: locationEnabled ? selectedLocation.lat : null,
+          lng: locationEnabled ? selectedLocation.lng : null,
+          radius_km: locationEnabled ? selectedLocation.radiusKm : 50,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("🔔 Arama uyarısı kaydedildi! Yeni ilan gelince bildirim alacaksın.");
+      } else {
+        toast.error(data.error || "Kaydedilemedi.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setSavingAlert(false);
+    }
+  }
 
   const syncUrl = useCallback((params: Record<string, string>) => {
     const current = new URLSearchParams(Array.from(searchParams.entries()));
@@ -454,6 +498,13 @@ function SearchPageContent() {
                       <span className="text-xs text-slate-400">Sadece öne çıkan</span>
                     </label>
 
+                    <button
+                      onClick={handleSaveAlert}
+                      disabled={savingAlert}
+                      className="flex items-center gap-1.5 rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs text-blue-400 hover:bg-blue-500/20 transition disabled:opacity-50"
+                    >
+                      🔔 {savingAlert ? "Kaydediliyor..." : "Bu aramayı kaydet"}
+                    </button>
                     {hasActiveFilter && (
                       <button onClick={handleClear}
                         className="flex items-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-400 hover:bg-red-500/20 transition">
@@ -664,9 +715,8 @@ function SearchPageContent() {
                           )}
                         </div>
                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-800">
-                          <span className="text-[11px] text-slate-600">
-                            {new Date(item.created_at).toLocaleDateString("tr-TR")}
-                          </span>
+                          {/* eslint-disable-next-line react-hooks/purity */}
+                          <span className="text-[11px] text-slate-600">{timeAgo(item.created_at)}</span>
                           <span className="text-xs text-blue-400 flex items-center gap-1 group-hover:gap-2 transition-all duration-200">
                             {t.common.viewAll} <ArrowRight className="w-3 h-3" />
                           </span>

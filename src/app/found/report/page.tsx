@@ -75,9 +75,15 @@ export default function FoundReportPage() {
   const [cropFileName, setCropFileName] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // AI suggestion
+  // AI suggestion (image category detection)
   const [aiSuggestion, setAiSuggestion] = useState<{ category: string; title: string } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+
+  // AI description suggestion
+  const [aiDescLoading, setAiDescLoading] = useState(false);
+
+  // Auto location
+  const [autoLocating, setAutoLocating] = useState(false);
 
   // Duplicate detection
   const [duplicateWarning, setDuplicateWarning] = useState<{ id: string; title: string }[]>([]);
@@ -167,6 +173,62 @@ export default function FoundReportPage() {
   function removeImage(index: number) {
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
     setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleAiDescSuggest() {
+    if (!title.trim() || !category) { toast.error("Önce başlık ve kategori doldur."); return; }
+    try {
+      setAiDescLoading(true);
+      const res = await fetch("/api/ai/suggest-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, category: category === "Diğer" ? customCategory || "Diğer" : category, type: "found" }),
+      });
+      const data = await res.json();
+      if (res.ok && data.description) {
+        setDescription(data.description);
+        toast.success("AI açıklaması oluşturuldu! İstersen düzenle.");
+      } else {
+        toast.error("AI önerisi alınamadı.");
+      }
+    } catch {
+      toast.error("Bir hata oluştu.");
+    } finally {
+      setAiDescLoading(false);
+    }
+  }
+
+  async function handleAutoLocation() {
+    if (!navigator.geolocation) { toast.error("Tarayıcın konum desteğini desteklemiyor."); return; }
+    setAutoLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=tr`,
+            { headers: { "User-Agent": "BulanVarMi/1.0" } }
+          );
+          const data = await res.json();
+          const addr = data.address;
+          const parts = [
+            addr.neighbourhood || addr.suburb || addr.quarter,
+            addr.district || addr.city_district || addr.county,
+            addr.city || addr.town || addr.village,
+          ].filter(Boolean);
+          if (parts.length > 0) {
+            setLocation(parts.join(" / "));
+            toast.success("Konum otomatik dolduruldu!");
+          } else {
+            toast.error("Konum adı bulunamadı.");
+          }
+        } catch {
+          toast.error("Konum bilgisi alınamadı.");
+        } finally {
+          setAutoLocating(false);
+        }
+      },
+      () => { toast.error("Konum izni verilmedi."); setAutoLocating(false); }
+    );
   }
 
   async function handleSubmit() {
@@ -434,7 +496,17 @@ export default function FoundReportPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-semibold text-slate-300">Açıklama *</label>
-                  <span className={`text-xs ${description.length > 900 ? "text-amber-400" : "text-slate-600"}`}>{description.length}/1000</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleAiDescSuggest}
+                      disabled={aiDescLoading || !title.trim() || !category}
+                      className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[11px] font-semibold text-violet-400 hover:bg-violet-500/20 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {aiDescLoading ? "✨ Yazıyor..." : "✨ AI Önerisi"}
+                    </button>
+                    <span className={`text-xs ${description.length > 900 ? "text-amber-400" : "text-slate-600"}`}>{description.length}/1000</span>
+                  </div>
                 </div>
                 <textarea
                   value={description}
@@ -519,6 +591,15 @@ export default function FoundReportPage() {
                     className="flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white placeholder:text-slate-600 outline-none focus:border-slate-600 transition"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={handleAutoLocation}
+                    disabled={autoLocating}
+                    className="flex-shrink-0 flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-3 text-sm text-blue-400 hover:bg-blue-500/20 transition disabled:opacity-50"
+                    title="Konumumu otomatik doldur"
+                  >
+                    {autoLocating ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                  </button>
                   <button
                     type="button"
                     onClick={() => setLocationModalOpen(true)}

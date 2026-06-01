@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 403 });
   }
 
-  const { targetEmail, ban, banDurationDays } = await req.json();
+  const { targetEmail, ban, banDurationDays, banReason } = await req.json();
 
   if (!targetEmail) {
     return NextResponse.json({ error: "targetEmail gerekli" }, { status: 400 });
@@ -46,7 +46,11 @@ export async function POST(req: NextRequest) {
 
   const { error } = await supabaseAdmin
     .from("profiles")
-    .update({ is_banned: !!ban, banned_until: ban ? bannedUntil : null })
+    .update({
+      is_banned: !!ban,
+      banned_until: ban ? bannedUntil : null,
+      ban_reason: ban ? (banReason || null) : null,
+    })
     .eq("email", targetEmail);
 
   if (error) {
@@ -55,6 +59,7 @@ export async function POST(req: NextRequest) {
 
   const durationLabel = banDurationDays === 1 ? "24 saat" : banDurationDays === 7 ? "7 gün" : banDurationDays === 30 ? "30 gün" : null;
   const banEndStr = bannedUntil ? `<p style="color:#fca5a5;font-size:13px;margin:8px 0 0;">Ban süresi: <strong>${durationLabel ?? `${banDurationDays} gün`}</strong> — ${new Date(bannedUntil).toLocaleDateString("tr-TR")} tarihinde otomatik kalkacak.</p>` : "";
+  const reasonStr = banReason ? `<div style="margin-top:12px;padding:10px 14px;background:#3b0f0f;border-radius:8px;border-left:3px solid #ef4444;"><p style="color:#fca5a5;font-size:13px;margin:0;"><strong>Sebep:</strong> ${banReason}</p></div>` : "";
 
   // Ban/unban bildirim emaili
   resend.emails.send({
@@ -70,6 +75,7 @@ export async function POST(req: NextRequest) {
             <p style="color:#fca5a5;font-weight:700;margin:0 0 8px">Hesabınız askıya alındı</p>
             <p style="color:#fca5a5;margin:0;font-size:14px;">Platform kurallarını ihlal ettiğiniz tespit edildiğinden hesabınız ${durationLabel ? `<strong>${durationLabel}</strong> süreyle` : "kalıcı olarak"} askıya alınmıştır.</p>
             ${banEndStr}
+            ${reasonStr}
           </div>
           <p style="color:#94a3b8;font-size:13px;margin:0 0 16px;">Kararın hatalı olduğunu düşünüyorsanız destek ekibimizle iletişime geçebilirsiniz.</p>
           <a href="${APP_URL}/destek" style="display:inline-block;background:#2563eb;color:#fff;padding:11px 22px;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;">Destek ile İletişime Geç →</a>
