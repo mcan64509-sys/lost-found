@@ -5,8 +5,10 @@ import Link from "next/link";
 import Image from "next/image";
 import AppHeader from "../components/AppHeader";
 import HomeBanner from "../components/HomeBanner";
+import ScrollToTop from "../components/ScrollToTop";
 import { useLanguage } from "../contexts/LanguageContext";
 import { supabase } from "../lib/supabase";
+import { useCountUp } from "../hooks/useCountUp";
 
 type FeaturedItem = {
   id: string;
@@ -52,6 +54,10 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 export default function HomePage() {
   const { t } = useLanguage();
   const [stats, setStats] = useState({ total: 0, lost: 0, found: 0, resolved: 0 });
+  const countTotal    = useCountUp(stats.total);
+  const countLost     = useCountUp(stats.lost);
+  const countFound    = useCountUp(stats.found);
+  const countResolved = useCountUp(stats.resolved);
   const [isAuthed, setIsAuthed] = useState(false);
   const [nearbyItems, setNearbyItems] = useState<NearbyItem[]>([]);
   const [nearbyLoading, setNearbyLoading] = useState(false);
@@ -130,10 +136,10 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl px-4 py-5">
             <div className="grid grid-cols-4 divide-x divide-slate-800/60">
               {[
-                { label: t.home.statTotal,    value: stats.total,    color: "text-white",       glow: "",                                              href: "/search" },
-                { label: t.home.statLost,     value: stats.lost,     color: "text-amber-400",   glow: "drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]",   href: "/search?type=lost" },
-                { label: t.home.statFound,    value: stats.found,    color: "text-emerald-400", glow: "drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]",   href: "/search?type=found" },
-                { label: t.home.statResolved, value: stats.resolved, color: "text-blue-400",    glow: "drop-shadow-[0_0_8px_rgba(96,165,250,0.3)]",   href: "/search?status=resolved" },
+                { label: t.home.statTotal,    value: countTotal,    color: "text-white",       glow: "",                                              href: "/search" },
+                { label: t.home.statLost,     value: countLost,     color: "text-amber-400",   glow: "drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]",   href: "/search?type=lost" },
+                { label: t.home.statFound,    value: countFound,    color: "text-emerald-400", glow: "drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]",   href: "/search?type=found" },
+                { label: t.home.statResolved, value: countResolved, color: "text-blue-400",    glow: "drop-shadow-[0_0_8px_rgba(96,165,250,0.3)]",   href: "/search?status=resolved" },
               ].map((s) => (
                 <Link key={s.label} href={isAuthed ? s.href : `/auth/login?redirect=${s.href}`} className="text-center px-3 py-2 group cursor-pointer hover:bg-slate-800/40 transition-colors duration-150 rounded-xl">
                   <div className={`text-xl md:text-2xl font-black transition-all duration-300 group-hover:scale-110 ${s.color} ${s.glow}`}>{s.value.toLocaleString()}</div>
@@ -228,6 +234,8 @@ export default function HomePage() {
             )}
           </div>
         </section>
+
+        <ScrollToTop />
 
         {/* ── FOOTER ── */}
         <footer className="border-t border-slate-800/40 mt-8 bg-gradient-to-b from-slate-950 to-slate-950 pb-20 md:pb-0">

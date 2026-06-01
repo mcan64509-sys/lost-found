@@ -8,6 +8,7 @@ import SearchMiniMap from "../../components/SearchMiniMap";
 import FullMapModal from "../../components/FullMapModal";
 import AppHeader from "../../components/AppHeader";
 import AuthGuard from "../../components/AuthGuard";
+import ScrollToTop from "../../components/ScrollToTop";
 import { supabase } from "../../lib/supabase";
 import type { ItemMarker } from "../../components/SearchMiniMapInner";
 import {
@@ -531,26 +532,29 @@ function SearchPageContent() {
           {loading ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden">
-                  <div className="h-44 animate-pulse bg-slate-800" />
-                  <div className="p-4 space-y-2">
-                    <div className="h-3 w-16 animate-pulse rounded-full bg-slate-800" />
-                    <div className="h-4 w-3/4 animate-pulse rounded-full bg-slate-800" />
-                    <div className="h-3 w-1/2 animate-pulse rounded-full bg-slate-800" />
+                <div key={i} className="rounded-2xl border border-slate-800/60 bg-slate-900 overflow-hidden">
+                  <div className="h-44 skeleton" />
+                  <div className="p-4 space-y-3">
+                    <div className="h-3 w-20 skeleton rounded-full" />
+                    <div className="h-4 w-3/4 skeleton rounded-full" />
+                    <div className="h-3 w-1/2 skeleton rounded-full" />
+                    <div className="h-3 w-2/3 skeleton rounded-full" />
                   </div>
                 </div>
               ))}
             </div>
           ) : displayedItems.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-800 bg-slate-900/30 p-16 text-center">
-              <Search className="w-12 h-12 text-slate-700 mx-auto mb-4" />
-              <p className="text-lg font-bold text-white mb-2">{t.search.noResults}</p>
-              <p className="text-sm text-slate-500 mb-6">
+            <div className="rounded-3xl border border-dashed border-slate-700/50 bg-gradient-to-b from-slate-900/60 to-slate-950/60 p-16 text-center animate-fade-in-up">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl border border-slate-700/50 bg-slate-800/50">
+                <Search className="w-9 h-9 text-slate-600" />
+              </div>
+              <p className="text-xl font-bold text-white mb-2">{t.search.noResults}</p>
+              <p className="text-sm text-slate-500 mb-8 max-w-xs mx-auto leading-relaxed">
                 {t.search.noResultsDesc}
               </p>
               {hasActiveFilter && (
                 <button onClick={handleClear}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:text-white transition">
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-5 py-2.5 text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-700 transition-all duration-150">
                   <X className="w-4 h-4" />
                   {t.search.clearFilters}
                 </button>
@@ -561,11 +565,13 @@ function SearchPageContent() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 stagger">
                 {displayedItems.slice(0, visibleCount).map((item) => {
                   const isLost = item.type === "lost";
+                  // eslint-disable-next-line react-hooks/purity
+                  const isNew = item.created_at && (Date.now() - new Date(item.created_at).getTime()) < 86_400_000;
                   return (
                     <Link
                       key={item.id}
                       href={`/items/${item.id}`}
-                      className="group flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 hover:border-slate-600 hover:shadow-xl hover:shadow-black/40 hover:-translate-y-1 transition-all duration-200"
+                      className={`group flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 hover:-translate-y-1 transition-all duration-200 ${isLost ? "card-lost" : "card-found"}`}
                     >
                       {/* Görsel */}
                       <div className="relative h-44 overflow-hidden bg-slate-800">
@@ -612,6 +618,11 @@ function SearchPageContent() {
                           {item.status === "resolved" && (
                             <span className="rounded-full bg-blue-500/90 px-2 py-1 text-[11px] font-bold text-white">
                               {t.common.resolved}
+                            </span>
+                          )}
+                          {isNew && item.status !== "resolved" && (
+                            <span className="rounded-full bg-white/90 px-2 py-1 text-[11px] font-bold text-slate-900 animate-pulse">
+                              ✨ Yeni
                             </span>
                           )}
                         </div>
@@ -690,6 +701,8 @@ function SearchPageContent() {
         items={filteredItems}
         onClose={() => setIsFullMapOpen(false)}
       />
+
+      <ScrollToTop />
     </>
   );
 }

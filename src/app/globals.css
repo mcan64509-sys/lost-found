@@ -190,3 +190,26 @@ strong { font-weight: 600; }
 .page-enter {
   animation: fade-in-up 0.4s ease-out both;
 }
+
+/* ── Input focus glow ────────────────────────────────────────── */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.35), 0 0 14px rgba(59,130,246,0.12);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* ── Card type glow on hover ─────────────────────────────────── */
+.card-lost:hover {
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(245,158,11,0.25), 0 0 28px rgba(245,158,11,0.07);
+  border-color: rgba(245,158,11,0.35) !important;
+}
+.card-found:hover {
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(52,211,153,0.25), 0 0 28px rgba(52,211,153,0.07);
+  border-color: rgba(52,211,153,0.35) !important;
+}
+
+/* ── Stagger extended (up to 8 children) ─────────────────────── */
+.stagger > *:nth-child(7) { animation-delay: 360ms; }
+.stagger > *:nth-child(8) { animation-delay: 420ms; }
