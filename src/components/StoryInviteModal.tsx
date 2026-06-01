@@ -4,7 +4,6 @@ import Link from "next/link";
 
 type Props = {
   itemTitle: string;
-  itemId: string;
   onClose: () => void;
 };
 

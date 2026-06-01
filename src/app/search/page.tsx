@@ -10,6 +10,7 @@ import AppHeader from "../../components/AppHeader";
 import AuthGuard from "../../components/AuthGuard";
 import ScrollToTop from "../../components/ScrollToTop";
 import { supabase } from "../../lib/supabase";
+import { toast } from "sonner";
 import type { ItemMarker } from "../../components/SearchMiniMapInner";
 import {
   Search,
