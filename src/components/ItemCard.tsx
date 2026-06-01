@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Item } from "../data/items";
 
 type Props = {
@@ -11,11 +12,14 @@ export default function ItemCard({ item }: Props) {
       href={`/items/${item.id}`}
       className="group block overflow-hidden rounded-xl border border-slate-800 bg-slate-900 transition-all duration-200 hover:border-slate-700 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/30"
     >
-      <img
-        src={item.image}
-        alt={item.title}
-        className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-105"
-      />
+      <div className="relative h-40 w-full overflow-hidden">
+        <Image
+          src={item.image}
+          alt={item.title}
+          fill
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      </div>
 
       <div className="p-4">
         <span className="text-xs text-slate-400">

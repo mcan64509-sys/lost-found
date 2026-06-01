@@ -602,7 +602,7 @@ export default function FoundReportPage() {
                   <p className="text-xs font-semibold text-violet-400 uppercase tracking-wider mb-2">✨ AI Önerisi</p>
                   <p className="text-sm text-slate-300 mb-3">
                     Görselden <span className="text-white font-semibold">{aiSuggestion.category}</span> kategorisi ve
-                    {" "}<span className="text-white font-semibold">"{aiSuggestion.title}"</span> başlığı tespit edildi.
+                    {" "}<span className="text-white font-semibold">&quot;{aiSuggestion.title}&quot;</span> başlığı tespit edildi.
                   </p>
                   <div className="flex gap-2">
                     <button

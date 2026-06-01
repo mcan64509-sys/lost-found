@@ -102,7 +102,9 @@ function SearchPageContent() {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isFullMapOpen, setIsFullMapOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("searchHistory") || "[]"); } catch { return []; }
+  });
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const isFirstRender = useRef(true);
@@ -121,13 +123,6 @@ function SearchPageContent() {
   }, [searchParams, router]);
 
   useEffect(() => {
-    try {
-      const h = JSON.parse(localStorage.getItem("searchHistory") || "[]");
-      setSearchHistory(h);
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
     const t = setTimeout(() => setDebouncedKeyword(keyword), 400);
     return () => clearTimeout(t);
   }, [keyword]);
@@ -139,7 +134,7 @@ function SearchPageContent() {
       const existing: string[] = JSON.parse(localStorage.getItem("searchHistory") || "[]");
       const updated = [keyword.trim(), ...existing.filter(h => h.toLowerCase() !== keyword.trim().toLowerCase())].slice(0, 5);
       localStorage.setItem("searchHistory", JSON.stringify(updated));
-      setSearchHistory(updated);
+      setSearchHistory(updated); // eslint-disable-line react-hooks/set-state-in-effect
     } catch { /* ignore */ }
   }, [keyword]);
 
@@ -170,6 +165,7 @@ function SearchPageContent() {
     return () => { cancelled = true; };
   }, [debouncedKeyword, category, activeTab]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setVisibleCount(12); }, [activeTab, category, keyword, selectedLocation, sortBy, dateFrom, dateTo, hideResolved]);
 
   useEffect(() => {

@@ -236,7 +236,7 @@ export default function PetsPage() {
             <div className="text-center py-20">
               <div className="text-5xl mb-4">🐾</div>
               <p className="text-slate-500 mb-2">Bu filtrede ilan bulunamadı.</p>
-              <p className="text-sm text-slate-600">İlan verirken "Evcil Hayvan" kategorisini seç.</p>
+              <p className="text-sm text-slate-600">İlan verirken &quot;Evcil Hayvan&quot; kategorisini seç.</p>
               <Link href="/lost/report" className="inline-flex items-center gap-2 mt-4 rounded-xl bg-pink-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-pink-400 transition">
                 İlan Ver <ArrowRight className="w-4 h-4" />
               </Link>

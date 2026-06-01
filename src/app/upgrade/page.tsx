@@ -74,7 +74,7 @@ function UpgradeContent() {
             <h1 className="text-4xl font-black text-white mb-3">İlanını Öne Çıkar</h1>
             {itemTitle ? (
               <p className="text-slate-400">
-                <span className="text-white font-semibold">"{itemTitle}"</span> ilanı için seçim yap
+                <span className="text-white font-semibold">&quot;{itemTitle}&quot;</span> ilanı için seçim yap
               </p>
             ) : (
               <p className="text-slate-400">Daha fazla kişiye ulaş, daha hızlı sonuç al</p>
@@ -85,7 +85,7 @@ function UpgradeContent() {
           <div className="mb-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 px-5 py-4 text-sm text-slate-300">
             <span className="font-semibold text-white">İlk 3 ilanın ücretsiz!</span>{" "}
             4. ilanından itibaren Standart, Altın veya Acil paket seçmelisin.
-            Altın ve Acil ilanlar "Acil İlanlar" kategorisinde görünür. Acil ilanlar en üst sıraya çıkar.
+            Altın ve Acil ilanlar &quot;Acil İlanlar&quot; kategorisinde görünür. Acil ilanlar en üst sıraya çıkar.
           </div>
 
           {/* Location boost info */}

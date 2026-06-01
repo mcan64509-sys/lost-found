@@ -89,7 +89,7 @@ export default function GizlilikPage() {
             <p className="mb-3">Platform yalnızca aşağıdaki amaçlarla çerez ve yerel depolama kullanır:</p>
             <ul className="list-disc space-y-2 pl-5 text-slate-400">
               <li><strong className="text-slate-300">Oturum çerezleri:</strong> Giriş durumunuzu korumak için zorunludur. Tarayıcı kapatıldığında silinir.</li>
-              <li><strong className="text-slate-300">Kimlik doğrulama token'ları:</strong> Supabase tarafından yönetilen güvenli oturum bilgileri.</li>
+              <li><strong className="text-slate-300">Kimlik doğrulama token&apos;ları:</strong> Supabase tarafından yönetilen güvenli oturum bilgileri.</li>
               <li><strong className="text-slate-300">Tercih verileri:</strong> Dil ve görünüm tercihleriniz (varsa) yerel depoda saklanır.</li>
             </ul>
             <p className="mt-3 text-slate-400">
@@ -116,7 +116,7 @@ export default function GizlilikPage() {
               <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme hakkı</li>
               <li>İşlenen verilerinize erişme ve kopyasını talep etme hakkı</li>
               <li>Yanlış veya eksik verilerin düzeltilmesini talep etme hakkı</li>
-              <li>Belirli koşullarda verilerinizin silinmesini talep etme hakkı ("unutulma hakkı")</li>
+              <li>Belirli koşullarda verilerinizin silinmesini talep etme hakkı (&quot;unutulma hakkı&quot;)</li>
               <li>Veri işlemeye itiraz etme hakkı</li>
               <li>Veri taşınabilirliği hakkı (verilerinizi makine okunabilir formatta alma)</li>
               <li>Rızanızı geri çekme hakkı (rızaya dayalı işlemler için)</li>

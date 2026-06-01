@@ -8,14 +8,14 @@ type Props = {
   onClose: () => void;
 };
 
-export default function StoryInviteModal({ itemTitle, itemId, onClose }: Props) {
+export default function StoryInviteModal({ itemTitle, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
       <div className="w-full max-w-sm rounded-3xl border border-emerald-500/30 bg-slate-900 p-8 shadow-2xl text-center animate-fade-in">
         <div className="text-5xl mb-4">🎉</div>
         <h2 className="text-xl font-black text-white mb-2">Harika!</h2>
         <p className="text-sm text-slate-400 mb-1">
-          <span className="text-white font-semibold">"{itemTitle}"</span> ilanın çözüme kavuştu.
+          <span className="text-white font-semibold">&quot;{itemTitle}&quot;</span> ilanın çözüme kavuştu.
         </p>
         <p className="text-sm text-slate-400 mb-6">
           Bu güzel deneyimi topluluğumuzla paylaşmak ister misin? Hikayen başkalarına ilham verebilir.

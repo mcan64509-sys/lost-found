@@ -104,7 +104,7 @@ export default function KullanimSartlariPage() {
           <section>
             <h2 className="mb-3 text-lg font-semibold text-white">9. Fikri Mülkiyet</h2>
             <p>
-              Platformun tasarımı, kodu ve içerikleri Bulan Varmi'ye aittir. Kullanıcılar
+              Platformun tasarımı, kodu ve içerikleri Bulan Varmi&apos;ye aittir. Kullanıcılar
               platforma yükledikleri içeriklerin lisansını platform ile paylaşmış sayılır;
               bu içerikler platformun işleyişi için kullanılabilir.
             </p>

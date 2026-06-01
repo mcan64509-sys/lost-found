@@ -88,6 +88,7 @@ export default function SearchMiniMapInner({ lat, lng, radiusKm, items = [] }: P
           <Popup maxWidth={220}>
             <div style={{ minWidth: "160px", fontFamily: "sans-serif" }}>
               {item.image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={item.image_url}
                   alt={item.title}

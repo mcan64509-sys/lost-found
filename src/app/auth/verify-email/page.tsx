@@ -33,7 +33,7 @@ function VerifyEmailContent() {
             <p className="text-white font-semibold text-sm mb-6 break-all">{email}</p>
           )}
           <p className="text-slate-500 text-xs leading-relaxed mb-8">
-            E-postana gel ve "Hesabımı Doğrula" butonuna tıkla. Spam/gereksiz klasörünü de kontrol et.
+            E-postana gel ve &quot;Hesabımı Doğrula&quot; butonuna tıkla. Spam/gereksiz klasörünü de kontrol et.
           </p>
 
           <Link

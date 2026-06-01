@@ -1093,7 +1093,7 @@ export default function AdminPage() {
                 ))}
               </div>
               {sightings.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[#1a2744] p-12 text-center text-slate-500">Henüz "Gördüm" bildirimi yok.</div>
+                <div className="rounded-2xl border border-dashed border-[#1a2744] p-12 text-center text-slate-500">Henüz &quot;Gördüm&quot; bildirimi yok.</div>
               ) : (
                 <div className="space-y-2">
                   {sightings.map((s) => (
@@ -1121,7 +1121,7 @@ export default function AdminPage() {
                             </a>
                           )}
                           {s.note && (
-                            <p className="mt-1.5 border-l-2 border-slate-700 pl-2 text-xs italic text-slate-400">"{s.note}"</p>
+                            <p className="mt-1.5 border-l-2 border-slate-700 pl-2 text-xs italic text-slate-400">&quot;{s.note}&quot;</p>
                           )}
                         </div>
                         <Link href={`/items/${s.item_id}`} className="shrink-0 rounded-xl border border-[#1a2744] px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 transition">
@@ -1268,7 +1268,7 @@ export default function AdminPage() {
                 pendingStories.map((s) => (
                   <div key={s.id} className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-4">
                     <p className="text-xs text-slate-500 mb-1">{s.user_email} · {new Date(s.created_at).toLocaleDateString("tr-TR")}</p>
-                    <p className="text-sm font-semibold text-white mb-2">"{s.item_title}"</p>
+                    <p className="text-sm font-semibold text-white mb-2">&quot;{s.item_title}&quot;</p>
                     <p className="text-sm text-slate-300 whitespace-pre-line mb-3">{s.story}</p>
                     <div className="flex gap-2">
                       <button

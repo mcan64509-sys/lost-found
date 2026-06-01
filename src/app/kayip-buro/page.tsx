@@ -80,7 +80,7 @@ export default function KayipBuroPage() {
             </div>
             <h1 className="text-3xl font-black mb-2">Kayıp Eşya Büroları</h1>
             <p className="text-slate-400 text-sm max-w-lg mx-auto">
-              Türkiye'deki resmi kayıp eşya büroları ve emniyet müdürlüklerinin iletişim bilgileri.
+              Türkiye&apos;deki resmi kayıp eşya büroları ve emniyet müdürlüklerinin iletişim bilgileri.
             </p>
           </div>
 

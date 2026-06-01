@@ -23,7 +23,7 @@ export default function IadePolitikasiPage() {
             <p>
               Bulan Varmi platformunda sunulan ücretli hizmetler (öncelikli ilan ve aylık abonelik),
               dijital hizmet niteliğinde olup hizmet aktive edildiği anda kullanıma açılmaktadır.
-              Bu nedenle Mesafeli Sözleşmeler Yönetmeliği'nin 15/ğ maddesi uyarınca,{" "}
+              Bu nedenle Mesafeli Sözleşmeler Yönetmeliği&apos;nin 15/ğ maddesi uyarınca,{" "}
               <strong className="text-white">hizmet aktive edildikten sonra cayma hakkı kullanılamaz
               ve iade yapılmaz.</strong>
             </p>
@@ -101,7 +101,7 @@ export default function IadePolitikasiPage() {
             <p>
               Tüm ödemeler <strong className="text-white">Stripe</strong> altyapısı üzerinden işlenir.
               Kart bilgileriniz platformumuzda saklanmaz; Stripe PCI DSS Level 1 sertifikalıdır.
-              Ödeme anlaşmazlıklarında Stripe'ın dispute süreci de geçerlidir.
+              Ödeme anlaşmazlıklarında Stripe&apos;ın dispute süreci de geçerlidir.
             </p>
           </section>
 

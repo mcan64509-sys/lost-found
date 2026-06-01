@@ -10,11 +10,10 @@ const SightingMapInner = dynamic(() => import("./SightingMapInner"), { ssr: fals
 type Props = {
   itemId: string;
   itemTitle: string;
-  reporterEmail: string;
   onClose: () => void;
 };
 
-export default function SightingModal({ itemId, itemTitle, reporterEmail, onClose }: Props) {
+export default function SightingModal({ itemId, itemTitle, onClose }: Props) {
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [locationText, setLocationText] = useState("");

@@ -644,7 +644,6 @@ export default function ItemDetailPage() {
       {showStoryInvite && item && (
         <StoryInviteModal
           itemTitle={item.title}
-          itemId={item.id}
           onClose={() => setShowStoryInvite(false)}
         />
       )}
@@ -653,7 +652,6 @@ export default function ItemDetailPage() {
         <SightingModal
           itemId={item.id}
           itemTitle={item.title}
-          reporterEmail={userEmail}
           onClose={() => setShowSightingModal(false)}
         />
       )}

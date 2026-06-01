@@ -58,6 +58,7 @@ export default function MapViewInner({ items }: Props) {
           <Popup maxWidth={220}>
             <div style={{ minWidth: "160px", fontFamily: "sans-serif" }}>
               {item.image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={item.image_url}
                   alt={item.title}

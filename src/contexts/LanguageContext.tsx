@@ -12,13 +12,11 @@ type LanguageContextValue = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("tr");
+  const [locale, setLocaleState] = useState<Locale>(() => detectLocale());
 
   useEffect(() => {
-    const detected = detectLocale();
-    setLocaleState(detected);
-    document.documentElement.lang = detected;
-  }, []);
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   function setLocale(l: Locale) {
     setLocaleState(l);

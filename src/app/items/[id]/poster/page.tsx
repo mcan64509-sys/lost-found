@@ -22,10 +22,9 @@ export default function PosterPage() {
   const { id } = useParams<{ id: string }>();
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
-  const [origin, setOrigin] = useState("");
+  const [origin] = useState(() => typeof window !== "undefined" ? window.location.origin : "");
 
   useEffect(() => {
-    setOrigin(window.location.origin);
     supabase
       .from("items")
       .select("id, title, description, category, location, date, type, image_url, image_urls, reward_amount, is_urgent")

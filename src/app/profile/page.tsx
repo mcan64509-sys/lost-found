@@ -1449,7 +1449,7 @@ export default function ProfilePage() {
                 <div className="mt-4 space-y-1 text-xs text-slate-600">
                   <p>• İlan oluşturma: +10 puan</p>
                   <p>• İlanı çözüldü işaretleme: +50 puan</p>
-                  <p>• "Gördüm" bildirimi: +5 puan</p>
+                  <p>• &quot;Gördüm&quot; bildirimi: +5 puan</p>
                   <p>• Talep onaylatma: +20 puan</p>
                 </div>
               </div>

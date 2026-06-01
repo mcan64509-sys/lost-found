@@ -239,7 +239,7 @@ export default function PriorityPage() {
             <div className="text-center py-20">
               <Star className="w-12 h-12 text-slate-700 mx-auto mb-4" />
               <p className="text-slate-500">Bu filtrede öncelikli ilan bulunamadı.</p>
-              <p className="text-sm text-slate-600 mt-2">İlan verirken "Öncelik Seviyesi" seçerek ilanını öne çıkarabilirsin.</p>
+              <p className="text-sm text-slate-600 mt-2">İlan verirken &quot;Öncelik Seviyesi&quot; seçerek ilanını öne çıkarabilirsin.</p>
               <Link href="/lost/report" className="inline-flex items-center gap-2 mt-4 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-slate-950 hover:bg-amber-400 transition">
                 İlan Ver <ArrowRight className="w-4 h-4" />
               </Link>

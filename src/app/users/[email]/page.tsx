@@ -470,7 +470,7 @@ export default function UserProfilePage() {
                       </div>
                       {r.comment && (
                         <p className="mt-3 text-sm text-slate-300 leading-relaxed border-t border-slate-800 pt-3">
-                          "{r.comment}"
+                          &quot;{r.comment}&quot;
                         </p>
                       )}
                     </div>

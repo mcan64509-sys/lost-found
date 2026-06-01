@@ -44,7 +44,7 @@ function RegisterForm() {
   const [companyName, setCompanyName] = useState("");
   const [companyType, setCompanyType] = useState("");
   const [loading, setLoading] = useState(false);
-  const [refCode, setRefCode] = useState("");
+  const [refCode, setRefCode] = useState(() => searchParams.get("ref")?.toUpperCase() ?? "");
 
   // Phone OTP fields
   const [phone, setPhone] = useState("");
@@ -56,10 +56,8 @@ function RegisterForm() {
   const otpInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const ref = searchParams.get("ref");
-    if (ref) setRefCode(ref.toUpperCase());
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
-  }, [searchParams]);
+  }, []);
 
   function startCountdown() {
     setCountdown(60);
@@ -267,7 +265,7 @@ function RegisterForm() {
                 <div>
                   <div className="font-semibold text-white">Şirket / İşletme Hesabı</div>
                   <div className="mt-1 text-xs text-slate-500 leading-5">
-                    Kargo firmaları, oteller, AVM'ler ve diğer işletmeler için. Toplu ilan yönetimi ve işletme profili.
+                    Kargo firmaları, oteller, AVM&apos;ler ve diğer işletmeler için. Toplu ilan yönetimi ve işletme profili.
                   </div>
                 </div>
                 <div className={`ml-auto mt-1 w-4 h-4 rounded-full border-2 flex-shrink-0 transition-all ${
