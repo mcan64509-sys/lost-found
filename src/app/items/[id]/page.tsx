@@ -82,6 +82,7 @@ export default function ItemDetailPage() {
   const [showSocialImageModal, setShowSocialImageModal] = useState(false);
   const [showStoryInvite, setShowStoryInvite] = useState(false);
   const [similarItems, setSimilarItems] = useState<{ id: string; title: string; type: string; image_url: string | null; location: string | null }[]>([]);
+  const [sightingsCount, setSightingsCount] = useState(0);
 
   // Claim modal
   const [showClaimModal, setShowClaimModal] = useState(false);
@@ -234,6 +235,13 @@ export default function ItemDetailPage() {
         } catch { /* localStorage unavailable */ }
 
         fetchMatches(id);
+
+        // Sightings count
+        supabase
+          .from("sightings")
+          .select("id", { count: "exact", head: true })
+          .eq("item_id", id)
+          .then(({ count }) => setSightingsCount(count ?? 0));
 
         // Load similar items (same category, different id)
         if (itemData.category) {
@@ -808,6 +816,13 @@ export default function ItemDetailPage() {
                 <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
                   <p className="text-xs uppercase tracking-wide text-slate-500">Görüntülenme</p>
                   <p className="mt-2 text-sm text-slate-200">👁 {item.view_count} kez görüntülendi</p>
+                </div>
+              )}
+
+              {sightingsCount > 0 && (
+                <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Gördüm Bildirimleri</p>
+                  <p className="mt-2 text-sm text-amber-300">📍 {sightingsCount} kişi bu eşyayı gördüğünü bildirdi</p>
                 </div>
               )}
 

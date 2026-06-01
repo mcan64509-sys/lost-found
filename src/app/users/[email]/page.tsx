@@ -17,6 +17,8 @@ type Profile = {
   full_name: string | null;
   avatar_url: string | null;
   created_at: string;
+  badges?: string[] | null;
+  points?: number | null;
 };
 
 type PublicItem = {
@@ -78,7 +80,7 @@ export default function UserProfilePage() {
 
         const { data: profileData } = await supabase
           .from("profiles")
-          .select("full_name, avatar_url, created_at, is_banned")
+          .select("full_name, avatar_url, created_at, is_banned, badges, points")
           .eq("email", emailParam)
           .maybeSingle();
 
@@ -271,6 +273,22 @@ export default function UserProfilePage() {
                     <StarRow score={Math.round(ratingAvg)} size="base" />
                     <span className="font-bold text-white">{ratingAvg.toFixed(1)}</span>
                     <span className="text-xs text-slate-500">({ratings.length} değerlendirme)</span>
+                  </div>
+                )}
+
+                {/* Badges */}
+                {profile?.badges && profile.badges.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {profile.badges.map((badge) => (
+                      <span key={badge} className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-300">
+                        {badge}
+                      </span>
+                    ))}
+                    {(profile.points ?? 0) > 0 && (
+                      <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-300">
+                        ⭐ {profile.points} puan
+                      </span>
+                    )}
                   </div>
                 )}
 

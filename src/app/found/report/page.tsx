@@ -79,6 +79,10 @@ export default function FoundReportPage() {
   const [aiSuggestion, setAiSuggestion] = useState<{ category: string; title: string } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Duplicate detection
+  const [duplicateWarning, setDuplicateWarning] = useState<{ id: string; title: string }[]>([]);
+  const [skipDuplicateCheck, setSkipDuplicateCheck] = useState(false);
+
   const DRAFT_KEY = "found_form_draft";
 
   useEffect(() => {
@@ -194,6 +198,25 @@ export default function FoundReportPage() {
       const { data: profile } = await supabase.from("profiles").select("is_banned").eq("id", user.id).maybeSingle();
       if (profile?.is_banned) { toast.error("Hesabınız engellendi. İlan oluşturamazsınız."); return; }
 
+      // Duplicate check — same category within last 24 hours
+      const finalCategory = category === "Diğer" ? customCategory.trim() || "Diğer" : category;
+
+      if (!skipDuplicateCheck) {
+        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: dupes } = await supabase
+          .from("items")
+          .select("id, title")
+          .eq("created_by_email", createdByEmail)
+          .eq("category", finalCategory)
+          .gte("created_at", cutoff)
+          .limit(3);
+        if (dupes && dupes.length > 0) {
+          setDuplicateWarning(dupes as { id: string; title: string }[]);
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const { count: itemCount } = await supabase
         .from("items")
         .select("id", { count: "exact", head: true })
@@ -203,7 +226,6 @@ export default function FoundReportPage() {
       const uploadResults = await Promise.all(selectedImages.map((img) => uploadItemImage(img, createdByEmail)));
       const [firstUrl, ...restUrls] = uploadResults.map((r) => r.publicUrl);
 
-      const finalCategory = category === "Diğer" ? customCategory.trim() || "Diğer" : category;
       const finalDate = date && time ? `${date} ${time}` : date;
 
       const { data: newItem, error: insertError } = await supabase
@@ -271,6 +293,42 @@ export default function FoundReportPage() {
   return (
     <>
       <AppHeader />
+
+      {/* Duplicate warning modal */}
+      {duplicateWarning.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-emerald-500/30 bg-[#0d1a2e] p-6 shadow-2xl">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-white">Benzer İlan Bulundu</h2>
+                <p className="text-xs text-slate-400 mt-0.5">Son 24 saatte bu kategoride zaten ilan verdin.</p>
+              </div>
+            </div>
+            <div className="space-y-2 mb-4">
+              {duplicateWarning.map((d) => (
+                <a key={d.id} href={`/items/${d.id}`} target="_blank" rel="noopener noreferrer"
+                  className="block rounded-xl border border-[#1a2744] bg-slate-800 px-3 py-2 text-sm text-slate-200 hover:border-slate-600 transition truncate">
+                  📋 {d.title}
+                </a>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDuplicateWarning([])}
+                className="flex-1 rounded-xl border border-[#1a2744] bg-slate-800 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition"
+              >Geri Dön</button>
+              <button
+                onClick={() => { setSkipDuplicateCheck(true); setDuplicateWarning([]); }}
+                className="flex-1 rounded-xl bg-emerald-500 py-2.5 text-sm font-bold text-slate-950 hover:bg-emerald-400 transition"
+              >Yine de Devam</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="min-h-screen bg-slate-950 text-white">
         <div className="mx-auto max-w-2xl px-4 py-10">
 

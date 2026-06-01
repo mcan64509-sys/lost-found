@@ -140,6 +140,8 @@ export default function AdminPage() {
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminEmail, setAdminEmail] = useState("");
   const [togglingBan, setTogglingBan] = useState<string | null>(null);
+  const [banDurationModal, setBanDurationModal] = useState<{ email: string } | null>(null);
+  const [banDurationDays, setBanDurationDays] = useState<number | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string; ownerEmail: string } | null>(null);
   const [deleteReason, setDeleteReason] = useState("");
@@ -462,19 +464,21 @@ export default function AdminPage() {
     toast.success(newVal ? "🔴 Acil işareti eklendi." : "Acil işareti kaldırıldı.");
   }
 
-  async function handleToggleBan(targetEmail: string, currentBan: boolean) {
+  async function handleToggleBan(targetEmail: string, currentBan: boolean, durationDays?: number | null) {
     setTogglingBan(targetEmail);
+    setBanDurationModal(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/admin/ban", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
-        body: JSON.stringify({ targetEmail, ban: !currentBan }),
+        body: JSON.stringify({ targetEmail, ban: !currentBan, banDurationDays: durationDays ?? null }),
       });
       const data = await res.json();
       if (res.ok) {
         setAdminUsers((prev) => prev.map((u) => u.email === targetEmail ? { ...u, is_banned: !currentBan } : u));
-        toast.success(!currentBan ? "Kullanıcı engellendi." : "Engel kaldırıldı.");
+        const label = durationDays === 1 ? "24 saat" : durationDays === 7 ? "7 gün" : durationDays === 30 ? "30 gün" : "kalıcı olarak";
+        toast.success(!currentBan ? `Kullanıcı ${label} engellendi.` : "Engel kaldırıldı.");
       } else {
         toast.error(data.error || "İşlem başarısız.");
       }
@@ -482,6 +486,7 @@ export default function AdminPage() {
       toast.error("Bir hata oluştu.");
     } finally {
       setTogglingBan(null);
+      setBanDurationDays(null);
     }
   }
 
@@ -1046,13 +1051,23 @@ export default function AdminPage() {
                             </Link>
                             {u.email.toLowerCase() !== adminEmail && (
                               <>
-                                <button
-                                  onClick={() => handleToggleBan(u.email, u.is_banned)}
-                                  disabled={togglingBan === u.email}
-                                  className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${u.is_banned ? "border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20" : "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"}`}
-                                >
-                                  {togglingBan === u.email ? "..." : u.is_banned ? "Engel Kaldır" : "Engelle"}
-                                </button>
+                                {u.is_banned ? (
+                                  <button
+                                    onClick={() => handleToggleBan(u.email, true)}
+                                    disabled={togglingBan === u.email}
+                                    className="rounded-lg border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-[11px] font-semibold text-green-400 hover:bg-green-500/20 transition disabled:opacity-50"
+                                  >
+                                    {togglingBan === u.email ? "..." : "Engel Kaldır"}
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => { setBanDurationModal({ email: u.email }); setBanDurationDays(null); }}
+                                    disabled={togglingBan === u.email}
+                                    className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-500/20 transition disabled:opacity-50"
+                                  >
+                                    {togglingBan === u.email ? "..." : "Engelle ▾"}
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => handleToggleBlacklist(u.email, u.is_blacklisted)}
                                   disabled={blacklisting === u.email}
@@ -1677,6 +1692,50 @@ export default function AdminPage() {
                 disabled={!joinName.trim()}
                 className="flex-1 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >Oturumu Onayla →</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ban duration modal */}
+      {banDurationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-sm rounded-2xl border border-[#1a2744] bg-[#0d1a2e] p-6 shadow-2xl">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-lg">🚫</div>
+              <div>
+                <h2 className="text-base font-bold text-white">Engelleme Süresi</h2>
+                <p className="mt-0.5 text-xs text-slate-400 break-all">{banDurationModal.email}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {[
+                { label: "24 Saat", days: 1 },
+                { label: "7 Gün", days: 7 },
+                { label: "30 Gün", days: 30 },
+                { label: "Kalıcı", days: null },
+              ].map(({ label, days }) => (
+                <button
+                  key={label}
+                  onClick={() => setBanDurationDays(days as number | null)}
+                  className={`rounded-xl border py-2.5 text-sm font-semibold transition ${
+                    banDurationDays === days
+                      ? "border-red-500 bg-red-500/20 text-red-300"
+                      : "border-[#1a2744] bg-slate-800 text-slate-300 hover:border-slate-600"
+                  }`}
+                >{label}</button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setBanDurationModal(null)}
+                className="flex-1 rounded-xl border border-[#1a2744] bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition"
+              >İptal</button>
+              <button
+                onClick={() => handleToggleBan(banDurationModal.email, false, banDurationDays)}
+                disabled={banDurationDays === undefined}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >Engelle</button>
             </div>
           </div>
         </div>

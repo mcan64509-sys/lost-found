@@ -5,7 +5,20 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: [
+          "/",
+          "/search",
+          "/items/",
+          "/hikayeler",
+          "/kayip-buro",
+          "/map",
+          "/pets",
+          "/priority",
+          "/gizlilik",
+          "/kullanim-sartlari",
+          "/iade-politikasi",
+          "/users/",
+        ],
         disallow: [
           "/api/",
           "/admin",
@@ -16,6 +29,10 @@ export default function robots(): MetadataRoute.Robots {
           "/alerts",
           "/business",
           "/auth/",
+          "/my-items",
+          "/upgrade",
+          "/destek",
+          "/payment/",
         ],
       },
     ],
