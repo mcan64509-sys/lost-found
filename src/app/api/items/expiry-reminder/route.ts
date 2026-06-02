@@ -133,7 +133,7 @@ export async function POST(req: Request) {
   if (authError || !user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userEmail = user.email.toLowerCase().trim();
-  if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(userEmail)) {
+  if (!ADMIN_EMAILS.includes(userEmail)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

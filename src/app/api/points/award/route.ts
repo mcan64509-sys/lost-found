@@ -19,14 +19,18 @@ const BADGES: Record<string, { threshold: number; badge: string }[]> = {
 };
 
 export async function POST(req: NextRequest) {
-  const auth = req.headers.get("authorization");
-  const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
-  if (!token) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  // Sadece sunucu-taraflı iç çağrılar kabul edilir; kullanıcı doğrudan çağıramaz
+  const secret = req.headers.get("x-internal-secret");
+  if (secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  }
 
-  const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-  if (!user) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  const { userId, action } = await req.json();
+  if (!userId) return NextResponse.json({ error: "userId gerekli" }, { status: 400 });
 
-  const { action } = await req.json();
+  const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(userId);
+  if (!user) return NextResponse.json({ error: "Kullanıcı bulunamadı" }, { status: 404 });
+
   const pts = POINT_VALUES[action];
   if (!pts) return NextResponse.json({ error: "Geçersiz aksiyon" }, { status: 400 });
 

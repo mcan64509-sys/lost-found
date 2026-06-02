@@ -187,7 +187,7 @@ export default function AdminPage() {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const email = session?.user?.email?.toLowerCase().trim() || "";
-      if (!email || (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(email))) {
+      if (!email || !ADMIN_EMAILS.includes(email)) {
         setAuthorized(false);
         return;
       }

@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const { sessionId } = body;
   if (!sessionId) return NextResponse.json({ error: "sessionId gerekli" }, { status: 400 });
 
-  const isAdmin = ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(user.email);
+  const isAdmin = ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(user.email);
 
   const { data: session } = await supabase
     .from("support_sessions")

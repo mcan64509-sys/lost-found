@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
   if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const isAdmin = ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(user.email);
+  const isAdmin = ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(user.email);
   if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { status } = Object.fromEntries(new URL(req.url).searchParams);

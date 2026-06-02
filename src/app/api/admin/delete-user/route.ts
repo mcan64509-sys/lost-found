@@ -22,7 +22,7 @@ async function getCallerEmail(req: NextRequest): Promise<string | null> {
 
 export async function POST(req: NextRequest) {
   const callerEmail = await getCallerEmail(req);
-  if (!callerEmail || (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(callerEmail))) {
+  if (!callerEmail || !ADMIN_EMAILS.includes(callerEmail)) {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 403 });
   }
 

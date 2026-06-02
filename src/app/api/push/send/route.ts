@@ -18,11 +18,20 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
     const isInternal = internalSecret === process.env.CRON_SECRET;
+    let callerEmail: string | null = null;
 
     if (!isInternal) {
       if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       const { data: { user } } = await supabase.auth.getUser(token);
-      if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      callerEmail = user.email.toLowerCase().trim();
+    }
+
+    const { userEmail, title, body, url, tag, sendEmail = false } = await req.json();
+
+    // JWT çağrılarında yalnızca kendi push aboneliğine gönderilebilir
+    if (!isInternal && callerEmail !== userEmail?.toLowerCase().trim()) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // Lazy init — env yoksa build patlamaz, sadece runtime'da hata verir
@@ -34,7 +43,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { userEmail, title, body, url, tag, sendEmail = false } = await req.json();
     if (!userEmail || !title) {
       return NextResponse.json({ error: "Eksik bilgi" }, { status: 400 });
     }

@@ -10,26 +10,37 @@ const supabase = createClient(
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // Internal server calls use x-internal-secret; client calls use Bearer JWT
     const internalSecret = req.headers.get("x-internal-secret");
     const authHeader = req.headers.get("authorization") || "";
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
     const isInternal = internalSecret === process.env.CRON_SECRET;
-    let isAuthenticated = isInternal;
+    let callerEmail: string | null = null;
 
-    if (!isInternal && token) {
+    if (!isInternal) {
+      if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       const { data: { user } } = await supabase.auth.getUser(token);
-      isAuthenticated = !!user;
-    }
-
-    if (!isAuthenticated) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      callerEmail = user.email.toLowerCase().trim();
     }
 
     const { userEmail, type, title, message, itemId, relatedItemId } = await req.json();
+
+    // JWT çağrılarında yalnızca kendi email'ine bildirim gönderilebilir
+    if (!isInternal && callerEmail !== userEmail?.toLowerCase().trim()) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     if (!userEmail || !type || !title || !message) {
       return NextResponse.json({ error: "Eksik alan" }, { status: 400 });
@@ -59,8 +70,8 @@ export async function POST(req: NextRequest) {
       subject: title,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; background: #0f172a; color: #fff; padding: 32px; border-radius: 16px;">
-          <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 16px;">${title}</h1>
-          <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">${message}</p>
+          <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 16px;">${escapeHtml(title)}</h1>
+          <p style="color: #94a3b8; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">${escapeHtml(message)}</p>
           ${itemId ? `
           <a href="${itemUrl}" style="display: inline-block; background: #2563eb; color: #fff; padding: 12px 24px; border-radius: 12px; text-decoration: none; font-weight: 600;">
             İlanı Görüntüle

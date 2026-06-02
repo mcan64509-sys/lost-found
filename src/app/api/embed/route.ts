@@ -9,8 +9,29 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
+    const internalSecret = req.headers.get("x-internal-secret");
+    const authHeader = req.headers.get("authorization") || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const isInternal = internalSecret === process.env.CRON_SECRET;
+
+    let callerEmail: string | null = null;
+    if (!isInternal) {
+      if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      callerEmail = user.email.toLowerCase().trim();
+    }
+
     const body = await req.json();
     const { itemId, title, description, category, location } = body;
+
+    // JWT çağrılarında ilan sahibi doğrula
+    if (!isInternal && itemId) {
+      const { data: item } = await supabase.from("items").select("created_by_email").eq("id", itemId).maybeSingle();
+      if (!item || item.created_by_email?.toLowerCase().trim() !== callerEmail) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
     const text = `${title} ${description} ${category} ${location}`;
 
     const { data, error } = await supabase.functions.invoke("embed", {

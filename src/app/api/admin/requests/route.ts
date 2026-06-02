@@ -17,7 +17,7 @@ async function verifyAdmin(req: NextRequest): Promise<string | null> {
   const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
   if (error || !user?.email) return null;
   const email = user.email.toLowerCase().trim();
-  if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(email)) return null;
+  if (!ADMIN_EMAILS.includes(email)) return null;
   return email;
 }
 

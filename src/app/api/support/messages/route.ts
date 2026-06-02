@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!sessionData.data) return NextResponse.json({ error: "Session bulunamadı" }, { status: 404 });
 
-  const isAdmin = ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(user.email);
+  const isAdmin = ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(user.email);
   if (!isAdmin && sessionData.data.user_email !== user.email) {
     return NextResponse.json({ error: "Yetki yok" }, { status: 403 });
   }
