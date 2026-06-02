@@ -101,7 +101,7 @@ export async function verifyPermission(
     .eq("email", email)
     .maybeSingle();
 
-  if (!data || !data[permission]) return null;
+  if (!data || !(data as Record<string, unknown>)[permission]) return null;
   return email;
 }
 
