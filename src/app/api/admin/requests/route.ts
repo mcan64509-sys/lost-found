@@ -1,28 +1,14 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifyPermission } from "../../../../lib/adminAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ADMIN_EMAILS = ((process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS) || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
-async function verifyAdmin(req: NextRequest): Promise<string | null> {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "");
-  if (!token) return null;
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !user?.email) return null;
-  const email = user.email.toLowerCase().trim();
-  if (!ADMIN_EMAILS.includes(email)) return null;
-  return email;
-}
-
 export async function GET(req: NextRequest) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyPermission(req, "manage_requests");
   if (!admin) return NextResponse.json({ error: "Yetkisiz." }, { status: 401 });
 
   const { data, error } = await supabaseAdmin
@@ -35,7 +21,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const admin = await verifyAdmin(req);
+  const admin = await verifyPermission(req, "manage_requests");
   if (!admin) return NextResponse.json({ error: "Yetkisiz." }, { status: 401 });
 
   const { requestId, status, adminResponse } = await req.json();

@@ -1,28 +1,15 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendCriticalAlert } from "../../../../lib/criticalAlert";
+import { verifyPermission } from "../../../../lib/adminAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ADMIN_EMAILS = ((process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS) || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
-async function getAdminEmail(req: NextRequest): Promise<string | null> {
-  const auth = req.headers.get("authorization");
-  if (!auth?.startsWith("Bearer ")) return null;
-  const token = auth.slice(7);
-  const { data } = await supabaseAdmin.auth.getUser(token);
-  const email = data?.user?.email?.toLowerCase().trim() || "";
-  return ADMIN_EMAILS.includes(email) ? email : null;
-}
-
 export async function GET(req: NextRequest) {
-  const adminEmail = await getAdminEmail(req);
+  const adminEmail = await verifyPermission(req, "view_users");
   if (!adminEmail) {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
   }

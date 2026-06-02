@@ -105,7 +105,38 @@ const REASON_LABELS: Record<string, string> = {
   diger: "Diğer",
 };
 
-type TabId = "stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests" | "stories" | "announce" | "support";
+type TabId = "stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests" | "stories" | "announce" | "support" | "permissions";
+
+const SUPER_ADMIN_EMAIL = "mcan64509@gmail.com";
+
+const ALL_PERMISSIONS = [
+  "ban_users", "delete_users", "delete_items", "moderate_items",
+  "view_users", "manage_reports", "manage_blacklist", "send_announcements",
+  "manage_support", "manage_stories", "manage_requests",
+] as const;
+
+const PERMISSION_LABELS: Record<string, string> = {
+  ban_users: "Kullanıcı Banlama",
+  delete_users: "Kullanıcı Silme",
+  delete_items: "İlan Silme",
+  moderate_items: "İlan Moderasyon",
+  view_users: "Kullanıcı Listesi",
+  manage_reports: "Şikayet Yönetimi",
+  manage_blacklist: "Kara Liste",
+  send_announcements: "Duyuru Gönderme",
+  manage_support: "Destek Yönetimi",
+  manage_stories: "Başarı Hikayeleri",
+  manage_requests: "Kullanıcı İstekleri",
+};
+
+type PermAdmin = {
+  email: string;
+  ban_users: boolean; delete_users: boolean; delete_items: boolean;
+  moderate_items: boolean; view_users: boolean; manage_reports: boolean;
+  manage_blacklist: boolean; send_announcements: boolean; manage_support: boolean;
+  manage_stories: boolean; manage_requests: boolean;
+  granted_by: string; created_at: string;
+};
 
 type SupportSession = {
   id: string;
@@ -149,6 +180,12 @@ export default function AdminPage() {
   const [deletingUser, setDeletingUser] = useState<string | null>(null);
   const [blacklisting, setBlacklisting] = useState<string | null>(null);
   const [updatingReport, setUpdatingReport] = useState<string | null>(null);
+  const [permAdmins, setPermAdmins] = useState<PermAdmin[]>([]);
+  const [permLoading, setPermLoading] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [savingPerm, setSavingPerm] = useState<string | null>(null);
+  const [removingAdmin, setRemovingAdmin] = useState<string | null>(null);
   const [evaluatingReport, setEvaluatingReport] = useState<string | null>(null);
   const [reportMessage, setReportMessage] = useState("");
   const [stats, setStats] = useState({
@@ -278,6 +315,81 @@ export default function AdminPage() {
       setPendingStories((storyJson.stories || []) as Story[]);
     }
     setLoading(false);
+  }
+
+  async function loadPermissions(token: string) {
+    setPermLoading(true);
+    try {
+      const res = await fetch("/api/admin/permissions", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setPermAdmins(data.admins ?? []);
+    } catch {
+    } finally {
+      setPermLoading(false);
+    }
+  }
+
+  async function addAdmin() {
+    if (!newAdminEmail.trim()) return;
+    setAddingAdmin(true);
+    const { data: { session } } = await supabase.auth.getSession();
+    try {
+      const res = await fetch("/api/admin/permissions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session?.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ email: newAdminEmail.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "Hata"); return; }
+      toast.success("Admin eklendi");
+      setNewAdminEmail("");
+      loadPermissions(session?.access_token || "");
+    } catch {
+      toast.error("Sunucu hatası");
+    } finally {
+      setAddingAdmin(false);
+    }
+  }
+
+  async function togglePermission(email: string, permission: string, value: boolean) {
+    setSavingPerm(`${email}-${permission}`);
+    const { data: { session } } = await supabase.auth.getSession();
+    try {
+      const res = await fetch("/api/admin/permissions", {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${session?.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ email, permissions: { [permission]: value } }),
+      });
+      if (!res.ok) { toast.error("Güncelleme başarısız"); return; }
+      setPermAdmins(prev => prev.map(a => a.email === email ? { ...a, [permission]: value } : a));
+    } catch {
+      toast.error("Sunucu hatası");
+    } finally {
+      setSavingPerm(null);
+    }
+  }
+
+  async function removeAdmin(email: string) {
+    if (!confirm(`${email} adminlikten kaldırılsın mı?`)) return;
+    setRemovingAdmin(email);
+    const { data: { session } } = await supabase.auth.getSession();
+    try {
+      const res = await fetch("/api/admin/permissions", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session?.access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "Hata"); return; }
+      toast.success("Admin kaldırıldı");
+      setPermAdmins(prev => prev.filter(a => a.email !== email));
+    } catch {
+      toast.error("Sunucu hatası");
+    } finally {
+      setRemovingAdmin(null);
+    }
   }
 
   async function loadSupportSessions(token: string) {
@@ -711,6 +823,7 @@ export default function AdminPage() {
     { id: "stories", label: "Hikayeler", icon: "✨", count: pendingStories.length },
     { id: "announce", label: "Duyuru", icon: "📢", count: 0 },
     { id: "support", label: "Canlı Destek", icon: "🎧", count: supportSessions.filter((s) => s.status === "waiting").length, alert: supportSessions.some((s) => s.status === "waiting") },
+    ...(adminEmail === SUPER_ADMIN_EMAIL ? [{ id: "permissions" as TabId, label: "Yetki Yönetimi", icon: "🔑", count: permAdmins.length }] : []),
   ];
 
   return (
@@ -776,9 +889,12 @@ export default function AdminPage() {
                   key={id}
                   onClick={async () => {
                     setActiveTab(id);
+                    const { data: { session } } = await supabase.auth.getSession();
                     if (id === "support" && supportSessions.length === 0) {
-                      const { data: { session } } = await supabase.auth.getSession();
                       loadSupportSessions(session?.access_token || "");
+                    }
+                    if (id === "permissions" && permAdmins.length === 0) {
+                      loadPermissions(session?.access_token || "");
                     }
                   }}
                   className={`relative flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-150 ${
@@ -1638,6 +1754,91 @@ export default function AdminPage() {
                   </>
                 )}
               </div>
+            </div>
+          ) : activeTab === "permissions" && adminEmail === SUPER_ADMIN_EMAIL ? (
+            <div className="space-y-6">
+              <h2 className="text-lg font-bold text-white">Yetki Yönetimi</h2>
+
+              {/* Süper admin kartı */}
+              <div className="flex items-center gap-3 rounded-xl border border-yellow-500/30 bg-yellow-500/5 px-4 py-3">
+                <span className="text-xl">👑</span>
+                <div>
+                  <p className="text-sm font-bold text-yellow-300">Süper Admin</p>
+                  <p className="text-xs text-slate-400">{SUPER_ADMIN_EMAIL} — tüm yetkiler açık, değiştirilemez</p>
+                </div>
+              </div>
+
+              {/* Yeni admin ekle */}
+              <div className="rounded-xl border border-[#1a2744] bg-[#0d1a2e] p-4">
+                <p className="text-xs font-semibold text-slate-400 mb-3">Yeni Admin Ekle</p>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={newAdminEmail}
+                    onChange={(e) => setNewAdminEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addAdmin()}
+                    placeholder="admin@example.com"
+                    className="flex-1 rounded-lg border border-[#1a2744] bg-[#07101f] px-3 py-2 text-sm text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none"
+                  />
+                  <button
+                    onClick={addAdmin}
+                    disabled={addingAdmin || !newAdminEmail.trim()}
+                    className="rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 text-sm font-semibold text-white transition"
+                  >
+                    {addingAdmin ? "Ekleniyor..." : "Ekle"}
+                  </button>
+                </div>
+                <p className="mt-2 text-[11px] text-slate-500">Eklenen admin varsayılan olarak hiçbir yetkiye sahip değil. Aşağıdan açabilirsin.</p>
+              </div>
+
+              {/* Admin listesi */}
+              {permLoading ? (
+                <div className="flex justify-center py-12"><div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" /></div>
+              ) : permAdmins.length === 0 ? (
+                <div className="rounded-xl border border-[#1a2744] bg-[#0d1a2e] px-4 py-8 text-center text-sm text-slate-500">
+                  Henüz admin eklenmedi.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {permAdmins.map((admin) => (
+                    <div key={admin.email} className="rounded-xl border border-[#1a2744] bg-[#0d1a2e] p-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="text-sm font-bold text-white">{admin.email}</p>
+                          <p className="text-[11px] text-slate-500">Ekleyen: {admin.granted_by} · {new Date(admin.created_at).toLocaleDateString("tr-TR")}</p>
+                        </div>
+                        <button
+                          onClick={() => removeAdmin(admin.email)}
+                          disabled={removingAdmin === admin.email}
+                          className="rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50"
+                        >
+                          {removingAdmin === admin.email ? "Kaldırılıyor..." : "Kaldır"}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {ALL_PERMISSIONS.map((perm) => {
+                          const permKey = perm as keyof PermAdmin;
+                          const isOn = !!(admin[permKey]);
+                          const isSaving = savingPerm === `${admin.email}-${perm}`;
+                          return (
+                            <label key={perm} className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 cursor-pointer transition ${
+                              isOn ? "border-blue-500/40 bg-blue-500/10" : "border-[#1a2744] bg-[#07101f]"
+                            }`}>
+                              <div
+                                onClick={() => !isSaving && togglePermission(admin.email, perm, !isOn)}
+                                className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${isOn ? "bg-blue-600" : "bg-slate-700"} ${isSaving ? "opacity-50" : "cursor-pointer"}`}
+                              >
+                                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${isOn ? "translate-x-4" : "translate-x-0.5"}`} />
+                              </div>
+                              <span className={`text-xs font-medium ${isOn ? "text-blue-300" : "text-slate-500"}`}>{PERMISSION_LABELS[perm]}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : null}
         </div>

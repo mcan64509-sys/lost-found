@@ -1,6 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { verifyPermission } from "../../../../lib/adminAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,23 +11,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <support@bulanvarmi.com>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
 
-const ADMIN_EMAILS = ((process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS) || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
-async function getCallerEmail(req: NextRequest): Promise<string | null> {
-  const auth = req.headers.get("authorization");
-  const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
-  if (!token) return null;
-  const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-  if (error || !user?.email) return null;
-  return user.email.toLowerCase().trim();
-}
-
 export async function POST(req: NextRequest) {
-  const callerEmail = await getCallerEmail(req);
-  if (!callerEmail || !ADMIN_EMAILS.includes(callerEmail)) {
+  const callerEmail = await verifyPermission(req, "ban_users");
+  if (!callerEmail) {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 403 });
   }
 

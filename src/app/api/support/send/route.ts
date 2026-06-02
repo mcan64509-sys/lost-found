@@ -7,8 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ADMIN_EMAILS = ((process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS) || "")
-  .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+import { verifyPermission } from "../../../../lib/adminAuth";
 
 export async function POST(req: NextRequest) {
   const [user, body] = await Promise.all([
@@ -24,7 +23,7 @@ export async function POST(req: NextRequest) {
   }
 
   const userEmail = user.email;
-  const isAdmin = ADMIN_EMAILS.length === 0 ? false : ADMIN_EMAILS.includes(userEmail);
+  const isAdmin = !!(await verifyPermission(req, "manage_support"));
 
   const { data: session } = await supabase
     .from("support_sessions")
@@ -59,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   // Push bildirimi fire-and-forget
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
-  const notifyEmail = isAdmin ? session.user_email : ADMIN_EMAILS[0];
+  const notifyEmail = isAdmin ? session.user_email : (process.env.SUPER_ADMIN_EMAIL || "mcan64509@gmail.com");
   if (notifyEmail) {
     fetch(`${APP_URL}/api/push/send`, {
       method: "POST",

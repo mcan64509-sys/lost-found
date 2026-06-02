@@ -1,29 +1,15 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendItemDeletedEmail } from "../../../../lib/email";
+import { verifyPermission } from "../../../../lib/adminAuth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ADMIN_EMAILS = ((process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS) || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
-async function verifyAdmin(req: NextRequest): Promise<string | null> {
-  const token = req.headers.get("authorization")?.replace("Bearer ", "");
-  if (!token) return null;
-  const { data: { user } } = await supabaseAdmin.auth.getUser(token);
-  if (!user?.email) return null;
-  const email = user.email.toLowerCase().trim();
-  if (!ADMIN_EMAILS.includes(email)) return null;
-  return email;
-}
-
 export async function POST(req: NextRequest) {
-  const adminEmail = await verifyAdmin(req);
+  const adminEmail = await verifyPermission(req, "delete_items");
   if (!adminEmail) return NextResponse.json({ error: "Yetkisiz." }, { status: 401 });
 
   const { itemId, reason } = await req.json();

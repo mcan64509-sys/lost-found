@@ -7,8 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const ADMIN_EMAILS = ((process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS) || "")
-  .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+import { verifyPermission } from "../../../../lib/adminAuth";
 
 export async function POST(req: NextRequest) {
   const [user, body] = await Promise.all([
@@ -21,7 +20,7 @@ export async function POST(req: NextRequest) {
   const { sessionId } = body;
   if (!sessionId) return NextResponse.json({ error: "sessionId gerekli" }, { status: 400 });
 
-  const isAdmin = ADMIN_EMAILS.length > 0 && ADMIN_EMAILS.includes(user.email);
+  const isAdmin = !!(await verifyPermission(req, "manage_support"));
 
   const { data: session } = await supabase
     .from("support_sessions")
