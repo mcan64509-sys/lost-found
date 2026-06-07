@@ -11,8 +11,8 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-40 md:hidden border-t border-[#1a2744] bg-slate-950/95 backdrop-blur-md"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="fixed bottom-0 inset-x-0 z-40 md:hidden border-t border-[#1a2744] bg-[#070d1c]"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)", transform: "translateZ(0)" }}
     >
       <div className="flex items-end justify-around px-2 pt-2 pb-1.5">
         <NavItem href="/" label="Anasayfa" icon={<Home className="w-5 h-5" />} active={pathname === "/"} />

@@ -284,7 +284,7 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/95 backdrop-blur-xl transition-all">
+      <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-[#070d1c] transition-all" style={{ transform: "translateZ(0)" }}>
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-6">
 
           {/* LOGO */}

@@ -1520,7 +1520,7 @@ export default function ItemDetailPage() {
 
         {/* ── MOBİL YAPIŞIK EYLEM ÇUBUĞU ── */}
         {!loading && item && (
-          <div className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-[#1a2744] bg-slate-950/95 backdrop-blur-md px-4 py-3 flex items-center gap-2" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
+          <div className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-[#1a2744] bg-[#070d1c] px-4 py-3 flex items-center gap-2" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))", transform: "translateZ(0)" }}>
             <button
               onClick={handleToggleFavorite}
               disabled={togglingFav}
