@@ -1499,7 +1499,7 @@ export default function ItemDetailPage() {
                   >
                     <div className="relative h-32 bg-slate-800">
                       {s.image_url ? (
-                        <Image src={s.image_url} alt={s.title} fill className="object-cover group-hover:scale-105 transition" unoptimized />
+                        <Image src={s.image_url} alt={s.title} fill className="object-cover group-hover:scale-105 transition" sizes="(max-width: 640px) 50vw, 25vw" />
                       ) : (
                         <div className="flex h-full items-center justify-center text-3xl text-slate-600">📦</div>
                       )}

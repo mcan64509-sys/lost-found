@@ -39,6 +39,8 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+type RecentItem = { id: string; title: string; type: string; image_url: string | null; category: string | null; viewedAt: number };
+
 export default function HomePage() {
   const { t } = useLanguage();
   const [stats, setStats] = useState({ total: 0, lost: 0, found: 0, resolved: 0 });
@@ -51,11 +53,20 @@ export default function HomePage() {
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [geoError, setGeoError] = useState(false);
   const [geoAsked, setGeoAsked] = useState(false);
+  const [recentlyViewed, setRecentlyViewed] = useState<RecentItem[]>([]);
+  const [catCounts, setCatCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setIsAuthed(!!data.session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setIsAuthed(!!s));
     return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const data = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
+      setRecentlyViewed(data);
+    } catch {}
   }, []);
 
   function requestNearby() {
@@ -82,6 +93,23 @@ export default function HomePage() {
       () => { setGeoError(true); setNearbyLoading(false); }
     );
   }
+
+  useEffect(() => {
+    // Category counts — only the category column
+    supabase
+      .from("items")
+      .select("category")
+      .eq("moderation_status", "approved")
+      .eq("status", "active")
+      .then(({ data }) => {
+        if (!data) return;
+        const counts: Record<string, number> = {};
+        for (const row of data as { category: string | null }[]) {
+          if (row.category) counts[row.category] = (counts[row.category] ?? 0) + 1;
+        }
+        setCatCounts(counts);
+      });
+  }, []);
 
   useEffect(() => {
     // 4 parallel COUNT queries — no data transfer, only header
@@ -173,10 +201,51 @@ export default function HomePage() {
                   <span className="text-[11px] font-semibold text-slate-400 group-hover:text-white transition-colors text-center leading-tight">
                     {t.cats[cat.i18n]}
                   </span>
+                  {catCounts[cat.dbKey] ? (
+                    <span className="text-[9px] text-slate-600 group-hover:text-slate-500 transition-colors">{catCounts[cat.dbKey]}</span>
+                  ) : null}
                 </Link>
               ))}
             </div>
           </section>
+
+          {/* ── SON GÖRÜNTÜLENENLER ── */}
+          {recentlyViewed.length > 0 && (
+            <section className="mx-auto max-w-7xl px-4 pb-4 animate-fade-in-up" style={{ animationDelay: "60ms" }}>
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-[11px] font-bold text-slate-600 tracking-widest uppercase">Son Görüntülenenler</span>
+                <button
+                  onClick={() => { localStorage.removeItem("recentlyViewed"); setRecentlyViewed([]); }}
+                  className="text-[10px] text-slate-700 hover:text-slate-400 transition"
+                >
+                  Temizle
+                </button>
+              </div>
+              <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                {recentlyViewed.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={isAuthed ? `/items/${item.id}` : `/auth/login?redirect=/items/${item.id}`}
+                    className="flex-shrink-0 flex items-center gap-2.5 rounded-xl border border-slate-800/80 bg-slate-900/50 px-3 py-2 hover:bg-slate-800/70 hover:border-slate-700 transition-all duration-150 group"
+                  >
+                    <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-slate-800 flex-shrink-0">
+                      {item.image_url ? (
+                        <Image src={item.image_url} alt={item.title} fill className="object-cover" sizes="32px" />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-slate-600 text-xs">📦</div>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-white truncate max-w-[110px] group-hover:text-blue-300 transition-colors">{item.title}</p>
+                      <span className={`text-[10px] font-bold ${item.type === "lost" ? "text-amber-400" : "text-emerald-400"}`}>
+                        {item.type === "lost" ? "Kayıp" : "Bulundu"}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* ── YAKINIMDAKI İLANLAR ── */}
           <section className="mx-auto max-w-7xl px-4 pb-10 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
