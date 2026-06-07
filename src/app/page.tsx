@@ -10,18 +10,6 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { supabase } from "../lib/supabase";
 import { useCountUp } from "../hooks/useCountUp";
 
-type FeaturedItem = {
-  id: string;
-  title: string;
-  type: string;
-  category: string | null;
-  location: string | null;
-  image_url: string | null;
-  is_urgent: boolean | null;
-  is_featured: boolean | null;
-  reward_amount: number | null;
-};
-
 type NearbyItem = {
   id: string;
   title: string;
@@ -34,13 +22,13 @@ type NearbyItem = {
 };
 
 const CATEGORY_ITEMS = [
-  { dbKey: "Telefon",      emoji: "📱", i18n: "phone"   as const },
-  { dbKey: "Cüzdan",       emoji: "👛", i18n: "wallet"  as const },
-  { dbKey: "Anahtar",      emoji: "🔑", i18n: "key"     as const },
-  { dbKey: "Çanta",        emoji: "👜", i18n: "bag"     as const },
-  { dbKey: "Laptop",       emoji: "💻", i18n: "laptop"  as const },
-  { dbKey: "Evcil Hayvan", emoji: "🐾", i18n: "pet"     as const },
-  { dbKey: "Diğer",        emoji: "📦", i18n: "other"   as const },
+  { dbKey: "Telefon",      emoji: "📱", i18n: "phone"   as const, glow: "hover:shadow-blue-500/20   hover:border-blue-500/40" },
+  { dbKey: "Cüzdan",       emoji: "👛", i18n: "wallet"  as const, glow: "hover:shadow-yellow-500/20  hover:border-yellow-500/40" },
+  { dbKey: "Anahtar",      emoji: "🔑", i18n: "key"     as const, glow: "hover:shadow-orange-500/20  hover:border-orange-500/40" },
+  { dbKey: "Çanta",        emoji: "👜", i18n: "bag"     as const, glow: "hover:shadow-pink-500/20    hover:border-pink-500/40" },
+  { dbKey: "Laptop",       emoji: "💻", i18n: "laptop"  as const, glow: "hover:shadow-cyan-500/20    hover:border-cyan-500/40" },
+  { dbKey: "Evcil Hayvan", emoji: "🐾", i18n: "pet"     as const, glow: "hover:shadow-emerald-500/20 hover:border-emerald-500/40" },
+  { dbKey: "Diğer",        emoji: "📦", i18n: "other"   as const, glow: "hover:shadow-slate-400/20   hover:border-slate-400/40" },
 ];
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -63,7 +51,6 @@ export default function HomePage() {
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [geoError, setGeoError] = useState(false);
   const [geoAsked, setGeoAsked] = useState(false);
-  const [featuredItems, setFeaturedItems] = useState<FeaturedItem[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setIsAuthed(!!data.session));
@@ -97,182 +84,190 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    supabase
-      .from("items")
-      .select("type, status")
-      .eq("moderation_status", "approved")
-      .then(({ data }) => {
-        if (!data) return;
-        const total = data.length;
-        const lost = data.filter((i) => i.type === "lost").length;
-        const found = data.filter((i) => i.type === "found").length;
-        const resolved = data.filter((i) => i.status === "resolved").length;
-        setStats({ total, lost, found, resolved });
+    // 4 parallel COUNT queries — no data transfer, only header
+    Promise.all([
+      supabase.from("items").select("*", { count: "exact", head: true }).eq("moderation_status", "approved"),
+      supabase.from("items").select("*", { count: "exact", head: true }).eq("moderation_status", "approved").eq("type", "lost"),
+      supabase.from("items").select("*", { count: "exact", head: true }).eq("moderation_status", "approved").eq("type", "found"),
+      supabase.from("items").select("*", { count: "exact", head: true }).eq("moderation_status", "approved").eq("status", "resolved"),
+    ]).then(([total, lost, found, resolved]) => {
+      setStats({
+        total:    total.count    ?? 0,
+        lost:     lost.count     ?? 0,
+        found:    found.count    ?? 0,
+        resolved: resolved.count ?? 0,
       });
-
-    supabase
-      .from("items")
-      .select("id, title, type, category, location, image_url, is_urgent, is_featured, reward_amount")
-      .eq("status", "active")
-      .eq("moderation_status", "approved")
-      .or("is_urgent.eq.true,is_featured.eq.true")
-      .order("is_urgent", { ascending: false })
-      .limit(6)
-      .then(({ data }) => { if (data) setFeaturedItems(data as FeaturedItem[]); });
-
+    });
   }, []);
 
   return (
     <>
       <AppHeader />
 
-      <main className="bg-slate-950 text-white min-h-screen">
+      <main className="bg-slate-950 text-white min-h-screen relative overflow-x-hidden">
 
-        {/* ── BANNER ── */}
-        <HomeBanner />
+        {/* Ambient background glow */}
+        <div className="pointer-events-none fixed inset-0 z-0">
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[500px] rounded-full bg-blue-600/5 blur-[120px]" />
+          <div className="absolute bottom-1/3 right-0 w-[400px] h-[400px] rounded-full bg-violet-600/4 blur-[100px]" />
+        </div>
 
-        {/* ── İSTATİSTİKLER ── */}
-        <div className="border-b border-slate-800/60 bg-gradient-to-b from-slate-900/60 to-slate-950">
-          <div className="mx-auto max-w-7xl px-4 py-5">
-            <div className="grid grid-cols-4 divide-x divide-slate-800/60">
-              {[
-                { label: t.home.statTotal,    value: countTotal,    color: "text-white",       glow: "",                                              href: "/search" },
-                { label: t.home.statLost,     value: countLost,     color: "text-amber-400",   glow: "drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]",   href: "/search?type=lost" },
-                { label: t.home.statFound,    value: countFound,    color: "text-emerald-400", glow: "drop-shadow-[0_0_8px_rgba(52,211,153,0.3)]",   href: "/search?type=found" },
-                { label: t.home.statResolved, value: countResolved, color: "text-blue-400",    glow: "drop-shadow-[0_0_8px_rgba(96,165,250,0.3)]",   href: "/search?status=resolved" },
-              ].map((s) => (
-                <Link key={s.label} href={isAuthed ? s.href : `/auth/login?redirect=${s.href}`} className="text-center px-3 py-2 group cursor-pointer hover:bg-slate-800/40 transition-colors duration-150 rounded-xl">
-                  <div className={`text-xl md:text-2xl font-black transition-all duration-300 group-hover:scale-110 ${s.color} ${s.glow}`}>{s.value.toLocaleString()}</div>
-                  <div className="text-[10px] md:text-xs text-slate-500 mt-0.5 leading-tight group-hover:text-slate-400 transition-colors">{s.label}</div>
+        <div className="relative z-10">
+          {/* ── BANNER ── */}
+          <HomeBanner />
+
+          {/* ── İSTATİSTİKLER ── */}
+          <div className="border-b border-slate-800/60 bg-gradient-to-b from-slate-900/60 to-slate-950 backdrop-blur-sm">
+            <div className="mx-auto max-w-7xl px-4 py-5">
+              <div className="grid grid-cols-4 divide-x divide-slate-800/60">
+                {[
+                  { label: t.home.statTotal,    value: countTotal,    color: "text-white",       glow: "",                                                  href: "/search" },
+                  { label: t.home.statLost,     value: countLost,     color: "text-amber-400",   glow: "drop-shadow-[0_0_10px_rgba(251,191,36,0.4)]",       href: "/search?type=lost" },
+                  { label: t.home.statFound,    value: countFound,    color: "text-emerald-400", glow: "drop-shadow-[0_0_10px_rgba(52,211,153,0.4)]",       href: "/search?type=found" },
+                  { label: t.home.statResolved, value: countResolved, color: "text-blue-400",    glow: "drop-shadow-[0_0_10px_rgba(96,165,250,0.4)]",       href: "/search?status=resolved" },
+                ].map((s) => (
+                  <Link
+                    key={s.label}
+                    href={isAuthed ? s.href : `/auth/login?redirect=${s.href}`}
+                    className="group text-center px-3 py-3 cursor-pointer hover:bg-slate-800/40 transition-colors duration-150 rounded-xl"
+                  >
+                    <div className={`text-xl md:text-3xl font-black transition-all duration-300 group-hover:scale-110 ${s.color} ${s.glow}`}>
+                      {s.value.toLocaleString()}
+                    </div>
+                    <div className="text-[10px] md:text-xs text-slate-500 mt-0.5 leading-tight group-hover:text-slate-400 transition-colors">
+                      {s.label}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── KATEGORİLER ── */}
+          <section className="mx-auto max-w-7xl px-4 py-10 md:py-14 animate-fade-in-up">
+            <div className="flex items-center justify-center mb-6">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent to-slate-800" />
+              <h2 className="text-[11px] font-bold text-slate-500 tracking-widest uppercase px-4">
+                {t.cats.all}
+              </h2>
+              <div className="h-px flex-1 bg-gradient-to-l from-transparent to-slate-800" />
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3 stagger">
+              {/* Acil İlanlar */}
+              <Link
+                href={isAuthed ? "/search?urgent=true" : "/auth/login?redirect=/search?urgent=true"}
+                className="group flex flex-col items-center gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 hover:border-amber-400/70 hover:bg-amber-500/20 hover:-translate-y-1.5 hover:shadow-lg hover:shadow-amber-500/25 transition-all duration-200"
+              >
+                <span className="text-3xl group-hover:scale-110 transition-transform duration-200">★</span>
+                <span className="text-[11px] font-bold text-amber-400 group-hover:text-amber-300 transition-colors text-center leading-tight">
+                  Acil İlanlar
+                </span>
+              </Link>
+              {CATEGORY_ITEMS.map((cat) => (
+                <Link
+                  key={cat.dbKey}
+                  href={isAuthed ? `/search?cat=${encodeURIComponent(cat.dbKey)}` : `/auth/login?redirect=/search?cat=${encodeURIComponent(cat.dbKey)}`}
+                  className={`group flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 hover:bg-slate-800/80 hover:-translate-y-1.5 hover:shadow-lg transition-all duration-200 ${cat.glow}`}
+                >
+                  <span className="text-3xl group-hover:scale-110 transition-transform duration-200">{cat.emoji}</span>
+                  <span className="text-[11px] font-semibold text-slate-400 group-hover:text-white transition-colors text-center leading-tight">
+                    {t.cats[cat.i18n]}
+                  </span>
                 </Link>
               ))}
             </div>
-          </div>
-        </div>
+          </section>
 
-        {/* ── KATEGORİLER ── */}
-        <section className="mx-auto max-w-7xl px-4 py-8 md:py-12 animate-fade-in-up">
-          <div className="flex items-center justify-center mb-5">
-            <h2 className="text-[11px] font-bold text-slate-500 tracking-widest uppercase">
-              {t.cats.all}
-            </h2>
-          </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-3 stagger">
-            {/* Acil İlanlar — special first card */}
-            <Link
-              href={isAuthed ? "/search?urgent=true" : "/auth/login?redirect=/search?urgent=true"}
-              className="group flex flex-col items-center gap-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 hover:border-amber-400/70 hover:bg-amber-500/20 hover:-translate-y-1 hover:shadow-lg hover:shadow-amber-500/20 transition-all duration-200 animate-fade-in-up"
-            >
-              <span className="text-3xl group-hover:scale-110 transition-transform duration-200">★</span>
-              <span className="text-[11px] font-bold text-amber-400 group-hover:text-amber-300 transition-colors text-center leading-tight">
-                Acil İlanlar
-              </span>
-            </Link>
-            {CATEGORY_ITEMS.map((cat) => (
-              <Link
-                key={cat.dbKey}
-                href={isAuthed ? `/search?cat=${encodeURIComponent(cat.dbKey)}` : `/auth/login?redirect=/search?cat=${encodeURIComponent(cat.dbKey)}`}
-                className="group flex flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 hover:border-slate-600 hover:bg-slate-800 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30 transition-all duration-200 animate-fade-in-up"
-              >
-                <span className="text-3xl group-hover:scale-110 transition-transform duration-200">{cat.emoji}</span>
-                <span className="text-[11px] font-semibold text-slate-400 group-hover:text-white transition-colors text-center leading-tight">
-                  {t.cats[cat.i18n]}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-
-        {/* ── YAKINIMDAKI İLANLAR ── */}
-        <section className="mx-auto max-w-7xl px-4 pb-8 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-          <div className="rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-900/80 to-slate-900/40 p-5 backdrop-blur-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-              <div>
-                <h2 className="text-base font-bold text-white">{t.home.nearbyTitle}</h2>
-                <p className="text-xs text-slate-500">{t.home.nearbyDesc}</p>
+          {/* ── YAKINIMDAKI İLANLAR ── */}
+          <section className="mx-auto max-w-7xl px-4 pb-10 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+            <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 to-slate-900/30 p-5 shadow-xl shadow-black/20 backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 className="text-base font-bold text-white">{t.home.nearbyTitle}</h2>
+                  <p className="text-xs text-slate-500">{t.home.nearbyDesc}</p>
+                </div>
+                {!geoAsked && (
+                  <button
+                    onClick={requestNearby}
+                    className="flex-shrink-0 flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-400 hover:bg-blue-500/20 hover:border-blue-400/50 hover:scale-105 active:scale-95 transition-all duration-150 animate-pulse-glow"
+                  >
+                    📍 {t.home.nearbyEnable}
+                  </button>
+                )}
               </div>
-              {!geoAsked && (
-                <button
-                  onClick={requestNearby}
-                  className="flex-shrink-0 flex items-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-sm font-semibold text-blue-400 hover:bg-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-150"
-                >
-                  📍 {t.home.nearbyEnable}
-                </button>
+              {nearbyLoading && <p className="text-sm text-slate-500 py-4 text-center">Konum alınıyor...</p>}
+              {geoError && <p className="text-sm text-slate-500 py-4 text-center">Konum alınamadı. Tarayıcı iznini kontrol edin.</p>}
+              {geoAsked && !nearbyLoading && !geoError && nearbyItems.length === 0 && (
+                <p className="text-sm text-slate-500 py-4 text-center">{t.home.nearbyEmpty}</p>
+              )}
+              {nearbyItems.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {nearbyItems.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={isAuthed ? `/items/${item.id}` : `/auth/login?redirect=/items/${item.id}`}
+                      className={`group rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-all duration-200 ${item.type === "lost" ? "card-lost" : "card-found"}`}
+                    >
+                      <div className="relative aspect-square bg-slate-800">
+                        {item.image_url ? (
+                          <Image src={item.image_url} alt={item.title} fill className="object-cover" sizes="(max-width: 640px) 50vw, 25vw" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-slate-600 text-2xl">📦</div>
+                        )}
+                        <span className={`absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[10px] font-bold ${item.type === "lost" ? "bg-amber-500 text-white" : "bg-emerald-500 text-white"}`}>
+                          {item.type === "lost" ? "Kayıp" : "Bulundu"}
+                        </span>
+                      </div>
+                      <div className="p-2.5">
+                        <p className="text-xs font-semibold text-white truncate">{item.title}</p>
+                        <p className="text-[10px] text-slate-500 truncate mt-0.5">📍 {item.location || "—"}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               )}
             </div>
-            {nearbyLoading && <p className="text-sm text-slate-500 py-4 text-center">Konum alınıyor...</p>}
-            {geoError && <p className="text-sm text-slate-500 py-4 text-center">Konum alınamadı. Tarayıcı iznini kontrol edin.</p>}
-            {geoAsked && !nearbyLoading && !geoError && nearbyItems.length === 0 && (
-              <p className="text-sm text-slate-500 py-4 text-center">{t.home.nearbyEmpty}</p>
-            )}
-            {nearbyItems.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {nearbyItems.map((item) => (
-                  <Link
-                    key={item.id}
-                    href={isAuthed ? `/items/${item.id}` : `/auth/login?redirect=/items/${item.id}`}
-                    className="group rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden hover:border-slate-600 hover:-translate-y-1 hover:shadow-lg hover:shadow-black/30 transition-all duration-200"
-                  >
-                    <div className="relative aspect-square bg-slate-800">
-                      {item.image_url ? (
-                        <Image src={item.image_url} alt={item.title} fill className="object-cover" unoptimized />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-slate-600 text-2xl">📦</div>
-                      )}
-                      <span className={`absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[10px] font-bold ${item.type === "lost" ? "bg-amber-500 text-white" : "bg-emerald-500 text-white"}`}>
-                        {item.type === "lost" ? "Kayıp" : "Bulundu"}
-                      </span>
-                    </div>
-                    <div className="p-2.5">
-                      <p className="text-xs font-semibold text-white truncate">{item.title}</p>
-                      <p className="text-[10px] text-slate-500 truncate mt-0.5">📍 {item.location || "—"}</p>
-                    </div>
+          </section>
+
+          <ScrollToTop />
+
+          {/* ── FOOTER ── */}
+          <footer className="border-t border-slate-800/40 mt-4 bg-gradient-to-b from-slate-950 to-slate-950 pb-20 md:pb-0">
+            <div className="mx-auto max-w-7xl px-4 py-8">
+              <div className="flex flex-wrap items-center justify-between gap-6">
+                <div>
+                  <div className="text-base font-black text-white tracking-tight">BulanVarMı?</div>
+                  <div className="text-xs text-slate-600 mt-1">
+                    © {new Date().getFullYear()} {t.home.footerTagline}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-5 text-xs text-slate-500">
+                  {[
+                    { href: "/gizlilik",          label: t.home.footerPrivacy },
+                    { href: "/kullanim-sartlari", label: t.home.footerTerms },
+                    { href: "/iade-politikasi",   label: t.home.footerRefund },
+                    { href: "/hikayeler",         label: t.home.footerStories },
+                    { href: "/kayip-buro",        label: t.home.footerBureaus },
+                  ].map((link) => (
+                    <Link key={link.href} href={link.href}
+                      className="hover:text-slate-300 transition-colors duration-150 hover:underline underline-offset-2">
+                      {link.label}
+                    </Link>
+                  ))}
+                  {isAuthed && (
+                    <Link href="/favorites" className="hover:text-slate-300 transition-colors duration-150 hover:underline underline-offset-2">
+                      {t.home.footerFavorites}
+                    </Link>
+                  )}
+                  <Link href={isAuthed ? "/search" : "/auth/login"}
+                    className="hover:text-slate-300 transition-colors duration-150 hover:underline underline-offset-2">
+                    {t.home.footerAllListings}
                   </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        <ScrollToTop />
-
-        {/* ── FOOTER ── */}
-        <footer className="border-t border-slate-800/40 mt-8 bg-gradient-to-b from-slate-950 to-slate-950 pb-20 md:pb-0">
-          <div className="mx-auto max-w-7xl px-4 py-8">
-            <div className="flex flex-wrap items-center justify-between gap-6">
-              <div>
-                <div className="text-base font-black text-white tracking-tight">BulanVarMı?</div>
-                <div className="text-xs text-slate-600 mt-1">
-                  © {new Date().getFullYear()} {t.home.footerTagline}
                 </div>
               </div>
-              <div className="flex flex-wrap gap-5 text-xs text-slate-500">
-                {[
-                  { href: "/gizlilik",          label: t.home.footerPrivacy },
-                  { href: "/kullanim-sartlari", label: t.home.footerTerms },
-                  { href: "/iade-politikasi",   label: t.home.footerRefund },
-                  { href: "/hikayeler",         label: t.home.footerStories },
-                  { href: "/kayip-buro",        label: t.home.footerBureaus },
-                ].map((link) => (
-                  <Link key={link.href} href={link.href}
-                    className="hover:text-slate-300 transition-colors duration-150 hover:underline underline-offset-2">
-                    {link.label}
-                  </Link>
-                ))}
-                {isAuthed && (
-                  <Link href="/favorites" className="hover:text-slate-300 transition-colors duration-150 hover:underline underline-offset-2">
-                    {t.home.footerFavorites}
-                  </Link>
-                )}
-                <Link href={isAuthed ? "/search" : "/auth/login"}
-                  className="hover:text-slate-300 transition-colors duration-150 hover:underline underline-offset-2">
-                  {t.home.footerAllListings}
-                </Link>
-              </div>
             </div>
-          </div>
-        </footer>
+          </footer>
+        </div>
 
       </main>
     </>
