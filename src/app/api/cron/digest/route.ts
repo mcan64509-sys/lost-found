@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 
@@ -9,7 +8,6 @@ const supabase = createClient(
 );
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-const anthropic = new Anthropic();
 const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <onboarding@resend.dev>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
 
@@ -26,26 +24,11 @@ type Profile = {
   full_name: string | null;
 };
 
-async function generateIntro(userName: string, items: Item[], userCategories: string[]): Promise<string> {
-  try {
-    const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 150,
-      messages: [{
-        role: "user",
-        content: `BulanVarMı? platformu haftalık digest emaili için kişisel bir giriş cümlesi yaz.
-Kullanıcı adı: ${userName}
-Kullanıcının ilgi kategorileri: ${userCategories.join(", ") || "genel"}
-Bu haftaki ilan sayısı: ${items.length}
-
-1-2 cümle, samimi, Türkçe. Sadece giriş metnini yaz, başka bir şey ekleme.`,
-      }],
-    });
-    const text = response.content.find((b) => b.type === "text");
-    return text ? (text as Anthropic.TextBlock).text : `Merhaba ${userName}, bu hafta ${items.length} yeni ilan var.`;
-  } catch {
-    return `Merhaba ${userName}, bu hafta ${items.length} yeni ilan eklendi.`;
-  }
+function generateIntro(userName: string, items: Item[], userCategories: string[]): string {
+  const catNote = userCategories.length > 0
+    ? ` ${userCategories.slice(0, 2).join(" ve ")} kategorisinde`
+    : "";
+  return `Merhaba ${userName}, bu hafta platformda${catNote} ${items.length} yeni ilan eklendi. Aşağıda ilginizi çekebilecek ilanları bulabilirsiniz.`;
 }
 
 function buildEmail(intro: string, items: Item[]): string {
@@ -166,7 +149,7 @@ export async function GET(req: Request) {
         ]
       : newItems as Item[];
 
-    const intro = await generateIntro(userName, relevant.slice(0, 8), userCategories);
+    const intro = generateIntro(userName, relevant.slice(0, 8), userCategories);
 
     try {
       await resend.emails.send({

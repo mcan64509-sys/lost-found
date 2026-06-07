@@ -1,5 +1,4 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
 import { getAuthenticatedUser } from "../../../../lib/auth";
@@ -8,7 +7,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-const anthropic = new Anthropic();
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
 const FROM = process.env.RESEND_FROM_EMAIL || "BulanVarMı? <support@bulanvarmi.com>";
@@ -62,46 +60,17 @@ async function runReport(alertOnly = false) {
   const noEmbed = (noEmbedItems.data || []) as ItemRow[];
   const waiting = (waitingSessions.data || []) as WaitingSession[];
 
-  const dataSummary = `
-Platform özeti:
-- Toplam aktif ilan: ${totalItems.count ?? "?"}
-- Toplam kullanıcı: ${totalUsers.count ?? "?"}
 
-Bekleyen şikayetler (toplam): ${pendingReports.count ?? 0}
-${reports.slice(0, 5).map((r) => `  • ${r.reason}: "${r.items?.title ?? "kullanıcı şikayeti"}" — ${r.reporter_email}`).join("\n") || "  (yok)"}
-
-Son 24 saatte işaretlenen ilanlar: ${flagged.length}
-${flagged.map((i) => `  • "${i.title}" (${i.category ?? "-"}, ${i.location ?? "-"})`).join("\n") || "  (yok)"}
-
-Son 24 saatte embedding hatası şüpheli (embedding=null): ${noEmbed.length}
-${noEmbed.map((i) => `  • "${i.title}"`).join("\n") || "  (yok)"}
-
-1+ saat yanıtsız bekleyen destek talepleri: ${waiting.length}
-${waiting.map((s) => `  • ${s.user_name || s.user_email}`).join("\n") || "  (yok)"}
-`;
-
-  let aiText = "";
-  try {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 9000);
-    const response = await anthropic.messages.create(
-      {
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 300,
-        system: `Sen BulanVarMı? platformunun admin asistanısın. Günlük platform sağlık raporunu kısa Türkçe yaz.
-Acil durum varsa (çok sayıda şikayet, toplu flag, embedding sorunu, yanıtsız destek) özellikle belirt.
-Her şey normalse "Genel durum iyi." diye başla.
-Sadece anlamlı uyarılar ver, gereksiz tekrar etme.`,
-        messages: [{ role: "user", content: dataSummary }],
-      },
-      { signal: ac.signal }
-    );
-    clearTimeout(timer);
-    const text = response.content.find((b) => b.type === "text");
-    aiText = text ? (text as Anthropic.TextBlock).text : "";
-  } catch {
-    aiText = "AI özeti oluşturulamadı.";
+  const parts: string[] = [];
+  if ((pendingReports.count ?? 0) === 0 && flagged.length === 0 && noEmbed.length === 0 && waiting.length === 0) {
+    parts.push("Genel durum iyi, bekleyen işlem yok.");
+  } else {
+    if ((pendingReports.count ?? 0) > 0) parts.push(`${pendingReports.count} bekleyen şikayet inceleme bekliyor.`);
+    if (flagged.length > 0) parts.push(`Son 24 saatte ${flagged.length} ilan uygunsuz içerik nedeniyle işaretlendi.`);
+    if (noEmbed.length > 0) parts.push(`${noEmbed.length} ilanda embedding hatası şüphesi var.`);
+    if (waiting.length > 0) parts.push(`${waiting.length} destek talebi 1 saatten fazladır yanıtsız bekliyor.`);
   }
+  const aiText = parts.join(" ");
 
   const hasIssues = (pendingReports.count ?? 0) > 0 || flagged.length > 0 || noEmbed.length > 0 || waiting.length > 0;
 
