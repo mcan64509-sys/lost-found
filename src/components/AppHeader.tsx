@@ -190,21 +190,9 @@ export default function AppHeader() {
   }, []);
 
   useEffect(() => {
-    async function init() {
-      const { data } = await supabase.auth.getSession();
-      const email = normalizeEmail(data.session?.user?.email);
-      if (email) loadNotifications(email);
-    }
-    init();
-  }, []);
-
-  useEffect(() => {
-    async function resolveEmail() {
-      const { data } = await supabase.auth.getSession();
-      const email = normalizeEmail(data.session?.user?.email);
-      setUserEmail(email);
-    }
-    resolveEmail();
+    const email = normalizeEmail(user?.email ?? "");
+    setUserEmail(email);
+    if (email) loadNotifications(email);
   }, [user]);
 
   useEffect(() => {

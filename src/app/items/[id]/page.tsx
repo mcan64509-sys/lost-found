@@ -140,16 +140,13 @@ export default function ItemDetailPage() {
         setItem(itemData as DbItem);
 
         if (email && sessionData.session?.access_token) {
-          fetch(`/api/favorites`, {
-            headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
-          })
-            .then((r) => r.json())
-            .then((d) => {
-              if (d.itemIds && Array.isArray(d.itemIds)) {
-                setIsFavorited(d.itemIds.includes(id));
-              }
-            })
-            .catch(() => {});
+          supabase
+            .from("favorites")
+            .select("id")
+            .eq("user_email", email)
+            .eq("item_id", id)
+            .maybeSingle()
+            .then(({ data: fav }) => setIsFavorited(!!fav));
 
           // Check if user already rated this item
           supabase
@@ -252,6 +249,7 @@ export default function ItemDetailPage() {
             .select("id, title, type, image_url, location")
             .eq("category", itemData.category)
             .eq("status", "active")
+            .eq("moderation_status", "approved")
             .neq("id", id)
             .limit(4)
             .then(({ data: sim }) => { if (sim) setSimilarItems(sim); });

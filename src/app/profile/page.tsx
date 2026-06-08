@@ -138,11 +138,6 @@ export default function ProfilePage() {
   const [userPoints, setUserPoints] = useState(0);
   const [userBadges, setUserBadges] = useState<string[]>([]);
 
-  // API key
-  const [apiKey, setApiKey] = useState("");
-  const [generatingApiKey, setGeneratingApiKey] = useState(false);
-  const [apiKeyVisible, setApiKeyVisible] = useState(false);
-
   // Item stats
   const [itemStats, setItemStats] = useState<{
     id: string; title: string; type: string; status: string;
@@ -254,8 +249,6 @@ export default function ProfilePage() {
       setReferralCode(profileRow?.referral_code ?? "");
       setUserPoints(profileRow?.points ?? 0);
       setUserBadges(profileRow?.badges ?? []);
-      setApiKey(profileRow?.api_key ?? "");
-
       // Load MFA factors
       supabase.auth.mfa.listFactors().then(({ data }) => {
         setMfaFactors((data?.all ?? []).map((f) => ({ id: f.id, factor_type: f.factor_type, status: f.status })));
@@ -637,22 +630,7 @@ export default function ProfilePage() {
     }
   }
 
-  async function handleGenerateApiKey() {
-    if (!user) return;
-    setGeneratingApiKey(true);
-    try {
-      const newKey = `bvm_${crypto.randomUUID().replace(/-/g, "")}`;
-      const { error } = await supabase.from("profiles").update({ api_key: newKey }).eq("id", user.id);
-      if (error) { toast.error("API anahtarı oluşturulamadı."); return; }
-      setApiKey(newKey);
-      setApiKeyVisible(true);
-      toast.success("Yeni API anahtarı oluşturuldu!");
-    } catch {
-      toast.error("Bir hata oluştu.");
-    } finally {
-      setGeneratingApiKey(false);
-    }
-  }
+
 
   async function handleMfaEnroll() {
     setMfaEnrolling(true);
@@ -1519,50 +1497,6 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* API Anahtarı */}
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-                <h3 className="text-sm font-bold text-white mb-1">🔑 API Anahtarı</h3>
-                <p className="text-xs text-slate-500 mb-4">
-                  Kendi sisteminizden ilan oluşturmak için API anahtarı kullanın.{" "}
-                  <code className="text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded text-[11px]">GET/POST /api/v1/items</code>
-                </p>
-                {apiKey ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3">
-                      <code className="flex-1 text-xs text-slate-300 font-mono truncate">
-                        {apiKeyVisible ? apiKey : `${apiKey.slice(0, 8)}${"•".repeat(24)}`}
-                      </code>
-                      <button
-                        onClick={() => setApiKeyVisible((v) => !v)}
-                        className="text-xs text-slate-500 hover:text-slate-300 shrink-0"
-                      >
-                        {apiKeyVisible ? "Gizle" : "Göster"}
-                      </button>
-                      <button
-                        onClick={() => { navigator.clipboard.writeText(apiKey); toast.success("Kopyalandı!"); }}
-                        className="text-xs text-blue-400 hover:text-blue-300 shrink-0"
-                      >
-                        Kopyala
-                      </button>
-                    </div>
-                    <button
-                      onClick={handleGenerateApiKey}
-                      disabled={generatingApiKey}
-                      className="w-full rounded-xl border border-red-500/20 bg-red-500/5 py-2 text-xs text-red-400 hover:bg-red-500/10 transition"
-                    >
-                      {generatingApiKey ? "Oluşturuluyor..." : "Yeni Anahtar Oluştur (eskisi geçersiz olur)"}
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={handleGenerateApiKey}
-                    disabled={generatingApiKey}
-                    className="w-full rounded-xl bg-slate-700 py-2.5 text-sm font-semibold text-white hover:bg-slate-600 transition disabled:opacity-50"
-                  >
-                    {generatingApiKey ? "Oluşturuluyor..." : "API Anahtarı Oluştur"}
-                  </button>
-                )}
-              </div>
             </section>
           )}
 

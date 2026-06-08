@@ -95,20 +95,21 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    // Category counts — only the category column
-    supabase
-      .from("items")
-      .select("category")
-      .eq("moderation_status", "approved")
-      .eq("status", "active")
-      .then(({ data }) => {
-        if (!data) return;
-        const counts: Record<string, number> = {};
-        for (const row of data as { category: string | null }[]) {
-          if (row.category) counts[row.category] = (counts[row.category] ?? 0) + 1;
-        }
-        setCatCounts(counts);
-      });
+    const cats = ["Telefon", "Cüzdan", "Anahtar", "Çanta", "Laptop", "Evcil Hayvan", "Diğer"];
+    Promise.all(
+      cats.map((cat) =>
+        supabase
+          .from("items")
+          .select("*", { count: "exact", head: true })
+          .eq("moderation_status", "approved")
+          .eq("status", "active")
+          .eq("category", cat)
+      )
+    ).then((results) => {
+      const counts: Record<string, number> = {};
+      cats.forEach((cat, i) => { counts[cat] = results[i].count ?? 0; });
+      setCatCounts(counts);
+    });
   }, []);
 
   useEffect(() => {
