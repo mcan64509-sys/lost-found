@@ -51,18 +51,11 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError;
 
-    // Trigger AI agents asynchronously — fire-and-forget
+    // Telegram bildirimi — sadece bu aktif
     if (process.env.CRON_SECRET && process.env.NEXT_PUBLIC_APP_URL) {
-      const agentHeaders = {
-        "Content-Type": "application/json",
-        "x-agent-secret": process.env.CRON_SECRET,
-      };
-      const agentBody = JSON.stringify({ itemId });
-      const base = process.env.NEXT_PUBLIC_APP_URL;
-
-      fetch(`${base}/api/agent/match`, { method: "POST", headers: agentHeaders, body: agentBody }).catch(() => {});
-      fetch(`${base}/api/agent/moderate`, { method: "POST", headers: agentHeaders, body: agentBody }).catch(() => {});
-      fetch(`${base}/api/telegram?itemId=${itemId}`, { headers: { "x-agent-secret": process.env.CRON_SECRET || "" } }).catch(() => {});
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/telegram?itemId=${itemId}`, {
+        headers: { "x-agent-secret": process.env.CRON_SECRET || "" },
+      }).catch(() => {});
     }
 
     return NextResponse.json({ success: true });

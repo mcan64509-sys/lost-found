@@ -66,23 +66,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Şikayet gönderilemedi." }, { status: 500 });
     }
 
-    // Trigger AI analysis agent — fire-and-forget
-    const { data: newReport } = await supabase
-      .from("reports")
-      .select("id")
-      .eq("reporter_email", reporterEmail)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (newReport?.id && process.env.CRON_SECRET && process.env.NEXT_PUBLIC_APP_URL) {
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/agent/resolve-reports`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-agent-secret": process.env.CRON_SECRET },
-        body: JSON.stringify({ reportId: newReport.id }),
-      }).catch(() => {});
-    }
-
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
