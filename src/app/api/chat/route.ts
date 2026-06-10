@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { checkRateLimit, getClientIp } from "../../../lib/ratelimit";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -19,8 +20,14 @@ YAZIM KURALLARI:
 - Türkçe yaz.
 - Platform dışı konularda kibarca platform konularına yönlendir.`;
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const rl = await checkRateLimit(`chat:${ip}`);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Çok fazla istek gönderdiniz. Lütfen bekleyin." }, { status: 429 });
+    }
+
     const { messages } = await req.json();
 
     if (!Array.isArray(messages) || messages.length === 0) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import AppHeader from "../../components/AppHeader";
 import AuthGuard from "../../components/AuthGuard";
 import { supabase } from "../../lib/supabase";
@@ -51,7 +52,7 @@ function PetCard({ item }: { item: PetItem }) {
     <Link href={`/items/${item.id}`} className="block rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden hover:border-slate-600 hover:scale-[1.01] transition-all group">
       <div className="relative h-44 overflow-hidden bg-slate-800">
         {img ? (
-          <img src={img} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+          <Image src={img} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, 33vw" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-5xl">{emoji}</div>
         )}

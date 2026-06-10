@@ -2,6 +2,7 @@
   "installCommand": "npm install --legacy-peer-deps",
   "crons": [
     { "path": "/api/alerts/check", "schedule": "0 10 * * *" },
-    { "path": "/api/items/expiry-reminder", "schedule": "0 9 * * *" }
+    { "path": "/api/items/expiry-reminder", "schedule": "0 9 * * *" },
+    { "path": "/api/cron/match", "schedule": "0 8 * * *" }
   ]
 }

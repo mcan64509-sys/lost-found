@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { toast } from "sonner";
@@ -482,7 +483,7 @@ export default function AppHeader() {
                   className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 pl-1 pr-3 py-1 hover:border-slate-600 transition"
                 >
                   {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="Profil" className="h-8 w-8 rounded-lg object-cover" />
+                    <Image src={user.avatarUrl} alt="Profil" width={32} height={32} className="h-8 w-8 rounded-lg object-cover" unoptimized />
                   ) : (
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-700 text-xs font-bold text-white">
                       {initials}
