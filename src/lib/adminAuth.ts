@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";
 
-const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || "mcan64509@gmail.com").toLowerCase().trim();
+const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL ?? "").toLowerCase().trim();
 
 export type AdminPermission =
   | "ban_users"
@@ -55,6 +55,7 @@ const supabaseAdmin = createClient(
 );
 
 export function isSuperAdmin(email: string): boolean {
+  if (!SUPER_ADMIN_EMAIL) return false;
   return email.toLowerCase().trim() === SUPER_ADMIN_EMAIL;
 }
 

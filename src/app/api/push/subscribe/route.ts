@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getAuthenticatedUser } from "../../../../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,15 +9,19 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { subscription, userEmail, userId } = await req.json();
-    if (!subscription?.endpoint || !userEmail) {
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser?.email) return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+
+    const { subscription, userId } = await req.json();
+    const userEmail = authUser.email;
+
+    if (!subscription?.endpoint) {
       return NextResponse.json({ error: "Eksik bilgi" }, { status: 400 });
     }
     if (
       subscription.endpoint.length > 512 ||
       (subscription.keys?.p256dh && subscription.keys.p256dh.length > 128) ||
-      (subscription.keys?.auth && subscription.keys.auth.length > 64) ||
-      userEmail.length > 254
+      (subscription.keys?.auth && subscription.keys.auth.length > 64)
     ) {
       return NextResponse.json({ error: "Geçersiz veri." }, { status: 400 });
     }

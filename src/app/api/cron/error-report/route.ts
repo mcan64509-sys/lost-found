@@ -219,13 +219,11 @@ async function runReport(alertOnly = false) {
 const ADMIN_EMAILS_LIST = ((process.env.ADMIN_EMAILS || process.env.NEXT_PUBLIC_ADMIN_EMAILS) || "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
 export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
   const bearer = req.headers.get("authorization") || "";
-  const secret = url.searchParams.get("secret");
-  if (bearer !== `Bearer ${process.env.CRON_SECRET}` && secret !== process.env.CRON_SECRET) {
+  if (bearer !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const alertOnly = url.searchParams.get("alertOnly") === "1";
+  const alertOnly = new URL(req.url).searchParams.get("alertOnly") === "1";
   return runReport(alertOnly);
 }
 
@@ -233,8 +231,7 @@ export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
   if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // ADMIN_EMAILS_LIST boşsa (env set edilmemiş) → authenticated herhangi kullanıcı geçer
-  if (ADMIN_EMAILS_LIST.length > 0 && !ADMIN_EMAILS_LIST.includes(user.email)) {
+  if (ADMIN_EMAILS_LIST.length === 0 || !ADMIN_EMAILS_LIST.includes(user.email.toLowerCase())) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

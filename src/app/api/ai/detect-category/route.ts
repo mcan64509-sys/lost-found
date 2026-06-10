@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { getAuthenticatedUser } from "../../../../lib/auth";
 
 const anthropic = new Anthropic();
 
@@ -7,6 +8,9 @@ const CATEGORIES = ["Telefon", "Cüzdan", "Anahtar", "Çanta", "Laptop", "Saat /
 
 export async function POST(req: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser?.email) return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+
     const { imageBase64, mimeType } = await req.json();
 
     if (!imageBase64 || !mimeType) {

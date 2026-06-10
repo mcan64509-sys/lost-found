@@ -20,13 +20,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Bu endpoint pg_cron veya harici cron tarafından her saat çağrılır
-// GET /api/alerts/check?secret=xxx
 export async function GET(req: Request) {
-  const secret = new URL(req.url).searchParams.get("secret");
   const bearer = (req as Request & { headers: Headers }).headers.get("authorization");
-  const authorized = secret === process.env.CRON_SECRET || bearer === `Bearer ${process.env.CRON_SECRET}`;
-  if (!authorized) {
+  if (bearer !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { getAuthenticatedUser } from "../../../../lib/auth";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser?.email) return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+
     const { title, category, type } = await req.json();
     if (!title || !category) {
       return NextResponse.json({ error: "title ve category gerekli" }, { status: 400 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getAuthenticatedUser } from "../../../../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,7 +8,11 @@ const supabase = createClient(
 );
 
 export async function POST(req: NextRequest) {
-  const { item_id, rater_email, rated_email, score, comment } = await req.json();
+  const authUser = await getAuthenticatedUser(req);
+  if (!authUser?.email) return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+
+  const { item_id, rated_email, score, comment } = await req.json();
+  const rater_email = authUser.email;
 
   if (!item_id || !rater_email || !rated_email || !score) {
     return NextResponse.json({ error: "Eksik alan" }, { status: 400 });

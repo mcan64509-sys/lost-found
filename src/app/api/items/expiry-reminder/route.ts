@@ -111,13 +111,11 @@ async function processExpiryReminders() {
   return { sent, skipped };
 }
 
-// GET: cron job ile çağrılır — ?secret=CRON_SECRET
 export async function GET(req: Request) {
-  const secret = new URL(req.url).searchParams.get("secret");
   const bearer = (req as Request & { headers: Headers }).headers.get("authorization");
-  const authorized =
-    secret === process.env.CRON_SECRET || bearer === `Bearer ${process.env.CRON_SECRET}`;
-  if (!authorized) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (bearer !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const result = await processExpiryReminders();
   return NextResponse.json(result);
