@@ -51,10 +51,16 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError;
 
-    // Telegram bildirimi — sadece bu aktif
     if (process.env.CRON_SECRET && process.env.NEXT_PUBLIC_APP_URL) {
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/telegram?itemId=${itemId}`, {
-        headers: { "x-agent-secret": process.env.CRON_SECRET || "" },
+      const base = process.env.NEXT_PUBLIC_APP_URL;
+      const secret = process.env.CRON_SECRET;
+      fetch(`${base}/api/agent/match`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-agent-secret": secret },
+        body: JSON.stringify({ itemId }),
+      }).catch(() => {});
+      fetch(`${base}/api/telegram?itemId=${itemId}`, {
+        headers: { "x-agent-secret": secret },
       }).catch(() => {});
     }
 
