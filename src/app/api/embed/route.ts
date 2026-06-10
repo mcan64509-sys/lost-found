@@ -59,6 +59,11 @@ export async function POST(req: NextRequest) {
         headers: { "Content-Type": "application/json", "x-agent-secret": secret },
         body: JSON.stringify({ itemId }),
       }).catch(() => {});
+      fetch(`${base}/api/agent/moderate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-agent-secret": secret },
+        body: JSON.stringify({ itemId }),
+      }).catch(() => {});
       fetch(`${base}/api/telegram?itemId=${itemId}`, {
         headers: { "x-agent-secret": secret },
       }).catch(() => {});
