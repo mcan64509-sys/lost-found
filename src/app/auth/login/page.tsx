@@ -67,11 +67,15 @@ function LoginForm() {
 
   async function handleGoogleLogin() {
     setGoogleLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
+        skipBrowserRedirect: true,
+      },
     });
-    if (error) { toast.error(error.message); setGoogleLoading(false); }
+    if (error) { toast.error(error.message); setGoogleLoading(false); return; }
+    if (data.url) window.location.href = data.url;
   }
 
   async function handleSendOtp() {

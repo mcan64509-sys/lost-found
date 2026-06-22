@@ -179,9 +179,13 @@ export default function FoundReportPage() {
     if (!title.trim() || !category) { toast.error("Önce başlık ve kategori doldur."); return; }
     try {
       setAiDescLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/ai/suggest-description", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { "Authorization": `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ title, category: category === "Diğer" ? customCategory || "Diğer" : category, type: "found" }),
       });
       const data = await res.json();
