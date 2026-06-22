@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+export const dynamic = "force-dynamic";
+
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "../../components/AppHeader";
 import { supabase } from "../../lib/supabase";
 import { normalizeEmail } from "../../lib/utils";
 import { PRODUCTS, type ProductType } from "../../lib/stripe-products";
+import { PADDLE_PRODUCTS } from "../../lib/paddle-products";
 import { Loader2 } from "lucide-react";
 
 function formatTL(cents: number) {
@@ -20,6 +23,7 @@ function UpgradeContent() {
   const [loading, setLoading] = useState<string | null>(null);
   const [itemTitle, setItemTitle] = useState("");
   const [itemType, setItemType] = useState<string | null>(null);
+  const paddleRef = useRef<{ Checkout: { open: (o: unknown) => void } } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -30,14 +34,26 @@ function UpgradeContent() {
 
       if (itemId) {
         const { data: item } = await supabase
-          .from("items")
-          .select("title, type")
-          .eq("id", itemId)
-          .single();
-        if (item) {
-          setItemTitle(item.title);
-          setItemType(item.type);
-        }
+          .from("items").select("title, type").eq("id", itemId).single();
+        if (item) { setItemTitle(item.title); setItemType(item.type); }
+      }
+
+      // Paddle başlat
+      try {
+        const { initializePaddle } = await import("@paddle/paddle-js");
+        const paddle = await initializePaddle({
+          environment: (process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT || "production") as "sandbox" | "production",
+          token: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN!,
+          eventCallback(event) {
+            if (event.name === "checkout.completed") {
+              const txId = (event.data as { transaction_id?: string })?.transaction_id || "";
+              router.push("/payment/success?session_id=" + txId);
+            }
+          },
+        });
+        paddleRef.current = paddle as { Checkout: { open: (o: unknown) => void } };
+      } catch (e) {
+        console.error("Paddle init hatası:", e);
       }
     }
     load();
@@ -49,16 +65,15 @@ function UpgradeContent() {
 
   async function handleCheckout(productType: ProductType) {
     if (!userEmail) { router.push("/auth/login"); return; }
+    if (!paddleRef.current) { alert("Ödeme sistemi yükleniyor, lütfen bekleyin."); return; }
     setLoading(productType);
     try {
-      const res = await fetch("/api/payment/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productType, itemId, userEmail }),
+      const paddleProduct = PADDLE_PRODUCTS[productType];
+      paddleRef.current.Checkout.open({
+        items: [{ priceId: paddleProduct.priceId, quantity: 1 }],
+        customer: { email: userEmail },
+        customData: { productType, itemId: itemId || "", userEmail },
       });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-      else alert("Ödeme başlatılamadı: " + data.error);
     } finally {
       setLoading(null);
     }
@@ -81,43 +96,33 @@ function UpgradeContent() {
             )}
           </div>
 
-          {/* Free tier info */}
           <div className="mb-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 px-5 py-4 text-sm text-slate-300">
             <span className="font-semibold text-white">İlk 3 ilanın ücretsiz!</span>{" "}
             4. ilanından itibaren Standart, Altın veya Acil paket seçmelisin.
-            Altın ve Acil ilanlar &quot;Acil İlanlar&quot; kategorisinde görünür. Acil ilanlar en üst sıraya çıkar.
+            Altın ve Acil ilanlar &quot;Acil İlanlar&quot; kategorisinde görünür.
           </div>
 
-          {/* Location boost info */}
           {itemTitle && (
             <div className="mb-6 rounded-2xl border border-violet-500/20 bg-violet-500/5 px-5 py-4 text-sm">
               <p className="font-semibold text-violet-300 mb-1">📍 Şehir Bazlı Öne Çıkarma</p>
               <p className="text-slate-400">
-                İlanın satın aldığın paketle birlikte <span className="text-white font-semibold">Öncelikli İlanlar</span> sayfasında şehre göre filtrelenebilecek.
-                İlancın konumuna göre arama yapan kullanıcılar seni daha kolay bulur.
+                İlanın <span className="text-white font-semibold">Öncelikli İlanlar</span> sayfasında şehre göre filtrelenebilecek.
               </p>
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
             {products.map(([key, product]) => (
-              <div
-                key={key}
-                className={`relative rounded-3xl border p-6 flex flex-col gap-4 transition hover:scale-[1.02] ${product.color}`}
-              >
+              <div key={key} className={`relative rounded-3xl border p-6 flex flex-col gap-4 transition hover:scale-[1.02] ${product.color}`}>
                 <div>
                   <div className="text-3xl mb-2">{product.label.split(" ")[0]}</div>
-                  <h3 className="font-black text-white text-lg">
-                    {product.label.split(" ").slice(1).join(" ")}
-                  </h3>
+                  <h3 className="font-black text-white text-lg">{product.label.split(" ").slice(1).join(" ")}</h3>
                   <p className="text-xs text-slate-400 mt-1">{product.desc}</p>
                 </div>
-
                 <div className="py-3 border-t border-b border-white/10">
                   <span className="text-3xl font-black text-white">{formatTL(product.price_cents)}</span>
                   <span className="text-slate-500 text-sm ml-1">/ 30 gün</span>
                 </div>
-
                 <ul className="space-y-2 flex-1">
                   {product.features.map((f) => (
                     <li key={f} className="flex items-center gap-2 text-xs text-slate-300">
@@ -125,23 +130,16 @@ function UpgradeContent() {
                     </li>
                   ))}
                 </ul>
-
                 <button
                   onClick={() => handleCheckout(key)}
                   disabled={loading === key}
                   className={`w-full flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold transition disabled:opacity-50 ${
-                    key === "altin_ilan"
-                      ? "bg-yellow-500 text-slate-900 hover:bg-yellow-400"
-                      : key === "acil_ilan"
-                      ? "bg-red-600 text-white hover:bg-red-500"
-                      : "bg-slate-600 text-white hover:bg-slate-500"
+                    key === "altin_ilan" ? "bg-yellow-500 text-slate-900 hover:bg-yellow-400"
+                    : key === "acil_ilan" ? "bg-red-600 text-white hover:bg-red-500"
+                    : "bg-slate-600 text-white hover:bg-slate-500"
                   }`}
                 >
-                  {loading === key ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    "Satın Al"
-                  )}
+                  {loading === key ? <Loader2 className="w-4 h-4 animate-spin" /> : "Satın Al"}
                 </button>
               </div>
             ))}
@@ -152,7 +150,7 @@ function UpgradeContent() {
               <div>
                 <div className="text-xl mb-1">🔒</div>
                 <div className="font-semibold text-white">Güvenli Ödeme</div>
-                <div className="text-xs text-slate-500 mt-0.5">Stripe altyapısı, 256-bit SSL</div>
+                <div className="text-xs text-slate-500 mt-0.5">Paddle altyapısı, 256-bit SSL</div>
               </div>
               <div>
                 <div className="text-xl mb-1">💳</div>
@@ -166,12 +164,6 @@ function UpgradeContent() {
               </div>
             </div>
           </div>
-
-          {process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.includes("test") && (
-            <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-center text-xs text-amber-400">
-              🧪 Test modu — Gerçek ödeme alınmaz. Test kartı: <strong>4242 4242 4242 4242</strong>
-            </div>
-          )}
         </div>
       </main>
     </>
@@ -179,9 +171,5 @@ function UpgradeContent() {
 }
 
 export default function UpgradePage() {
-  return (
-    <Suspense>
-      <UpgradeContent />
-    </Suspense>
-  );
+  return <Suspense><UpgradeContent /></Suspense>;
 }

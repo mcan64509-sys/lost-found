@@ -9,14 +9,14 @@ import { CheckCircle2, ArrowRight, Star } from "lucide-react";
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
+  const fromApp = searchParams.get("from") === "app";
   const [verified, setVerified] = useState(false);
 
   useEffect(() => {
-    if (sessionId) {
-      // Kısa bekleme — webhook işlemesi için
+    if (sessionId || fromApp) {
       setTimeout(() => setVerified(true), 2000);
     }
-  }, [sessionId]);
+  }, [sessionId, fromApp]);
 
   return (
     <>
@@ -31,7 +31,11 @@ function SuccessContent() {
             Öncelik seviyeniz güncellendi. İlanınız artık listelerde öne çıkıyor.
           </p>
           <p className="text-xs text-slate-600 mb-8">
-            Onay e-postası {sessionId ? "kayıtlı adresinize" : ""} gönderildi.
+            {fromApp
+              ? "Ödeme işlemi tamamlandı. İlanınız birkaç saniye içinde güncellenir."
+              : sessionId
+              ? "Onay e-postası kayıtlı adresinize gönderildi."
+              : ""}
           </p>
 
           <div className="flex flex-col gap-3">
