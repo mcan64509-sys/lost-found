@@ -257,9 +257,20 @@ export default function MyItemsPage() {
               </div>
             </div>
           ) : items.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-900/50 p-10 text-center">
-              <h3 className="text-2xl font-bold">{t.myItems.empty}</h3>
-              <p className="mt-3 text-slate-400">{t.myItems.emptyDesc}</p>
+            <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-900/50 p-12 text-center animate-fade-in-up">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl border border-slate-700 bg-slate-800/60 text-4xl">
+                📋
+              </div>
+              <h3 className="text-2xl font-bold text-white">{t.myItems.empty}</h3>
+              <p className="mt-3 text-slate-400 max-w-sm mx-auto leading-relaxed">{t.myItems.emptyDesc}</p>
+              <div className="mt-8 flex flex-wrap justify-center gap-3">
+                <Link href="/lost/report" className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-slate-950 hover:bg-amber-400 transition">
+                  + Kayıp İlan Ver
+                </Link>
+                <Link href="/found/report" className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 transition">
+                  + Bulundu İlan Ver
+                </Link>
+              </div>
             </div>
           ) : (
             <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">

@@ -127,16 +127,19 @@ export default function FavoritesPage() {
               ))}
             </div>
           ) : items.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-slate-800 p-12 text-center">
-              <p className="text-lg font-semibold text-slate-300">Henüz favori ilanın yok</p>
-              <p className="mt-2 text-sm text-slate-500">
-                İlan detayına girerek ★ Favori butonuna tıklayarak kaydet.
+            <div className="rounded-3xl border border-dashed border-slate-700 bg-slate-900/30 p-12 text-center animate-fade-in-up">
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-3xl border border-slate-700 bg-slate-800/60 text-4xl">
+                ⭐
+              </div>
+              <p className="text-xl font-bold text-white">Henüz favori ilanın yok</p>
+              <p className="mt-3 text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">
+                İlan detayına girerek ★ butonuna tıklayarak favori listene ekleyebilirsin.
               </p>
               <Link
                 href="/search"
-                className="mt-6 inline-block rounded-2xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"
+                className="mt-8 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-500 transition"
               >
-                İlanlara Göz At
+                İlanlara Göz At →
               </Link>
             </div>
           ) : (

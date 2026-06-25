@@ -42,14 +42,29 @@ function timeAgo(dateStr: string) {
 }
 
 function PetCard({ item }: { item: PetItem }) {
+  const [imgLoaded, setImgLoaded] = useState(false);
   const img = item.image_url || item.image_urls?.[0];
   const emoji = SPECIES_EMOJI[item.pet_species ?? ""] ?? "🐾";
+  const isLost = item.type === "lost";
 
   return (
-    <Link href={`/items/${item.id}`} className="block rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden hover:border-slate-600 hover:scale-[1.01] transition-all group">
+    <Link
+      href={`/items/${item.id}`}
+      className={`block rounded-2xl border border-slate-800 bg-slate-900/60 overflow-hidden hover:-translate-y-1 transition-all duration-200 group ${isLost ? "card-lost" : "card-found"}`}
+    >
       <div className="relative h-44 overflow-hidden bg-slate-800">
         {img ? (
-          <Image src={img} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width: 768px) 100vw, 33vw" />
+          <>
+            {!imgLoaded && <div className="absolute inset-0 skeleton" />}
+            <Image
+              src={img}
+              alt={item.title}
+              fill
+              onLoad={() => setImgLoaded(true)}
+              className={`object-cover group-hover:scale-105 transition-all duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+              sizes="(max-width: 768px) 100vw, 33vw"
+            />
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-5xl">{emoji}</div>
         )}
@@ -217,7 +232,19 @@ export default function PetsPage() {
 
           {/* İlanlar */}
           {loading ? (
-            <div className="text-center py-20 text-slate-500">Yükleniyor...</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="rounded-2xl border border-slate-800/60 bg-slate-900 overflow-hidden">
+                  <div className="h-44 skeleton" />
+                  <div className="p-4 space-y-3">
+                    <div className="h-3 w-20 skeleton rounded-full" />
+                    <div className="h-4 w-3/4 skeleton rounded-full" />
+                    <div className="h-3 w-1/2 skeleton rounded-full" />
+                    <div className="h-3 w-2/3 skeleton rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-20">
               <div className="text-5xl mb-4">🐾</div>

@@ -210,6 +210,24 @@ select:focus-visible {
   border-color: rgba(52,211,153,0.35) !important;
 }
 
-/* ── Stagger extended (up to 8 children) ─────────────────────── */
-.stagger > *:nth-child(7) { animation-delay: 360ms; }
-.stagger > *:nth-child(8) { animation-delay: 420ms; }
+/* ── Stagger extended (up to 12 children) ────────────────────── */
+.stagger > *:nth-child(7)  { animation-delay: 360ms; }
+.stagger > *:nth-child(8)  { animation-delay: 420ms; }
+.stagger > *:nth-child(9)  { animation-delay: 480ms; }
+.stagger > *:nth-child(10) { animation-delay: 540ms; }
+.stagger > *:nth-child(11) { animation-delay: 600ms; }
+.stagger > *:nth-child(12) { animation-delay: 660ms; }
+
+/* ── Scroll reveal — fires when element enters viewport ──────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.65s ease-out, transform 0.65s ease-out;
+}
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal.delay-100 { transition-delay: 100ms; }
+.reveal.delay-200 { transition-delay: 200ms; }
+.reveal.delay-300 { transition-delay: 300ms; }

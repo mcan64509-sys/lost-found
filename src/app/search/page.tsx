@@ -28,6 +28,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
+import ImgFade from "../../components/ImgFade";
 
 type SearchItem = ItemMarker & {
   created_at: string;
@@ -35,10 +36,6 @@ type SearchItem = ItemMarker & {
   status: string | null;
   description: string | null;
   location: string | null;
-  reward_amount?: number | null;
-  is_urgent?: boolean | null;
-  is_featured?: boolean | null;
-  priority_level?: number | null;
 };
 
 type SelectedLocation = {
@@ -92,8 +89,6 @@ function SearchPageContent() {
   const [dateFrom, setDateFrom] = useState(() => searchParams.get("from") || "");
   const [dateTo, setDateTo] = useState(() => searchParams.get("to") || "");
   const [hideResolved, setHideResolved] = useState(() => searchParams.get("hide_resolved") === "1");
-  const [onlyUrgent, setOnlyUrgent] = useState(() => searchParams.get("urgent") === "true");
-  const [onlyFeatured, setOnlyFeatured] = useState(() => searchParams.get("featured") === "true");
   const [onlyStatus] = useState(() => searchParams.get("status") || "");
   const [selectedLocation, setSelectedLocation] = useState<SelectedLocation>(defaultLocation);
   const [locationEnabled, setLocationEnabled] = useState(false);
@@ -190,9 +185,8 @@ function SearchPageContent() {
       setLoading(true);
       let query = supabase
         .from("items")
-        .select("id, type, title, description, category, location, lat, lng, image_url, created_at, view_count, status, reward_amount, is_urgent, is_featured, priority_level")
+        .select("id, type, title, description, category, location, lat, lng, image_url, created_at, view_count, status")
         .eq("moderation_status", "approved")
-        .order("priority_level", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (debouncedKeyword.trim().length > 1) {
@@ -247,8 +241,6 @@ function SearchPageContent() {
         if (!inTitle && !inDesc && !inLocation) return false;
       }
       if (hideResolved && item.status === "resolved") return false;
-      if (onlyUrgent && !item.is_urgent) return false;
-      if (onlyFeatured && !item.is_featured) return false;
       if (onlyStatus && item.status !== onlyStatus) return false;
       if (fromMs && new Date(item.created_at).getTime() < fromMs) return false;
       if (toMs && new Date(item.created_at).getTime() > toMs) return false;
@@ -256,27 +248,17 @@ function SearchPageContent() {
     });
 
     return [...filtered].sort((a, b) => {
-      // Featured ilanlar her zaman üstte
-      if (a.is_featured && !b.is_featured) return -1;
-      if (!a.is_featured && b.is_featured) return 1;
-      // Öncelikli ilanlar (priority_level yüksek olan önce)
-      const aPriority = a.priority_level ?? 0;
-      const bPriority = b.priority_level ?? 0;
-      if (aPriority !== bPriority) return bPriority - aPriority;
-      // Urgent ilanlar sonra
-      if (a.is_urgent && !b.is_urgent) return -1;
-      if (!a.is_urgent && b.is_urgent) return 1;
       if (sortBy === "oldest") return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       if (sortBy === "most_viewed") return (b.view_count ?? 0) - (a.view_count ?? 0);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [allItems, selectedLocation, locationEnabled, activeTab, category, keyword, sortBy, dateFrom, dateTo, hideResolved, onlyUrgent, onlyFeatured, onlyStatus]);
+  }, [allItems, selectedLocation, locationEnabled, activeTab, category, keyword, sortBy, dateFrom, dateTo, hideResolved, onlyStatus]);
 
   const lostItems = filteredItems.filter((i) => i.type === "lost");
   const foundItems = filteredItems.filter((i) => i.type === "found");
   const displayedItems = activeTab === "all" ? filteredItems : activeTab === "lost" ? lostItems : foundItems;
 
-  const hasActiveFilter = keyword || category !== CATEGORIES_DB[0] || sortBy !== "newest" || dateFrom || dateTo || hideResolved || onlyUrgent || onlyFeatured;
+  const hasActiveFilter = keyword || category !== CATEGORIES_DB[0] || sortBy !== "newest" || dateFrom || dateTo || hideResolved;
 
   const handleClear = () => {
     setActiveTab("all");
@@ -286,8 +268,6 @@ function SearchPageContent() {
     setDateFrom("");
     setDateTo("");
     setHideResolved(false);
-    setOnlyUrgent(false);
-    setOnlyFeatured(false);
     setSelectedLocation(defaultLocation);
     setLocationEnabled(false);
     router.replace("/search", { scroll: false });
@@ -477,28 +457,6 @@ function SearchPageContent() {
                       <span className="text-xs text-slate-400">{t.search.hideResolved}</span>
                     </label>
 
-                    {/* Sadece acil toggle */}
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <div
-                        onClick={() => { setOnlyUrgent(!onlyUrgent); syncUrl({ urgent: !onlyUrgent ? "true" : "" }); }}
-                        className={`relative w-9 h-5 rounded-full transition-colors ${onlyUrgent ? "bg-red-600" : "bg-slate-700"}`}
-                      >
-                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${onlyUrgent ? "translate-x-4" : ""}`} />
-                      </div>
-                      <span className="text-xs text-slate-400">Sadece acil</span>
-                    </label>
-
-                    {/* Sadece öne çıkan toggle */}
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <div
-                        onClick={() => { setOnlyFeatured(!onlyFeatured); syncUrl({ featured: !onlyFeatured ? "true" : "" }); }}
-                        className={`relative w-9 h-5 rounded-full transition-colors ${onlyFeatured ? "bg-amber-500" : "bg-slate-700"}`}
-                      >
-                        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${onlyFeatured ? "translate-x-4" : ""}`} />
-                      </div>
-                      <span className="text-xs text-slate-400">Sadece öne çıkan</span>
-                    </label>
-
                     <button
                       onClick={handleSaveAlert}
                       disabled={savingAlert}
@@ -639,7 +597,7 @@ function SearchPageContent() {
                       {/* Görsel */}
                       <div className="relative h-44 overflow-hidden bg-slate-800">
                         {item.image_url ? (
-                          <img
+                          <ImgFade
                             src={item.image_url}
                             alt={item.title}
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -663,21 +621,6 @@ function SearchPageContent() {
                             {isLost ? <AlertCircle className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
                             {isLost ? t.common.lost : t.common.found}
                           </span>
-                          {item.is_featured && (
-                            <span className="rounded-full bg-yellow-400/90 px-2 py-1 text-[11px] font-bold text-slate-950">
-                              ⭐ {t.common.featured}
-                            </span>
-                          )}
-                          {(item.priority_level ?? 0) > 0 && !item.is_featured && (
-                            <span className="rounded-full bg-amber-500/90 px-2 py-1 text-[11px] font-bold text-slate-950">
-                              {item.priority_level === 3 ? "🥇" : item.priority_level === 2 ? "🥈" : "🥉"} Öncelikli
-                            </span>
-                          )}
-                          {item.is_urgent && (
-                            <span className="rounded-full bg-red-500/90 px-2 py-1 text-[11px] font-bold text-white">
-                              🔴 {t.common.urgent}
-                            </span>
-                          )}
                           {item.status === "resolved" && (
                             <span className="rounded-full bg-blue-500/90 px-2 py-1 text-[11px] font-bold text-white">
                               {t.common.resolved}
@@ -689,12 +632,6 @@ function SearchPageContent() {
                             </span>
                           )}
                         </div>
-                        {/* Ödül badge */}
-                        {item.reward_amount && item.reward_amount > 0 && (
-                          <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-emerald-500/90 px-2.5 py-1 backdrop-blur-sm">
-                            <span className="text-[11px] font-bold text-slate-950">💰 {item.reward_amount.toLocaleString("tr-TR")} TL ödül</span>
-                          </div>
-                        )}
                         {/* Görüntülenme */}
                         {item.view_count !== null && item.view_count > 0 && (
                           <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/50 px-2 py-1 backdrop-blur-sm">

@@ -63,6 +63,24 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    const els = document.querySelectorAll<HTMLElement>(".reveal");
+    if (!els.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in-view");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -32px 0px" }
+    );
+    els.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     try {
       const data = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
       setRecentlyViewed(data);
@@ -173,7 +191,7 @@ export default function HomePage() {
           </div>
 
           {/* ── KATEGORİLER ── */}
-          <section className="mx-auto max-w-7xl px-4 py-10 md:py-14 animate-fade-in-up">
+          <section className="mx-auto max-w-7xl px-4 py-10 md:py-14 reveal">
             <div className="flex items-center justify-center mb-6">
               <div className="h-px flex-1 bg-gradient-to-r from-transparent to-slate-800" />
               <h2 className="text-[11px] font-bold text-slate-500 tracking-widest uppercase px-4">
@@ -212,7 +230,7 @@ export default function HomePage() {
 
           {/* ── SON GÖRÜNTÜLENENLER ── */}
           {recentlyViewed.length > 0 && (
-            <section className="mx-auto max-w-7xl px-4 pb-4 animate-fade-in-up" style={{ animationDelay: "60ms" }}>
+            <section className="mx-auto max-w-7xl px-4 pb-4 reveal">
               <div className="flex items-center justify-between mb-2.5">
                 <span className="text-[11px] font-bold text-slate-600 tracking-widest uppercase">Son Görüntülenenler</span>
                 <button
@@ -249,7 +267,7 @@ export default function HomePage() {
           )}
 
           {/* ── YAKINIMDAKI İLANLAR ── */}
-          <section className="mx-auto max-w-7xl px-4 pb-10 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+          <section className="mx-auto max-w-7xl px-4 pb-10 reveal delay-100">
             <div className="rounded-2xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 to-slate-900/30 p-5 shadow-xl shadow-black/20 backdrop-blur-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                 <div>
