@@ -60,21 +60,7 @@ export default function KullanimSartlariPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-lg font-semibold text-white">5. Ücretli Hizmetler ve Ödeme</h2>
-            <p className="mb-3">
-              Platform bazı özellikleri (öncelikli ilan, öne çıkarma, abonelik) ücretli olarak sunmaktadır.
-            </p>
-            <ul className="list-disc space-y-2 pl-5 text-slate-400">
-              <li>Tüm ödemeler <strong className="text-white">Stripe</strong> altyapısı üzerinden güvenli şekilde işlenir. Kart bilgileriniz platformumuzda saklanmaz.</li>
-              <li>Fiyatlar Euro (€) cinsinden belirtilmiş olup KDV dahil değildir.</li>
-              <li>Tek seferlik satın alımlar (Bronz, Gümüş, Altın öncelik) belirtilen süre için geçerlidir ve süre sonunda otomatik olarak sona erer.</li>
-              <li>Aylık abonelikler her ay otomatik olarak yenilenir. İstediğiniz zaman iptal edebilirsiniz; iptal işlemi mevcut dönem sonunda geçerli olur.</li>
-              <li>Dijital hizmet niteliğinde olduğundan, hizmet aktive edildikten sonra iade yapılmaz. Ayrıntılar için <Link href="/iade-politikasi" className="text-blue-400 hover:text-blue-300">İade Politikası</Link> sayfamızı inceleyin.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="mb-3 text-lg font-semibold text-white">6. Yasaklı İçerik ve Davranışlar</h2>
+            <h2 className="mb-3 text-lg font-semibold text-white">5. Yasaklı İçerik ve Davranışlar</h2>
             <ul className="list-disc space-y-2 pl-5 text-slate-400">
               <li>Spam, reklam veya zararlı bağlantı paylaşmak yasaktır.</li>
               <li>Diğer kullanıcılara yönelik taciz, tehdit veya hakaret içerikli mesaj göndermek yasaktır.</li>
@@ -84,11 +70,10 @@ export default function KullanimSartlariPage() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-lg font-semibold text-white">7. Hesap Askıya Alma ve Sonlandırma</h2>
+            <h2 className="mb-3 text-lg font-semibold text-white">6. Hesap Askıya Alma ve Sonlandırma</h2>
             <p>
               Platform yönetimi, bu şartları ihlal eden hesapları önceden bildirim yapmaksızın
-              askıya alma veya kalıcı olarak silme hakkını saklı tutar. Askıya alınan hesaplar
-              için ödenmiş ücretler iade edilmez.
+              askıya alma veya kalıcı olarak silme hakkını saklı tutar.
             </p>
           </section>
 
@@ -133,7 +118,6 @@ export default function KullanimSartlariPage() {
 
         <div className="mt-12 flex flex-wrap gap-4 text-sm text-slate-500">
           <Link href="/gizlilik" className="hover:text-white transition">Gizlilik Politikası</Link>
-          <Link href="/iade-politikasi" className="hover:text-white transition">İade Politikası</Link>
           <Link href="/" className="hover:text-white transition">Ana Sayfa</Link>
         </div>
       </div>

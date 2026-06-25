@@ -8,13 +8,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: BASE,                          priority: 1.0,  changeFrequency: "daily",   lastModified: new Date() },
     { url: `${BASE}/search`,              priority: 0.9,  changeFrequency: "hourly",  lastModified: new Date() },
     { url: `${BASE}/map`,                 priority: 0.8,  changeFrequency: "hourly",  lastModified: new Date() },
-    { url: `${BASE}/priority`,            priority: 0.7,  changeFrequency: "daily",   lastModified: new Date() },
     { url: `${BASE}/pets`,                priority: 0.7,  changeFrequency: "daily",   lastModified: new Date() },
     { url: `${BASE}/hikayeler`,           priority: 0.6,  changeFrequency: "weekly",  lastModified: new Date() },
     { url: `${BASE}/kayip-buro`,          priority: 0.5,  changeFrequency: "monthly", lastModified: new Date() },
     { url: `${BASE}/gizlilik`,            priority: 0.3,  changeFrequency: "monthly", lastModified: new Date() },
     { url: `${BASE}/kullanim-sartlari`,   priority: 0.3,  changeFrequency: "monthly", lastModified: new Date() },
-    { url: `${BASE}/iade-politikasi`,     priority: 0.3,  changeFrequency: "monthly", lastModified: new Date() },
   ];
 
   try {

@@ -315,7 +315,6 @@ export default function HomePage() {
                   {[
                     { href: "/gizlilik",          label: t.home.footerPrivacy },
                     { href: "/kullanim-sartlari", label: t.home.footerTerms },
-                    { href: "/iade-politikasi",   label: t.home.footerRefund },
                     { href: "/hikayeler",         label: t.home.footerStories },
                     { href: "/kayip-buro",        label: t.home.footerBureaus },
                   ].map((link) => (

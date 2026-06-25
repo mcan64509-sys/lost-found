@@ -38,7 +38,6 @@ export default function GizlilikPage() {
               <li><strong className="text-slate-300">Hesap verileri:</strong> E-posta adresi, şifre (şifreli olarak saklanır), kayıt tarihi.</li>
               <li><strong className="text-slate-300">İlan içerikleri:</strong> Başlık, açıklama, kategori, konum (koordinat ve adres), yüklenen fotoğraflar, evcil hayvan bilgileri (tür, renk, mikro çip numarası).</li>
               <li><strong className="text-slate-300">İletişim verileri:</strong> Diğer kullanıcılara gönderdiğiniz mesajlar ve talep geçmişiniz.</li>
-              <li><strong className="text-slate-300">Ödeme verileri:</strong> Ödeme işlemleri Stripe altyapısı üzerinden gerçekleştirilir. Kart numarası gibi hassas finansal bilgiler platformumuzda <strong className="text-slate-300">saklanmaz</strong>. Yalnızca Stripe tarafından sağlanan işlem kimliği ve abonelik durumu kaydedilir.</li>
               <li><strong className="text-slate-300">Bildirim aboneliği:</strong> Tarayıcı push bildirimleri için cihaz abonelik anahtarı (isteğe bağlı, izninizle).</li>
               <li><strong className="text-slate-300">Teknik veriler:</strong> IP adresi, tarayıcı türü, platform kullanım istatistikleri.</li>
             </ul>
@@ -49,7 +48,6 @@ export default function GizlilikPage() {
             <ul className="list-disc space-y-2 pl-5 text-slate-400">
               <li>Kayıp eşya ve evcil hayvanları sahiplerine kavuşturmak (platformun temel hizmeti)</li>
               <li>Hesabınızı oluşturmak, doğrulamak ve yönetmek</li>
-              <li>Ödeme işlemlerini gerçekleştirmek ve abonelik durumunu takip etmek</li>
               <li>İlan eşleşmelerini size bildirmek (e-posta ve/veya push bildirim)</li>
               <li>Platform güvenliğini sağlamak ve kötüye kullanımı önlemek</li>
               <li>Yasal yükümlülükleri yerine getirmek</li>
@@ -65,10 +63,6 @@ export default function GizlilikPage() {
               <li>
                 <strong className="text-slate-300">Supabase</strong> — Veritabanı ve kimlik doğrulama altyapısı. Veriler AB/ABD veri merkezlerinde şifreli olarak saklanır.
                 (<a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Gizlilik politikası</a>)
-              </li>
-              <li>
-                <strong className="text-slate-300">Stripe</strong> — Ödeme işlemleri ve abonelik yönetimi. PCI DSS Level 1 sertifikalıdır.
-                (<a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Gizlilik politikası</a>)
               </li>
               <li>
                 <strong className="text-slate-300">Resend</strong> — İşlemsel e-posta gönderimi (şifre sıfırlama, bildirimler).
@@ -102,7 +96,6 @@ export default function GizlilikPage() {
             <ul className="list-disc space-y-2 pl-5 text-slate-400">
               <li>Hesap verileri, hesabınızı silene kadar saklanır.</li>
               <li>İlanlar, siz silene veya 1 yıl boyunca hareketsiz kalana kadar saklanır.</li>
-              <li>Ödeme kayıtları, finansal ve yasal yükümlülükler nedeniyle 7 yıl boyunca saklanır.</li>
               <li>Push bildirim abonelikleri, siz iptal edene veya cihaz geçersiz hale gelene kadar saklanır.</li>
             </ul>
           </section>
@@ -136,7 +129,6 @@ export default function GizlilikPage() {
               <li>Tüm veriler HTTPS/TLS şifreli bağlantı üzerinden iletilir.</li>
               <li>Şifreler bcrypt algoritmasıyla hashlenerek saklanır; düz metin şifre hiçbir zaman saklanmaz.</li>
               <li>Veritabanı erişimi Row Level Security (RLS) politikalarıyla korunmaktadır.</li>
-              <li>Ödeme bilgileri PCI DSS uyumlu Stripe altyapısında işlenir.</li>
             </ul>
           </section>
 
@@ -170,7 +162,6 @@ export default function GizlilikPage() {
 
         <div className="mt-12 flex flex-wrap gap-4 text-sm text-slate-500">
           <Link href="/kullanim-sartlari" className="hover:text-white transition">Kullanım Şartları</Link>
-          <Link href="/iade-politikasi" className="hover:text-white transition">İade Politikası</Link>
           <Link href="/" className="hover:text-white transition">Ana Sayfa</Link>
         </div>
       </div>

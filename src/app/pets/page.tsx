@@ -16,9 +16,6 @@ type PetItem = {
   type: string;
   image_url: string | null;
   image_urls: string[] | null;
-  priority_level: number;
-  reward_amount: number | null;
-  is_urgent: boolean | null;
   view_count: number | null;
   created_at: string;
   status: string | null;
@@ -60,12 +57,6 @@ function PetCard({ item }: { item: PetItem }) {
           <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.type === "lost" ? "bg-red-500 text-white" : "bg-emerald-500 text-white"}`}>
             {item.type === "lost" ? "Kayıp" : "Bulundu"}
           </span>
-          {item.is_urgent && (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-600 text-white">🔴 Acil</span>
-          )}
-          {(item.priority_level ?? 0) > 0 && (
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950">⭐</span>
-          )}
         </div>
         {item.pet_species && (
           <div className="absolute top-2 right-2">
@@ -106,11 +97,6 @@ function PetCard({ item }: { item: PetItem }) {
           <span>{timeAgo(item.created_at)}</span>
         </div>
 
-        {item.reward_amount && item.reward_amount > 0 && (
-          <div className="mt-2 text-sm font-bold text-emerald-400">
-            💰 {item.reward_amount.toLocaleString("tr-TR")} TL ödül
-          </div>
-        )}
         {item.pet_microchip && (
           <div className="mt-2 text-xs text-blue-400 flex items-center gap-1">
             📡 Mikroçip: {item.pet_microchip}
@@ -133,11 +119,10 @@ export default function PetsPage() {
       setLoading(true);
       const { data } = await supabase
         .from("items")
-        .select("id,title,description,location,type,image_url,image_urls,priority_level,reward_amount,is_urgent,view_count,created_at,status,pet_species,pet_breed,pet_color,pet_age,pet_microchip")
+        .select("id,title,description,location,type,image_url,image_urls,view_count,created_at,status,pet_species,pet_breed,pet_color,pet_age,pet_microchip")
         .eq("category", "Evcil Hayvan")
         .neq("status", "resolved")
         .eq("moderation_status", "approved")
-        .order("priority_level", { ascending: false })
         .order("created_at", { ascending: false });
       setItems((data as PetItem[]) ?? []);
       setLoading(false);
