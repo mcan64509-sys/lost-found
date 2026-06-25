@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendContactToAdminEmail, sendContactConfirmationEmail } from "../../../lib/email";
 import { checkRateLimit, getClientIp } from "../../../lib/ratelimit";
+import { getAuthenticatedUser } from "../../../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,7 +28,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Çok fazla istek. Lütfen bekleyin." }, { status: 429 });
     }
 
-    const { userEmail, type, title, description } = await req.json();
+    const user = await getAuthenticatedUser(req);
+    if (!user?.email) return NextResponse.json({ error: "Yetkisiz." }, { status: 401 });
+    const userEmail = user.email;
+
+    const { type, title, description } = await req.json();
     if (!userEmail || !type || !title || !description) {
       return NextResponse.json({ error: "Eksik alanlar." }, { status: 400 });
     }

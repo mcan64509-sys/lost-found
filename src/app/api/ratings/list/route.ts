@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from("ratings")
-    .select("id, rater_email, score, comment, created_at, item_id")
+    .select("id, score, comment, created_at, item_id")
     .eq("rated_email", email)
     .order("created_at", { ascending: false })
     .limit(50);

@@ -25,6 +25,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { itemId, title, description, category, location } = body;
 
+    if (!isInternal && !itemId) {
+      return NextResponse.json({ error: "itemId gerekli" }, { status: 400 });
+    }
+
     // JWT çağrılarında ilan sahibi doğrula
     if (!isInternal && itemId) {
       const { data: item } = await supabase.from("items").select("created_by_email").eq("id", itemId).maybeSingle();

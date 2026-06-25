@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
 
   // Push bildirimi fire-and-forget
   const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://bulanvarmi.com";
-  const notifyEmail = isAdmin ? session.user_email : (process.env.SUPER_ADMIN_EMAIL || "mcan64509@gmail.com");
+  const notifyEmail = isAdmin ? session.user_email : process.env.SUPER_ADMIN_EMAIL;
   if (notifyEmail) {
     fetch(`${APP_URL}/api/push/send`, {
       method: "POST",

@@ -160,6 +160,10 @@ Platform: ${APP_URL}`,
 
 export async function POST(req: NextRequest) {
   try {
+    const secret = req.headers.get("x-telegram-bot-api-secret-token");
+    if (process.env.TELEGRAM_WEBHOOK_SECRET && secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
+      return NextResponse.json({ ok: true });
+    }
     const body = await req.json();
     const message = body?.message;
     if (!message) return NextResponse.json({ ok: true });

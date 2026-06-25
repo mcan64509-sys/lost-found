@@ -59,6 +59,9 @@ export async function POST(req: NextRequest) {
         is_read: false,
       });
 
+    if (insertError) {
+      console.error("[notify] DB insert failed:", insertError.message);
+    }
 
     // 2. Email gönder
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createHmac, timingSafeEqual } from "crypto";
 import { PADDLE_PRODUCTS, type PaddleProductType } from "../../../../lib/paddle-products";
 
 const supabase = createClient(
@@ -7,9 +8,28 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+function verifyPaddleSignature(rawBody: string, signatureHeader: string | null): boolean {
+  const secret = process.env.PADDLE_WEBHOOK_SECRET;
+  if (!secret || !signatureHeader) return false;
+  const parts = Object.fromEntries(signatureHeader.split(";").map((p) => p.split("=")));
+  const ts = parts["ts"];
+  const h1 = parts["h1"];
+  if (!ts || !h1) return false;
+  const computed = createHmac("sha256", secret).update(`${ts}:${rawBody}`).digest("hex");
+  try {
+    return timingSafeEqual(Buffer.from(computed, "hex"), Buffer.from(h1, "hex"));
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as Record<string, unknown>;
+    const rawBody = await req.text();
+    if (!verifyPaddleSignature(rawBody, req.headers.get("paddle-signature"))) {
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+    const body = JSON.parse(rawBody) as Record<string, unknown>;
     const eventType = body.event_type as string;
 
     if (eventType !== "transaction.completed") {

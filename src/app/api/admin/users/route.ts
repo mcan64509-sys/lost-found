@@ -13,16 +13,23 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 403 });
   }
 
-  const [{ data: authData, error: authError }, { data: profiles }, { data: blacklistData }, { data: items }] = await Promise.all([
-    supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
+  // Tüm kullanıcıları sayfalı çek (Supabase max 1000/sayfa)
+  let allUsers: import("@supabase/supabase-js").User[] = [];
+  let page = 1;
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000, page });
+    if (error || !data?.users?.length) break;
+    allUsers = allUsers.concat(data.users);
+    if (data.users.length < 1000) break;
+    page++;
+  }
+  const authData = { users: allUsers };
+
+  const [{ data: profiles }, { data: blacklistData }, { data: items }] = await Promise.all([
     supabaseAdmin.from("profiles").select("id, email, full_name, avatar_url, is_banned"),
     supabaseAdmin.from("blacklisted_emails").select("email"),
     supabaseAdmin.from("items").select("created_by_email, status"),
   ]);
-
-  if (authError) {
-    return NextResponse.json({ error: authError.message }, { status: 500 });
-  }
 
   const profileMap: Record<string, { full_name: string | null; avatar_url: string | null; is_banned: boolean | null }> = {};
   for (const p of profiles ?? []) {

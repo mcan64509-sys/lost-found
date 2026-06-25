@@ -113,7 +113,11 @@ export async function POST(req: NextRequest) {
   const { itemId } = await req.json();
   if (!itemId) return NextResponse.json({ error: "itemId gerekli" }, { status: 400 });
 
-  const { data: item, error } = await supabase.from("items").select("*").eq("id", itemId).single();
+  const { data: item, error } = await supabase
+    .from("items")
+    .select("id, title, type, category, location, date, description, created_by_email, embedding, lat, lng, status")
+    .eq("id", itemId)
+    .single();
   if (error || !item) return NextResponse.json({ error: "İlan bulunamadı" }, { status: 404 });
 
   // Use already-stored embedding (set by /api/embed); re-embed only if missing

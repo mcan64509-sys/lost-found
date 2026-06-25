@@ -185,13 +185,15 @@ export default function ChatWidget() {
     setSupportMessages((prev) => [...prev, tempMsg]);
 
     try {
-      const { error } = await supabase.from("support_messages").insert({
-        session_id: sessionId,
-        sender_type: "user",
-        sender_email: userEmail || "anonim",
-        content: text,
+      const res = await fetch("/api/support/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ sessionId, content: text }),
       });
-      if (error) setSupportMessages((prev) => prev.filter((m) => m.id !== tempId));
+      if (!res.ok) setSupportMessages((prev) => prev.filter((m) => m.id !== tempId));
     } catch {
       setSupportMessages((prev) => prev.filter((m) => m.id !== tempId));
     }

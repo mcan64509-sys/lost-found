@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-import { isValidEmail } from "../../../lib/utils";
+import { getAuthenticatedUser } from "../../../lib/auth";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,10 +11,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
-    const { userEmail } = await req.json();
-    if (!userEmail || !isValidEmail(userEmail)) {
-      return NextResponse.json({ error: "Geçersiz email." }, { status: 400 });
-    }
+    const user = await getAuthenticatedUser(req);
+    if (!user?.email) return NextResponse.json({ error: "Yetkisiz." }, { status: 401 });
+    const userEmail = user.email;
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 

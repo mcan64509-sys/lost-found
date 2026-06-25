@@ -107,7 +107,7 @@ const REASON_LABELS: Record<string, string> = {
 
 type TabId = "stats" | "items" | "reports" | "users" | "sightings" | "moderation" | "requests" | "stories" | "announce" | "support" | "permissions";
 
-const SUPER_ADMIN_EMAIL = "mcan64509@gmail.com";
+const SUPER_ADMIN_EMAIL = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL ?? "";
 
 const ALL_PERMISSIONS = [
   "ban_users", "delete_users", "delete_items", "moderate_items",

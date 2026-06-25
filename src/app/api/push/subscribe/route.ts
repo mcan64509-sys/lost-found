@@ -45,8 +45,17 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const authUser = await getAuthenticatedUser(req);
+    if (!authUser?.email) return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+
     const { endpoint } = await req.json();
-    await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
+    if (!endpoint) return NextResponse.json({ error: "Eksik bilgi" }, { status: 400 });
+
+    await supabase
+      .from("push_subscriptions")
+      .delete()
+      .eq("endpoint", endpoint)
+      .eq("user_email", authUser.email);
     return NextResponse.json({ success: true });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

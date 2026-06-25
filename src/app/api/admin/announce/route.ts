@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     if (!error) notifSent = emails.length;
   }
 
-  // Mailler — Resend rate limit için 300ms aralık
+  // Mailler — 50'lik batch'ler halinde paralel gönder
   if (sendEmail) {
     const html = `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto;background:#0f172a;color:#e2e8f0;padding:28px 24px;border-radius:16px;">
@@ -67,15 +67,20 @@ export async function POST(req: NextRequest) {
       </div>
     `;
 
-    for (const email of emails) {
-      try {
-        await resend.emails.send({ from: FROM, to: email, subject: subject.trim(), html });
-        emailSent++;
-      } catch {
-        emailFailed++;
+    const BATCH_SIZE = 50;
+    for (let i = 0; i < emails.length; i += BATCH_SIZE) {
+      const batch = emails.slice(i, i + BATCH_SIZE);
+      const results = await Promise.allSettled(
+        batch.map((email) => resend.emails.send({ from: FROM, to: email, subject: subject.trim(), html }))
+      );
+      for (const r of results) {
+        if (r.status === "fulfilled") emailSent++;
+        else emailFailed++;
       }
-      // Resend rate limit
-      await new Promise((r) => setTimeout(r, 300));
+      // Resend rate limit arası — batch'ler arasında bekle
+      if (i + BATCH_SIZE < emails.length) {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
     }
   }
 

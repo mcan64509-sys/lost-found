@@ -200,6 +200,8 @@ export default function ConversationDetailPage() {
   }, [conversationId, router]);
 
   useEffect(() => {
+    if (!normalizedUserEmail) return;
+
     setRealtimeStatus("connecting");
 
     const channel = supabase
