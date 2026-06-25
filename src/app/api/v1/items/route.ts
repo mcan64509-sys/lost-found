@@ -18,7 +18,7 @@ async function getProfileByApiKey(apiKey: string) {
 function extractApiKey(req: NextRequest): string | null {
   const auth = req.headers.get("authorization");
   if (auth?.startsWith("Bearer ")) return auth.slice(7);
-  return req.nextUrl.searchParams.get("api_key");
+  return null;
 }
 
 export async function GET(req: NextRequest) {

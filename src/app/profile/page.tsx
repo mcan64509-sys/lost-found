@@ -164,9 +164,11 @@ export default function ProfilePage() {
   const loadClaims = useCallback(async (userId: string, userEmail: string) => {
     try {
       setClaimsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token ?? "";
       const [incomingRes, outgoingRes] = await Promise.all([
-        fetch(`/api/claims/incoming?userId=${encodeURIComponent(userId)}&userEmail=${encodeURIComponent(userEmail)}`),
-        fetch(`/api/claims/outgoing?userId=${encodeURIComponent(userId)}`),
+        fetch(`/api/claims/incoming`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`/api/claims/outgoing?userId=${encodeURIComponent(userId)}`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       const [incomingData, outgoingData] = await Promise.all([
         incomingRes.json(),

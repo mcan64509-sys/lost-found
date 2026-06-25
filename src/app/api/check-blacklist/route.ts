@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { checkRateLimit, getClientIp } from "@/lib/ratelimit";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -7,6 +8,10 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rl = await checkRateLimit(`blacklist:${ip}`);
+  if (!rl.allowed) return NextResponse.json({ blacklisted: false }, { status: 429 });
+
   const { email } = await req.json();
   if (!email) return NextResponse.json({ blacklisted: false });
 
