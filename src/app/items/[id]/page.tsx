@@ -31,10 +31,6 @@ type DbItem = {
   created_by_email?: string | null;
   embedding?: number[] | null;
   view_count?: number | null;
-  reward_amount?: number | null;
-  is_urgent?: boolean | null;
-  is_featured?: boolean | null;
-  priority_level?: number | null;
 };
 
 type MatchItem = {
@@ -811,16 +807,6 @@ export default function ItemDetailPage() {
                     {item.category}
                   </span>
                 )}
-                {item.is_featured && (
-                  <span className="rounded-full border border-yellow-500/40 bg-yellow-500/15 px-3 py-1 text-xs font-bold text-yellow-400">
-                    ⭐ Öne Çıkan
-                  </span>
-                )}
-                {item.is_urgent && (
-                  <span className="rounded-full border border-red-500/40 bg-red-500/15 px-3 py-1 text-xs font-bold text-red-400">
-                    🔴 Acil
-                  </span>
-                )}
                 {item.status === "resolved" && (
                   <span className="rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-xs font-semibold text-green-300">
                     Çözüldü
@@ -832,17 +818,6 @@ export default function ItemDetailPage() {
                   </span>
                 )}
               </div>
-
-              {item.reward_amount && item.reward_amount > 0 && (
-                <div className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
-                  <div className="text-2xl">💰</div>
-                  <div>
-                    <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Ödül Teklifi</div>
-                    <div className="text-xl font-black text-white mt-0.5">{item.reward_amount.toLocaleString("tr-TR")} TL</div>
-                    <div className="text-xs text-emerald-300/70 mt-0.5">Eşyayı sahibine ulaştırana verilecek</div>
-                  </div>
-                </div>
-              )}
 
               <h1 className="mt-5 text-3xl font-black md:text-4xl">{item.title}</h1>
 
@@ -1122,24 +1097,6 @@ export default function ItemDetailPage() {
                   📸 Görsel
                 </button>
               </div>
-
-              {/* Öne Çıkar — sadece kayıp ilanlar */}
-              {isOwner && item.type === "lost" && item.status !== "resolved" && (
-                <div className="mt-3">
-                  <a
-                    href={`/upgrade?item=${id}`}
-                    className="flex items-center justify-center gap-2 w-full rounded-2xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-sm font-semibold text-amber-400 hover:bg-amber-500/20 transition"
-                  >
-                    ⭐ İlanı Öne Çıkar
-                    {item.is_urgent && (
-                      <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">🚨 Acil aktif</span>
-                    )}
-                    {!item.is_urgent && (item.priority_level ?? 0) > 0 && (
-                      <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">⭐ Altın aktif</span>
-                    )}
-                  </a>
-                </div>
-              )}
 
               {!isOwner && (
                 <div className="mt-3">

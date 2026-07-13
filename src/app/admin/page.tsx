@@ -27,9 +27,6 @@ type AdminItem = {
   created_by_email: string | null;
   created_at: string;
   view_count: number | null;
-  is_featured: boolean | null;
-  is_urgent: boolean | null;
-  reward_amount: number | null;
   moderation_status: string | null;
 };
 
@@ -560,22 +557,6 @@ export default function AdminPage() {
     }
   }
 
-  async function handleToggleFeatured(id: string, current: boolean | null) {
-    const newVal = !current;
-    const featuredUntil = newVal ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() : null;
-    const { error } = await supabase.from("items").update({ is_featured: newVal, featured_until: featuredUntil }).eq("id", id);
-    if (error) { toast.error("Güncellenemedi."); return; }
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_featured: newVal } : i));
-    toast.success(newVal ? "⭐ İlan öne çıkarıldı (7 gün)." : "Öne çıkarma kaldırıldı.");
-  }
-
-  async function handleToggleUrgent(id: string, current: boolean | null) {
-    const newVal = !current;
-    const { error } = await supabase.from("items").update({ is_urgent: newVal }).eq("id", id);
-    if (error) { toast.error("Güncellenemedi."); return; }
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_urgent: newVal } : i));
-    toast.success(newVal ? "🔴 Acil işareti eklendi." : "Acil işareti kaldırıldı.");
-  }
 
   async function handleToggleBan(targetEmail: string, currentBan: boolean, durationDays?: number | null, reason?: string) {
     setTogglingBan(targetEmail);
@@ -1089,8 +1070,6 @@ export default function AdminPage() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {item.is_featured && <span className="text-[10px] text-yellow-400">⭐</span>}
-                          {item.is_urgent && <span className="text-[10px] text-red-400">🔴</span>}
                           <Link href={`/items/${item.id}`} className="truncate text-sm font-medium text-white hover:text-blue-300">
                             {item.title}
                           </Link>
@@ -1101,16 +1080,6 @@ export default function AdminPage() {
                       <p className="text-xs text-slate-400">👁 {(item.view_count || 0).toLocaleString()}</p>
                       <p className="text-xs text-slate-500"><span className="sm:hidden text-slate-600 mr-1">Tarih:</span>{new Date(item.created_at).toLocaleDateString("tr-TR")}</p>
                       <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => handleToggleFeatured(item.id, item.is_featured)}
-                          title={item.is_featured ? "Öne çıkarmayı kaldır" : "Öne çıkar"}
-                          className={`rounded-lg border px-2 py-1 text-[11px] font-semibold transition ${item.is_featured ? "border-yellow-500/40 bg-yellow-500/15 text-yellow-400" : "border-[#1a2744] bg-[#0a0f1e] text-slate-500 hover:text-yellow-400"}`}
-                        >⭐</button>
-                        <button
-                          onClick={() => handleToggleUrgent(item.id, item.is_urgent)}
-                          title={item.is_urgent ? "Acili kaldır" : "Acil işaretle"}
-                          className={`rounded-lg border px-2 py-1 text-[11px] font-semibold transition ${item.is_urgent ? "border-red-500/40 bg-red-500/15 text-red-400" : "border-[#1a2744] bg-[#0a0f1e] text-slate-500 hover:text-red-400"}`}
-                        >🔴</button>
                         <button
                           onClick={() => handleDeleteItem(item.id)}
                           disabled={deleting === item.id}

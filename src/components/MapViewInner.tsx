@@ -13,12 +13,11 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-type MapItem = ItemMarker & { priority_level?: number };
+type MapItem = ItemMarker;
 
 function createIcon(item: MapItem) {
   const isLost = item.type === "lost";
-  const isPriority = (item.priority_level ?? 0) > 0;
-  const color = isPriority ? "#f59e0b" : isLost ? "#ef4444" : "#22c55e";
+  const color = isLost ? "#ef4444" : "#22c55e";
   return L.divIcon({
     html: `
       <svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36">
@@ -72,14 +71,6 @@ export default function MapViewInner({ items }: Props) {
               }}>
                 {item.type === "lost" ? "Kayıp" : "Bulundu"}
               </span>
-              {(item.priority_level ?? 0) > 0 && (
-                <span style={{
-                  background: "#f59e0b", color: "#0f172a", fontSize: "10px",
-                  padding: "2px 8px", borderRadius: "99px", fontWeight: 700, marginLeft: "4px",
-                }}>
-                  ⭐ Öncelikli
-                </span>
-              )}
               <div style={{ fontWeight: 600, fontSize: "13px", margin: "6px 0 2px" }}>{item.title}</div>
               <div style={{ fontSize: "11px", color: "#888", marginBottom: "8px" }}>{item.category}</div>
               <a href={`/items/${item.id}`} style={{

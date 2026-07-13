@@ -11,8 +11,6 @@ import type { ItemMarker } from "../../components/SearchMiniMapInner";
 const MapViewInner = dynamic(() => import("../../components/MapViewInner"), { ssr: false });
 
 type MapItem = ItemMarker & {
-  priority_level?: number;
-  reward_amount?: number;
   pet_species?: string;
 };
 
@@ -50,12 +48,11 @@ export default function MapPage() {
       setLoading(true);
       const { data } = await supabase
         .from("items")
-        .select("id, title, type, category, lat, lng, image_url, priority_level, reward_amount, pet_species, status")
+        .select("id, title, type, category, lat, lng, image_url, pet_species, status")
         .not("lat", "is", null)
         .not("lng", "is", null)
         .neq("status", "resolved")
         .eq("moderation_status", "approved")
-        .order("priority_level", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(500);
       setItems((data as MapItem[]) ?? []);
@@ -180,10 +177,6 @@ export default function MapPage() {
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded-full bg-emerald-500" />
               Bulundu ilanı
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-amber-400" />
-              Öncelikli ilan
             </div>
           </div>
         </div>

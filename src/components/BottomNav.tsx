@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Search, Plus, MessageCircle, FolderOpen } from "lucide-react";
 
-const HIDE_ON = ["/admin", "/auth/", "/lost/report", "/found/report", "/items/", "/upgrade", "/messages/"];
+const HIDE_ON = ["/admin", "/auth/", "/lost/report", "/found/report", "/items/", "/messages/"];
 
 export default function BottomNav() {
   const pathname = usePathname();

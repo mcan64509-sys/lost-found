@@ -308,8 +308,6 @@ export default function FoundReportPage() {
           image_urls: restUrls,
           lat,
           lng,
-          is_urgent: false,
-          priority_level: 0,
           pet_species: finalCategory === "Evcil Hayvan" ? petSpecies || null : null,
           pet_breed: finalCategory === "Evcil Hayvan" ? petBreed || null : null,
           pet_color: finalCategory === "Evcil Hayvan" ? petColor || null : null,
@@ -344,11 +342,7 @@ export default function FoundReportPage() {
       }).catch(() => {});
 
       toast.success("Bulundu ilanınız alındı! Admin onayından sonra yayınlanacak.");
-      if (newItem && (itemCount ?? 0) >= 3) {
-        router.push(`/upgrade?item=${newItem.id}`);
-      } else {
-        router.push("/my-items");
-      }
+      router.push("/my-items");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "İlan oluşturulurken bir hata oluştu.");
     } finally {

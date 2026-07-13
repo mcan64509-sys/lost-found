@@ -14,8 +14,6 @@ type Item = {
   type: string | null;
   image_url: string | null;
   image_urls?: string[] | null;
-  reward_amount?: number | null;
-  is_urgent?: boolean | null;
 };
 
 export default function PosterPage() {
@@ -27,7 +25,7 @@ export default function PosterPage() {
   useEffect(() => {
     supabase
       .from("items")
-      .select("id, title, description, category, location, date, type, image_url, image_urls, reward_amount, is_urgent")
+      .select("id, title, description, category, location, date, type, image_url, image_urls")
       .eq("id", id)
       .single()
       .then(({ data }) => {
@@ -89,12 +87,8 @@ export default function PosterPage() {
               <div>
                 <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-black tracking-widest uppercase mb-2 ${isLost ? "bg-amber-400 text-white" : "bg-emerald-500 text-white"}`}>
                   {isLost ? "🔴 KAYIP" : "🟢 BULUNDU"}
-                  {item.is_urgent && <span className="ml-1">⚡ ACİL</span>}
                 </div>
                 <h1 className="text-3xl print:text-2xl font-black text-gray-900 leading-tight">{item.title}</h1>
-                {item.reward_amount && item.reward_amount > 0 && (
-                  <p className="mt-1 text-amber-600 font-bold text-lg">💰 {item.reward_amount.toLocaleString("tr-TR")} TL Ödül</p>
-                )}
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-400 font-medium">BulanVarMı?</p>

@@ -228,18 +228,16 @@ export async function GET(req: NextRequest) {
 
   const { data: item } = await supabase
     .from("items")
-    .select("id, title, type, category, location, reward_amount, is_urgent")
+    .select("id, title, type, category, location")
     .eq("id", itemId)
     .single();
 
   if (!item) return NextResponse.json({ error: "İlan bulunamadı" }, { status: 404 });
 
   const typeLabel = item.type === "lost" ? "🔴 Kayıp" : "🟢 Bulundu";
-  const urgentTag = item.is_urgent ? " 🚨 <b>ACİL</b>" : "";
-  const rewardTag = item.reward_amount ? ` 💰 <b>${item.reward_amount}₺ Ödül</b>` : "";
 
   const text =
-    `${typeLabel} Yeni İlan${urgentTag}${rewardTag}\n\n` +
+    `${typeLabel} Yeni İlan\n\n` +
     `<b>${item.title}</b>\n` +
     `📂 ${item.category ?? "-"}  📍 ${item.location ?? "-"}\n\n` +
     `🔗 ${APP_URL}/items/${item.id}`;

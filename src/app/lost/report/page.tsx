@@ -53,7 +53,6 @@ export default function LostReportPage() {
   const [category, setCategory] = useState("");
   const [customCategory, setCustomCategory] = useState("");
   const [description, setDescription] = useState("");
-  const [rewardAmount, setRewardAmount] = useState("");
 
   // Evcil hayvan alanları
   const [petSpecies, setPetSpecies] = useState("");
@@ -103,7 +102,6 @@ export default function LostReportPage() {
       if (d.category) setCategory(d.category);
       if (d.customCategory) setCustomCategory(d.customCategory);
       if (d.description) setDescription(d.description);
-      if (d.rewardAmount) setRewardAmount(d.rewardAmount);
       if (d.location) setLocation(d.location);
       if (d.date) setDate(d.date);
       if (d.time) setTime(d.time);
@@ -115,10 +113,10 @@ export default function LostReportPage() {
     if (!title && !category && !description && !location) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
-        title, category, customCategory, description, rewardAmount, location, date, time,
+        title, category, customCategory, description, location, date, time,
       }));
     } catch { /* ignore */ }
-  }, [title, category, customCategory, description, rewardAmount, location, date, time]);
+  }, [title, category, customCategory, description, location, date, time]);
 
   function canGoNext() {
     if (step === 1) return title.trim() !== "" && category !== "" && description.trim() !== "";
@@ -314,9 +312,6 @@ export default function LostReportPage() {
           image_urls: restUrls,
           lat,
           lng,
-          reward_amount: rewardAmount ? parseInt(rewardAmount) : null,
-          is_urgent: false,
-          priority_level: 0,
           pet_species: finalCategory === "Evcil Hayvan" ? petSpecies || null : null,
           pet_breed: finalCategory === "Evcil Hayvan" ? petBreed || null : null,
           pet_color: finalCategory === "Evcil Hayvan" ? petColor || null : null,
@@ -352,12 +347,7 @@ export default function LostReportPage() {
       }).catch(() => {});
 
       toast.success("Kayıp ilanınız alındı! Admin onayından sonra yayınlanacak.");
-      // If user has used more than 3 free listings, redirect to upgrade
-      if (newItem && (itemCount ?? 0) >= 3) {
-        router.push(`/upgrade?item=${newItem.id}`);
-      } else {
-        router.push("/my-items");
-      }
+      router.push("/my-items");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "İlan oluşturulurken bir hata oluştu.");
     } finally {
@@ -530,34 +520,6 @@ export default function LostReportPage() {
                   required
                 />
                 <p className="mt-1.5 text-xs text-slate-600">Ne kadar detaylı olursa AI eşleştirme o kadar iyi çalışır</p>
-              </div>
-
-              {/* Ödül + Acil */}
-              <div className="pt-2 border-t border-slate-800 space-y-4">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Ekstra Seçenekler</p>
-
-                {/* Ödül */}
-                <div>
-                  <label className="text-sm font-semibold text-slate-300 mb-2 block">💰 Ödül Teklifi (isteğe bağlı)</label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={rewardAmount}
-                      onChange={(e) => setRewardAmount(e.target.value)}
-                      placeholder="Örn: 500"
-                      min="0"
-                      max="100000"
-                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 pr-12 text-white placeholder:text-slate-600 outline-none focus:border-emerald-500/50 transition"
-                    />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">TL</span>
-                  </div>
-                  <p className="mt-1.5 text-xs text-slate-600">Eşyayı bulana ödül teklif edebilirsin. İlanda ödül rozeti gösterilir.</p>
-                </div>
-
-                {/* Öncelik bilgi notu */}
-                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs text-amber-300">
-                  ⭐ İlanı oluşturduktan sonra <strong>Acil İlan</strong> veya <strong>Altın İlan</strong> paketi satın alarak listelerde öne çıkarabilirsin.
-                </div>
               </div>
 
               {/* Evcil Hayvan Alanları */}
