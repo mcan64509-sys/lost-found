@@ -53,7 +53,14 @@ export default function HomePage() {
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [geoError, setGeoError] = useState(false);
   const [geoAsked, setGeoAsked] = useState(false);
-  const [recentlyViewed, setRecentlyViewed] = useState<RecentItem[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<RecentItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      return JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
+    } catch {
+      return [];
+    }
+  });
   const [catCounts, setCatCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -78,13 +85,6 @@ export default function HomePage() {
     );
     els.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    try {
-      const data = JSON.parse(localStorage.getItem("recentlyViewed") || "[]");
-      setRecentlyViewed(data);
-    } catch {}
   }, []);
 
   function requestNearby() {
