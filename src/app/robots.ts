@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
           "/pets",
           "/gizlilik",
           "/kullanim-sartlari",
+          "/hesap-silme",
           "/users/",
         ],
         disallow: [
