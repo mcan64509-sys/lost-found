@@ -15,10 +15,10 @@ export async function POST(req: NextRequest) {
 
   const { targetUserId, targetEmail } = await req.json();
 
-  if (!targetUserId || !targetEmail) {
-    return NextResponse.json({ error: "targetUserId ve targetEmail gerekli" }, { status: 400 });
+  if (!targetUserId) {
+    return NextResponse.json({ error: "targetUserId gerekli" }, { status: 400 });
   }
-  if (targetEmail.toLowerCase() === callerEmail) {
+  if (targetEmail && targetEmail.toLowerCase() === callerEmail) {
     return NextResponse.json({ error: "Kendinizi silemezsiniz" }, { status: 400 });
   }
 
