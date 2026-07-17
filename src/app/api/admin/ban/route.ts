@@ -17,12 +17,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Yetkisiz" }, { status: 403 });
   }
 
-  const { targetEmail, ban, banDurationDays, banReason } = await req.json();
+  const { targetUserId, targetEmail, ban, banDurationDays, banReason } = await req.json();
 
-  if (!targetEmail) {
-    return NextResponse.json({ error: "targetEmail gerekli" }, { status: 400 });
+  if (!targetUserId && !targetEmail) {
+    return NextResponse.json({ error: "targetUserId veya targetEmail gerekli" }, { status: 400 });
   }
-  if (targetEmail.toLowerCase() === callerEmail) {
+  if (targetEmail && targetEmail.toLowerCase() === callerEmail) {
     return NextResponse.json({ error: "Kendinizi engelleyemezsiniz" }, { status: 400 });
   }
 
@@ -31,17 +31,23 @@ export async function POST(req: NextRequest) {
       ? new Date(Date.now() + banDurationDays * 86_400_000).toISOString()
       : null;
 
-  const { error } = await supabaseAdmin
+  const updateQuery = supabaseAdmin
     .from("profiles")
     .update({
       is_banned: !!ban,
       banned_until: ban ? bannedUntil : null,
       ban_reason: ban ? (banReason || null) : null,
-    })
-    .eq("email", targetEmail);
+    });
+  const { error } = targetUserId
+    ? await updateQuery.eq("id", targetUserId)
+    : await updateQuery.eq("email", targetEmail);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (!targetEmail) {
+    return NextResponse.json({ success: true, banned: !!ban });
   }
 
   const durationLabel = banDurationDays === 1 ? "24 saat" : banDurationDays === 7 ? "7 gün" : banDurationDays === 30 ? "30 gün" : null;

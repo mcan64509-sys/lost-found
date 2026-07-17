@@ -168,7 +168,7 @@ export default function AdminPage() {
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [adminEmail, setAdminEmail] = useState("");
   const [togglingBan, setTogglingBan] = useState<string | null>(null);
-  const [banDurationModal, setBanDurationModal] = useState<{ email: string } | null>(null);
+  const [banDurationModal, setBanDurationModal] = useState<{ id: string; email: string } | null>(null);
   const [banDurationDays, setBanDurationDays] = useState<number | null | undefined>(undefined);
   const [banReason, setBanReason] = useState("");
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -558,19 +558,19 @@ export default function AdminPage() {
   }
 
 
-  async function handleToggleBan(targetEmail: string, currentBan: boolean, durationDays?: number | null, reason?: string) {
-    setTogglingBan(targetEmail);
+  async function handleToggleBan(targetUserId: string, targetEmail: string, currentBan: boolean, durationDays?: number | null, reason?: string) {
+    setTogglingBan(targetUserId);
     setBanDurationModal(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/admin/ban", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
-        body: JSON.stringify({ targetEmail, ban: !currentBan, banDurationDays: durationDays ?? null, banReason: reason || null }),
+        body: JSON.stringify({ targetUserId, targetEmail: targetEmail || null, ban: !currentBan, banDurationDays: durationDays ?? null, banReason: reason || null }),
       });
       const data = await res.json();
       if (res.ok) {
-        setAdminUsers((prev) => prev.map((u) => u.email === targetEmail ? { ...u, is_banned: !currentBan } : u));
+        setAdminUsers((prev) => prev.map((u) => u.id === targetUserId ? { ...u, is_banned: !currentBan } : u));
         const label = durationDays === 1 ? "24 saat" : durationDays === 7 ? "7 gün" : durationDays === 30 ? "30 gün" : "kalıcı olarak";
         toast.success(!currentBan ? `Kullanıcı ${label} engellendi.` : "Engel kaldırıldı.");
       } else {
@@ -587,7 +587,7 @@ export default function AdminPage() {
 
   async function handleDeleteUser(userId: string, userEmail: string) {
     if (!confirm(`"${userEmail}" hesabını kalıcı olarak silmek istediğine emin misin?\n\nBu işlem geri alınamaz.`)) return;
-    setDeletingUser(userEmail);
+    setDeletingUser(userId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/admin/delete-user", {
@@ -597,7 +597,7 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        setAdminUsers((prev) => prev.filter((u) => u.email !== userEmail));
+        setAdminUsers((prev) => prev.filter((u) => u.id !== userId));
         toast.success("Kullanıcı silindi.");
       } else {
         toast.error(data.error || "Silinemedi.");
@@ -1114,7 +1114,7 @@ export default function AdminPage() {
                         ? u.full_name.trim().split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()
                         : (u.email?.[0] ?? "?").toUpperCase();
                       return (
-                        <div key={u.email} className={`grid grid-cols-1 md:grid-cols-[40px_1fr_70px_70px_100px_auto] gap-3 items-center px-4 py-3 transition-colors ${u.is_banned ? "bg-red-500/5" : u.is_blacklisted ? "bg-orange-500/5" : "bg-[#0d1a2e] hover:bg-[#0f1f38]"}`}>
+                        <div key={u.id} className={`grid grid-cols-1 md:grid-cols-[40px_1fr_70px_70px_100px_auto] gap-3 items-center px-4 py-3 transition-colors ${u.is_banned ? "bg-red-500/5" : u.is_blacklisted ? "bg-orange-500/5" : "bg-[#0d1a2e] hover:bg-[#0f1f38]"}`}>
                           <div className="h-9 w-9 shrink-0 flex items-center justify-center rounded-full bg-slate-700 text-xs font-bold text-white overflow-hidden">
                             {u.avatar_url ? (
                               <Image src={u.avatar_url} alt={u.full_name || u.email} width={36} height={36} className="h-9 w-9 rounded-full object-cover" unoptimized />
@@ -1140,34 +1140,36 @@ export default function AdminPage() {
                               <>
                                 {u.is_banned ? (
                                   <button
-                                    onClick={() => handleToggleBan(u.email, true)}
-                                    disabled={togglingBan === u.email}
+                                    onClick={() => handleToggleBan(u.id, u.email, true)}
+                                    disabled={togglingBan === u.id}
                                     className="rounded-lg border border-green-500/30 bg-green-500/10 px-2.5 py-1 text-[11px] font-semibold text-green-400 hover:bg-green-500/20 transition disabled:opacity-50"
                                   >
-                                    {togglingBan === u.email ? "..." : "Engel Kaldır"}
+                                    {togglingBan === u.id ? "..." : "Engel Kaldır"}
                                   </button>
                                 ) : (
                                   <button
-                                    onClick={() => { setBanDurationModal({ email: u.email }); setBanDurationDays(undefined); setBanReason(""); }}
-                                    disabled={togglingBan === u.email}
+                                    onClick={() => { setBanDurationModal({ id: u.id, email: u.email }); setBanDurationDays(undefined); setBanReason(""); }}
+                                    disabled={togglingBan === u.id}
                                     className="rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-500/20 transition disabled:opacity-50"
                                   >
-                                    {togglingBan === u.email ? "..." : "Engelle ▾"}
+                                    {togglingBan === u.id ? "..." : "Engelle ▾"}
+                                  </button>
+                                )}
+                                {u.email && (
+                                  <button
+                                    onClick={() => handleToggleBlacklist(u.email, u.is_blacklisted)}
+                                    disabled={blacklisting === u.email}
+                                    className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${u.is_blacklisted ? "border-[#1a2744] bg-slate-800 text-slate-400" : "border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"}`}
+                                  >
+                                    {blacklisting === u.email ? "..." : u.is_blacklisted ? "Kara Listeden Çıkar" : "Kara Liste"}
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => handleToggleBlacklist(u.email, u.is_blacklisted)}
-                                  disabled={blacklisting === u.email}
-                                  className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${u.is_blacklisted ? "border-[#1a2744] bg-slate-800 text-slate-400" : "border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"}`}
-                                >
-                                  {blacklisting === u.email ? "..." : u.is_blacklisted ? "Kara Listeden Çıkar" : "Kara Liste"}
-                                </button>
-                                <button
                                   onClick={() => handleDeleteUser(u.id, u.email)}
-                                  disabled={deletingUser === u.email}
+                                  disabled={deletingUser === u.id}
                                   className="rounded-lg border border-red-600/30 bg-red-600/10 px-2.5 py-1 text-[11px] font-semibold text-red-400 hover:bg-red-600/20 transition disabled:opacity-50"
                                 >
-                                  {deletingUser === u.email ? "..." : "Sil"}
+                                  {deletingUser === u.id ? "..." : "Sil"}
                                 </button>
                               </>
                             )}
@@ -1916,7 +1918,7 @@ export default function AdminPage() {
                 className="flex-1 rounded-xl border border-[#1a2744] bg-slate-800 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-700 transition"
               >İptal</button>
               <button
-                onClick={() => handleToggleBan(banDurationModal.email, false, banDurationDays, banReason)}
+                onClick={() => handleToggleBan(banDurationModal.id, banDurationModal.email, false, banDurationDays, banReason)}
                 disabled={banDurationDays === undefined || !banReason.trim()}
                 className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >Engelle</button>

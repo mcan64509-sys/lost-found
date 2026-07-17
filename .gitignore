@@ -55,3 +55,8 @@ next-env.d.ts
 /android/build
 /ios/App/Pods
 /ios/App/App.xcworkspace/xcuserdata
+
+# Android signing (never commit)
+/android/keystore.properties
+/android/app/*.keystore
+/android/app/*.jks

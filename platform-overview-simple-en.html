@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BulanVarMı? — Platform Overview</title>
+<style>
+  :root {
+    --bg: #eef0f5;
+    --bg-alt: #e4e8f0;
+    --surface: #ffffff;
+    --border: #d6dbe6;
+    --ink: #141b2e;
+    --ink-dim: #5c6479;
+    --accent: #2f6fed;
+    --accent-soft: rgba(47,111,237,0.09);
+    --lost: #b45309;
+    --lost-soft: rgba(180,83,9,0.09);
+    --lost-border: rgba(180,83,9,0.35);
+    --found: #15803d;
+    --found-soft: rgba(21,128,61,0.09);
+    --found-border: rgba(21,128,61,0.32);
+    --shadow: 0 1px 2px rgba(20,27,46,0.05), 0 10px 28px -16px rgba(20,27,46,0.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #080d1a;
+      --bg-alt: #07101f;
+      --surface: #0d1a2e;
+      --border: #1a2744;
+      --ink: #e7ebf5;
+      --ink-dim: #8b96ae;
+      --accent: #3b82f6;
+      --accent-soft: rgba(59,130,246,0.14);
+      --lost: #f59e0b;
+      --lost-soft: rgba(245,158,11,0.1);
+      --lost-border: rgba(245,158,11,0.4);
+      --found: #22c55e;
+      --found-soft: rgba(34,197,94,0.1);
+      --found-border: rgba(34,197,94,0.38);
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 14px 34px -18px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #080d1a; --bg-alt: #07101f; --surface: #0d1a2e; --border: #1a2744;
+    --ink: #e7ebf5; --ink-dim: #8b96ae; --accent: #3b82f6; --accent-soft: rgba(59,130,246,0.14);
+    --lost: #f59e0b; --lost-soft: rgba(245,158,11,0.1); --lost-border: rgba(245,158,11,0.4);
+    --found: #22c55e; --found-soft: rgba(34,197,94,0.1); --found-border: rgba(34,197,94,0.38);
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 14px 34px -18px rgba(0,0,0,0.6);
+  }
+  :root[data-theme="light"] {
+    --bg: #eef0f5; --bg-alt: #e4e8f0; --surface: #ffffff; --border: #d6dbe6;
+    --ink: #141b2e; --ink-dim: #5c6479; --accent: #2f6fed; --accent-soft: rgba(47,111,237,0.09);
+    --lost: #b45309; --lost-soft: rgba(180,83,9,0.09); --lost-border: rgba(180,83,9,0.35);
+    --found: #15803d; --found-soft: rgba(21,128,61,0.09); --found-border: rgba(21,128,61,0.32);
+    --shadow: 0 1px 2px rgba(20,27,46,0.05), 0 10px 28px -16px rgba(20,27,46,0.18);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { color-scheme: light dark; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .doc {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  /* ── Masthead ── */
+  .masthead {
+    padding: 56px 0 32px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .tag-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+  .doc-tag {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 4px 9px;
+    border-radius: 4px;
+  }
+  .masthead h1 {
+    font-family: "Bahnschrift", "Arial Narrow", "Roboto Condensed", sans-serif;
+    font-weight: 700;
+    font-size: 42px;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .masthead .dek {
+    color: var(--ink-dim);
+    font-size: 16px;
+    max-width: 52ch;
+  }
+
+  h2.section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    font-family: "Bahnschrift", "Arial Narrow", "Roboto Condensed", sans-serif;
+    font-weight: 700;
+    font-size: 23px;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+    margin: 56px 0 20px;
+  }
+  h2.section-head::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .lead {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 20px 24px;
+    color: var(--ink);
+    font-size: 15.5px;
+    box-shadow: var(--shadow);
+  }
+  .lead strong { color: var(--accent); }
+
+  /* ── Docket / step sequence ── */
+  .docket {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .docket-row {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+  .docket-row:last-child { border-bottom: none; }
+  .docket-num {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 13px;
+    color: var(--ink-dim);
+    background: var(--bg-alt);
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+  }
+  .docket-body { padding: 16px 20px; }
+  .docket-body .t {
+    font-weight: 700;
+    font-size: 14.5px;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+  .docket-body .d {
+    font-size: 13.75px;
+    color: var(--ink-dim);
+  }
+
+  /* ── Action tag-cards ── */
+  .tag-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .tag-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .tag-card .flow {
+    display: inline-block;
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+  }
+  .flow-lost   { color: var(--lost);   background: var(--lost-soft);   border: 1px solid var(--lost-border); }
+  .flow-found  { color: var(--found);  background: var(--found-soft);  border: 1px solid var(--found-border); }
+  .flow-both   { color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); }
+
+  .tag-card h3 {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 5px;
+  }
+  .tag-card p {
+    font-size: 13.25px;
+    color: var(--ink-dim);
+  }
+
+  /* ── Role table ── */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+  }
+  table.roles {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    font-size: 13.75px;
+  }
+  table.roles th, table.roles td {
+    text-align: left;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  table.roles th {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    background: var(--bg-alt);
+  }
+  table.roles td:first-child {
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  table.roles td { color: var(--ink-dim); }
+  table.roles tr:last-child td { border-bottom: none; }
+
+  /* ── Safety cards ── */
+  .safety-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .safety-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .safety-card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 5px;
+  }
+  .safety-card p {
+    font-size: 13.25px;
+    color: var(--ink-dim);
+  }
+
+  /* ── Closing stamp ── */
+  .stamp {
+    margin-top: 52px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 22px 26px;
+    background: var(--bg-alt);
+  }
+  .stamp .eyebrow {
+    font-family: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+    display: block;
+  }
+  .stamp p {
+    color: var(--ink);
+    font-size: 15px;
+    max-width: 62ch;
+  }
+
+  @media (max-width: 600px) {
+    .masthead { padding: 40px 0 26px; }
+    .masthead h1 { font-size: 32px; }
+    .tag-grid, .safety-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="doc">
+
+  <div class="masthead">
+    <div class="tag-row">
+      <span class="doc-tag">Platform Overview</span>
+      <span class="doc-tag">Plain-Language Edition</span>
+      <span class="doc-tag">EN</span>
+    </div>
+    <h1>BulanVarMı?</h1>
+    <p class="dek">How the lost &amp; found platform works and what people can do on it — explained without any technical or coding detail.</p>
+  </div>
+
+  <div class="lead">
+    <strong>BulanVarMı?</strong> is a website where people who lost something and people who found something can find
+    each other. A person who lost an item posts about it, a person who found an item posts about it too, and the
+    platform helps connect the two sides so the item can make its way back to its rightful owner.
+  </div>
+
+  <h2 class="section-head">How It Works</h2>
+  <div class="docket">
+    <div class="docket-row">
+      <div class="docket-num">01</div>
+      <div class="docket-body">
+        <div class="t">Something gets lost or found</div>
+        <div class="d">A person loses a wallet, phone, keys, bag, pet, or any other item — or someone else finds something that isn't theirs.</div>
+      </div>
+    </div>
+    <div class="docket-row">
+      <div class="docket-num">02</div>
+      <div class="docket-body">
+        <div class="t">They post a listing</div>
+        <div class="d">A short description, a photo, and where and when it happened. It's marked either "Lost" or "Found."</div>
+      </div>
+    </div>
+    <div class="docket-row">
+      <div class="docket-num">03</div>
+      <div class="docket-body">
+        <div class="t">The platform looks for matches</div>
+        <div class="d">Lost and Found listings are compared automatically, and likely matches are suggested to both sides — no manual searching required.</div>
+      </div>
+    </div>
+    <div class="docket-row">
+      <div class="docket-num">04</div>
+      <div class="docket-body">
+        <div class="t">The two people connect and the item is returned</div>
+        <div class="d">The person claims the item, proves it's theirs with a few details, chats with the other side, and arranges to get it back. The listing is then marked resolved.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-head">What People Can Do</h2>
+  <div class="tag-grid">
+    <div class="tag-card">
+      <span class="flow flow-lost">Lost flow</span>
+      <h3>Report a Lost Item</h3>
+      <p>Describe what was lost, where, and when, and add a photo. The platform can help suggest a description or work out the category from the photo.</p>
+    </div>
+    <div class="tag-card">
+      <span class="flow flow-found">Found flow</span>
+      <h3>Report a Found Item</h3>
+      <p>Same idea, but for something someone else lost — helping the true owner recognise and find it.</p>
+    </div>
+    <div class="tag-card">
+      <span class="flow flow-both">General</span>
+      <h3>Search and Browse</h3>
+      <p>Look through all listings, filter by type, category, date, or location, and sort them however is most useful.</p>
+    </div>
+    <div class="tag-card">
+      <span class="flow flow-both">General</span>
+      <h3>Browse on a Map</h3>
+      <p>See lost and found items pinned on a map, to search visually by area instead of reading through lists.</p>
+    </div>
+    <div class="tag-card">
+      <span class="flow flow-found">Found flow</span>
+      <h3>Claim an Item</h3>
+      <p>If a found item looks like theirs, someone can claim it by describing details only the real owner would know. The listing owner reviews and approves or declines.</p>
+    </div>
+    <div class="tag-card">
+      <span class="flow flow-lost">Lost flow</span>
+      <h3>Report a Sighting</h3>
+      <p>Someone who spotted a lost item somewhere, without picking it up, can leave a note about where they saw it.</p>
+    </div>
+    <div class="tag-card">
+      <span class="flow flow-both">General</span>
+      <h3>Chat Privately</h3>
+      <p>Once a claim is approved, the two people get a private chat to arrange the handover — no personal contact details need to be shared upfront.</p>
+    </div>
+    <div class="tag-card">
+      <span class="flow flow-both">General</span>
+      <h3>Save Favourites</h3>
+      <p>Keep an eye on listings that might be relevant, without committing to a claim yet.</p>
+    </div>
+    <div class="tag-card">
+      <span class="flow flow-lost">Lost flow</span>
+      <h3>Set Up Alerts</h3>
+      <p>Save a search — like "lost wallets in Kadıköy" — and get notified automatically the moment a matching listing appears.</p>
+    </div>
+    <div class="tag-card">
+      <span class="flow flow-lost">Lost flow</span>
+      <h3>Print a Poster</h3>
+      <p>Turn a listing into a printable flyer to put up around the neighbourhood.</p>
+    </div>
+    <div class="tag-card">
+      <span class="flow flow-both">General</span>
+      <h3>Rate Each Other</h3>
+      <p>After an item is returned, both sides can leave a star rating, building trust for future interactions on the platform.</p>
+    </div>
+    <div class="tag-card">
+      <span class="flow flow-both">General</span>
+      <h3>Business Accounts</h3>
+      <p>Hotels, malls, courier companies, schools and similar organisations that regularly handle lost items can switch to a business profile with tools to manage many listings at once.</p>
+    </div>
+  </div>
+
+  <h2 class="section-head">Who's Who</h2>
+  <div class="table-wrap">
+    <table class="roles">
+      <tr><th>Role</th><th>What they can do</th></tr>
+      <tr><td>Visitor</td><td>Sees general stats and category counts, but must sign up or log in to open a listing or take any action.</td></tr>
+      <tr><td>Registered user</td><td>Posts lost/found listings, searches, claims items, chats, saves favourites, sets alerts, and rates other users.</td></tr>
+      <tr><td>Business account</td><td>Everything a regular user can do, plus a dashboard to manage many listings, view statistics, and export data.</td></tr>
+      <tr><td>Admin</td><td>Reviews new listings before they go public, handles user reports, manages banned users, and staffs live support chat.</td></tr>
+    </table>
+  </div>
+
+  <h2 class="section-head">Trust and Safety</h2>
+  <div class="safety-grid">
+    <div class="safety-card">
+      <h3>Listings are reviewed</h3>
+      <p>Every new listing is checked before it becomes publicly visible, keeping out spam or inappropriate content.</p>
+    </div>
+    <div class="safety-card">
+      <h3>Reporting abuse</h3>
+      <p>Any listing or profile can be reported for being misleading, spammy, or inappropriate. Admins review every report.</p>
+    </div>
+    <div class="safety-card">
+      <h3>Private by default</h3>
+      <p>Contact details aren't shared directly — people connect only after a claim is approved, and only through the in-platform chat.</p>
+    </div>
+    <div class="safety-card">
+      <h3>Reputation system</h3>
+      <p>Ratings, points, and badges build a visible track record, so people can judge trustworthiness before dealing with someone.</p>
+    </div>
+  </div>
+
+  <div class="stamp">
+    <span class="eyebrow">In short</span>
+    <p>The platform's whole purpose is to shorten the distance between "I lost something" and "someone found it" — through
+    easy reporting, automatic matching suggestions, a safe way to prove ownership, and a private way to arrange the return.</p>
+  </div>
+
+</div>
+</body>
+</html>

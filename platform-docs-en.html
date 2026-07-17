@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BulanVarMı? — Platform Page Documentation (English)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #f8f9fc;
+    }
+
+    /* ── Cover page ── */
+    .cover {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: linear-gradient(135deg, #0f1729 0%, #1a2744 60%, #0f1729 100%);
+      color: #fff;
+      page-break-after: always;
+      padding: 60px 40px;
+    }
+    .cover .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px; height: 80px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #f59e0b, #10b981);
+      font-size: 28px;
+      font-weight: 900;
+      color: #0f1729;
+      margin-bottom: 28px;
+      letter-spacing: -1px;
+    }
+    .cover h1 {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 10px;
+    }
+    .cover .subtitle {
+      font-size: 17px;
+      color: #94a3b8;
+      margin-bottom: 40px;
+    }
+    .cover .meta {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .cover .meta-item {
+      text-align: center;
+    }
+    .cover .meta-item .val {
+      font-size: 28px;
+      font-weight: 900;
+      color: #60a5fa;
+    }
+    .cover .meta-item .lbl {
+      font-size: 11px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .cover .description {
+      max-width: 560px;
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.8;
+      margin-bottom: 48px;
+    }
+    .cover .divider {
+      width: 60px; height: 3px;
+      background: linear-gradient(90deg, #3b82f6, #10b981);
+      border-radius: 2px;
+      margin: 24px auto;
+    }
+
+    /* ── Table of contents ── */
+    .toc-page {
+      page-break-after: always;
+      padding: 48px 48px;
+      background: #fff;
+    }
+    .toc-page h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #0f1729;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 3px solid #e2e8f0;
+    }
+    .toc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 40px;
+    }
+    .toc-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px dotted #e2e8f0;
+      font-size: 12px;
+    }
+    .toc-item .num {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      background: #f1f5f9;
+      color: #3b82f6;
+      font-weight: 800;
+      font-size: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .toc-item .pg-title { flex: 1; color: #334155; font-weight: 600; }
+    .toc-item .pg-url { color: #94a3b8; font-family: monospace; font-size: 10px; }
+    .toc-section {
+      margin-top: 20px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #94a3b8;
+      grid-column: 1 / -1;
+      padding-top: 10px;
+    }
+
+    /* ── Section header ── */
+    .section-header {
+      page-break-before: always;
+      background: linear-gradient(135deg, #0f1729, #1e3a5f);
+      color: #fff;
+      padding: 40px 48px;
+    }
+    .section-header .cat-label {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #60a5fa;
+      background: rgba(96,165,250,0.15);
+      border: 1px solid rgba(96,165,250,0.3);
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+    .section-header h2 {
+      font-size: 26px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+    .section-header p {
+      color: #94a3b8;
+      font-size: 13px;
+      max-width: 520px;
+    }
+
+    /* ── Page card ── */
+    .page-card {
+      background: #fff;
+      margin: 0;
+      padding: 36px 48px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .page-card:last-child { border-bottom: none; }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .page-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .icon-blue   { background: #eff6ff; }
+    .icon-amber  { background: #fffbeb; }
+    .icon-green  { background: #f0fdf4; }
+    .icon-purple { background: #faf5ff; }
+    .icon-red    { background: #fff1f2; }
+    .icon-pink   { background: #fdf4ff; }
+    .icon-teal   { background: #f0fdfa; }
+    .icon-slate  { background: #f8fafc; }
+    .icon-orange { background: #fff7ed; }
+
+    .page-title-block .page-num {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #94a3b8;
+      margin-bottom: 3px;
+    }
+    .page-title-block h3 {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 3px;
+    }
+    .page-url {
+      font-family: monospace;
+      font-size: 11px;
+      color: #3b82f6;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .page-body {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 24px;
+      margin-top: 16px;
+    }
+
+    .page-description h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-top: 16px;
+      margin-bottom: 6px;
+    }
+    .page-description h4:first-child { margin-top: 0; }
+
+    .page-description p {
+      color: #374151;
+      font-size: 13px;
+      line-height: 1.75;
+      margin-bottom: 8px;
+    }
+
+    .feature-list {
+      list-style: none;
+      margin: 6px 0 12px;
+    }
+    .feature-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12.5px;
+      color: #374151;
+      padding: 4px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .feature-list li:last-child { border-bottom: none; }
+    .feature-list li::before {
+      content: "→";
+      color: #3b82f6;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .sidebar-box {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .info-box {
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 12px;
+    }
+    .info-box h5 {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .info-box p, .info-box li {
+      color: #374151;
+      line-height: 1.65;
+      font-size: 12px;
+    }
+    .info-box ul { list-style: disc; padding-left: 14px; }
+    .info-box li { margin-bottom: 3px; }
+
+    .box-blue   { background: #eff6ff; border: 1px solid #bfdbfe; }
+    .box-blue h5 { color: #1d4ed8; }
+
+    .box-amber  { background: #fffbeb; border: 1px solid #fde68a; }
+    .box-amber h5 { color: #92400e; }
+
+    .box-green  { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .box-green h5 { color: #166534; }
+
+    .box-purple { background: #faf5ff; border: 1px solid #e9d5ff; }
+    .box-purple h5 { color: #6b21a8; }
+
+    .box-slate  { background: #f8fafc; border: 1px solid #e2e8f0; }
+    .box-slate h5 { color: #334155; }
+
+    .box-pink   { background: #fdf4ff; border: 1px solid #f5d0fe; }
+    .box-pink h5 { color: #86198f; }
+
+    .box-red    { background: #fff1f2; border: 1px solid #fecdd3; }
+    .box-red h5 { color: #9f1239; }
+
+    /* ── Full-width layout for simple pages ── */
+    .page-body-full {
+      margin-top: 16px;
+    }
+    .page-body-full h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-top: 16px;
+      margin-bottom: 6px;
+    }
+    .page-body-full h4:first-child { margin-top: 0; }
+    .page-body-full p {
+      color: #374151;
+      font-size: 13px;
+      line-height: 1.75;
+      margin-bottom: 8px;
+    }
+
+    /* ── Print ── */
+    @media print {
+      body { background: #fff; font-size: 12px; }
+      .cover { min-height: auto; padding: 80px 60px; }
+      .page-card { page-break-inside: avoid; }
+      .section-header { page-break-inside: avoid; }
+    }
+    @page { size: A4; margin: 1.2cm 1cm; }
+  </style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <div class="logo-badge">BV</div>
+  <h1>BulanVarMı?</h1>
+  <p class="subtitle">Platform Page Documentation — English</p>
+  <div class="divider"></div>
+  <p class="description">
+    A complete page-by-page walkthrough of the BulanVarMı? lost &amp; found platform.
+    Each section describes what the page is, who uses it, what they can do on it,
+    and how it connects to the rest of the platform.
+  </p>
+  <div class="meta">
+    <div class="meta-item"><div class="val">30</div><div class="lbl">Pages</div></div>
+    <div class="meta-item"><div class="val">6</div><div class="lbl">Sections</div></div>
+    <div class="meta-item"><div class="val">AI</div><div class="lbl">Matching</div></div>
+    <div class="meta-item"><div class="val">TR</div><div class="lbl">Market</div></div>
+  </div>
+</div>
+
+<!-- TABLE OF CONTENTS -->
+<div class="toc-page">
+  <h2>Table of Contents</h2>
+  <div class="toc-grid">
+
+    <div class="toc-section">§1 — Core / Homepage</div>
+    <div class="toc-item"><div class="num">1</div><div class="pg-title">Home Page</div><div class="pg-url">/</div></div>
+    <div class="toc-item"><div class="num">2</div><div class="pg-title">Search &amp; Browse</div><div class="pg-url">/search</div></div>
+    <div class="toc-item"><div class="num">3</div><div class="pg-title">Map View</div><div class="pg-url">/map</div></div>
+
+    <div class="toc-section">§2 — Listing Lifecycle</div>
+    <div class="toc-item"><div class="num">4</div><div class="pg-title">Report Lost Item</div><div class="pg-url">/lost/report</div></div>
+    <div class="toc-item"><div class="num">5</div><div class="pg-title">Report Found Item</div><div class="pg-url">/found/report</div></div>
+    <div class="toc-item"><div class="num">6</div><div class="pg-title">Item Detail</div><div class="pg-url">/items/[id]</div></div>
+    <div class="toc-item"><div class="num">7</div><div class="pg-title">Edit Listing</div><div class="pg-url">/items/[id]/edit</div></div>
+    <div class="toc-item"><div class="num">8</div><div class="pg-title">Ownership Claim</div><div class="pg-url">/items/[id]/claim</div></div>
+    <div class="toc-item"><div class="num">9</div><div class="pg-title">Printable Poster</div><div class="pg-url">/items/[id]/poster</div></div>
+
+    <div class="toc-section">§3 — Messaging &amp; Notifications</div>
+    <div class="toc-item"><div class="num">10</div><div class="pg-title">Messages List</div><div class="pg-url">/messages</div></div>
+    <div class="toc-item"><div class="num">11</div><div class="pg-title">Conversation Detail</div><div class="pg-url">/messages/[id]</div></div>
+    <div class="toc-item"><div class="num">12</div><div class="pg-title">Notifications</div><div class="pg-url">/notifications</div></div>
+
+    <div class="toc-section">§4 — User Account</div>
+    <div class="toc-item"><div class="num">13</div><div class="pg-title">My Profile</div><div class="pg-url">/profile</div></div>
+    <div class="toc-item"><div class="num">14</div><div class="pg-title">My Listings</div><div class="pg-url">/my-items</div></div>
+    <div class="toc-item"><div class="num">15</div><div class="pg-title">Favourites</div><div class="pg-url">/favorites</div></div>
+    <div class="toc-item"><div class="num">16</div><div class="pg-title">Search Alerts</div><div class="pg-url">/alerts</div></div>
+    <div class="toc-item"><div class="num">17</div><div class="pg-title">Public User Profile</div><div class="pg-url">/users/[email]</div></div>
+    <div class="toc-item"><div class="num">18</div><div class="pg-title">Business Dashboard</div><div class="pg-url">/business</div></div>
+
+    <div class="toc-section">§5 — Auth</div>
+    <div class="toc-item"><div class="num">19</div><div class="pg-title">Login</div><div class="pg-url">/auth/login</div></div>
+    <div class="toc-item"><div class="num">20</div><div class="pg-title">Register</div><div class="pg-url">/auth/register</div></div>
+    <div class="toc-item"><div class="num">21</div><div class="pg-title">Forgot Password</div><div class="pg-url">/auth/forgot-password</div></div>
+    <div class="toc-item"><div class="num">22</div><div class="pg-title">Verify Email</div><div class="pg-url">/auth/verify-email</div></div>
+    <div class="toc-item"><div class="num">23</div><div class="pg-title">Complete Profile</div><div class="pg-url">/auth/complete-profile</div></div>
+
+    <div class="toc-section">§6 — Community &amp; Info</div>
+    <div class="toc-item"><div class="num">24</div><div class="pg-title">Pet Listings</div><div class="pg-url">/pets</div></div>
+    <div class="toc-item"><div class="num">25</div><div class="pg-title">Success Stories</div><div class="pg-url">/hikayeler</div></div>
+    <div class="toc-item"><div class="num">26</div><div class="pg-title">Lost Property Offices</div><div class="pg-url">/kayip-buro</div></div>
+    <div class="toc-item"><div class="num">27</div><div class="pg-title">Support &amp; Contact</div><div class="pg-url">/destek</div></div>
+    <div class="toc-item"><div class="num">28</div><div class="pg-title">Privacy Policy</div><div class="pg-url">/gizlilik</div></div>
+    <div class="toc-item"><div class="num">29</div><div class="pg-title">Terms of Use</div><div class="pg-url">/kullanim-sartlari</div></div>
+    <div class="toc-item"><div class="num">30</div><div class="pg-title">Admin Panel</div><div class="pg-url">/admin</div></div>
+  </div>
+</div>
+
+<!-- ══ §1 — CORE / HOMEPAGE ══ -->
+<div class="section-header">
+  <div class="cat-label">Section 1</div>
+  <h2>Core / Homepage</h2>
+  <p>The entry points of the platform — where visitors discover listings, search by category, and orient themselves to how BulanVarMı? works.</p>
+</div>
+
+<!-- PAGE 1: Home -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-blue">🏠</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 01</div>
+      <h3>Home Page</h3>
+      <span class="page-url">/</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>The home page is the first thing any visitor sees. It gives an immediate snapshot of the platform: how many items have been reported lost, how many found, and how many cases resolved. It serves as both a landing page and a quick navigation hub.</p>
+
+      <h4>What users can do here</h4>
+      <ul class="feature-list">
+        <li>See live statistics — total listings, lost count, found count, resolved count — that count up with an animated counter on load.</li>
+        <li>Browse the <strong>category shortcut grid</strong>: Phone, Wallet, Keys, Bag, Laptop, Pet, Other, and an "Urgent" highlight. Each tile shows the count of active listings in that category and links directly to a filtered search.</li>
+        <li>Enable <strong>Nearby Listings</strong>: the page asks for browser location permission and then shows up to 8 active listings within 20 km of the user on a horizontal scroll strip.</li>
+        <li>See a <strong>Recently Viewed</strong> strip (stored in browser local storage) showing items the user has opened in the current session.</li>
+        <li>Navigate to key sections via footer links: Privacy Policy, Terms of Use, Success Stories, Lost Property Offices, Favourites, All Listings.</li>
+      </ul>
+
+      <h4>Important behaviour</h4>
+      <p>Statistics and categories are visible to everyone. However, clicking a listing card requires being logged in — unauthenticated visitors are redirected to login, then back to where they were trying to go.</p>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-blue">
+        <h5>Who uses it</h5>
+        <ul>
+          <li>All visitors, logged in or not</li>
+          <li>Returning users checking their recent items</li>
+          <li>People who just discovered the platform</li>
+        </ul>
+      </div>
+      <div class="info-box box-green">
+        <h5>Key features</h5>
+        <ul>
+          <li>Animated stat counters</li>
+          <li>Category quick-filter grid</li>
+          <li>GPS-based nearby listings</li>
+          <li>Recently viewed (local storage)</li>
+        </ul>
+      </div>
+      <div class="info-box box-amber">
+        <h5>Login required?</h5>
+        <p>No for browsing stats/categories. Yes for opening a listing.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2: Search -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-blue">🔍</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 02</div>
+      <h3>Search &amp; Browse Listings</h3>
+      <span class="page-url">/search</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>The main discovery page. It shows all active, approved listings in a card grid and gives users a full toolkit to narrow results until they find what they are looking for — or confirm a match hasn't been posted yet.</p>
+
+      <h4>Filtering and sorting options</h4>
+      <ul class="feature-list">
+        <li><strong>Keyword search:</strong> Searches across title, description, and location. Updates 400 ms after the user stops typing (debounced).</li>
+        <li><strong>Type tabs:</strong> All, Lost, Found — filter to see only one type.</li>
+        <li><strong>Category dropdown:</strong> Phone, Wallet, Key, Bag, Laptop, Watch/Jewellery, ID/Documents, Pet, Other.</li>
+        <li><strong>Sort order:</strong> Newest first, Oldest first, Most viewed.</li>
+        <li><strong>Date range:</strong> Narrow to listings created within a specific window.</li>
+        <li><strong>Location + radius filter:</strong> Pick a point on the map and set a radius; only listings with GPS coordinates within that distance are shown. A mini-map appears in the results when this filter is active.</li>
+        <li><strong>Hide Resolved toggle:</strong> Remove already-closed listings from view.</li>
+      </ul>
+
+      <h4>Additional features</h4>
+      <ul class="feature-list">
+        <li><strong>Search history:</strong> Last 5 searches stored in the browser, shown as quick-tap chips under the search box.</li>
+        <li><strong>Save Alert button:</strong> Saves the current search as an alert — the user receives an email when a new listing matches those criteria.</li>
+        <li><strong>Infinite scroll:</strong> Results load 12 at a time; scrolling to the bottom loads the next batch automatically.</li>
+        <li><strong>Full-screen map:</strong> "Open Map" button shows all filtered results on the full-screen map page.</li>
+      </ul>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-blue">
+        <h5>Who uses it</h5>
+        <ul>
+          <li>Users searching for their lost item</li>
+          <li>People who found something checking if it was reported</li>
+        </ul>
+      </div>
+      <div class="info-box box-green">
+        <h5>Each card shows</h5>
+        <ul>
+          <li>Thumbnail photo</li>
+          <li>Lost / Found / Resolved badge</li>
+          <li>"New" badge (under 24 hours)</li>
+          <li>Category, location, time</li>
+          <li>View count</li>
+        </ul>
+      </div>
+      <div class="info-box box-amber">
+        <h5>Login required?</h5>
+        <p>Yes — unauthenticated visitors are redirected to login.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3: Map -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-teal">🗺️</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 03</div>
+      <h3>Map View</h3>
+      <span class="page-url">/map</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>A full-screen interactive map that plots all active, approved listings that have GPS coordinates. This gives users a visual, geographic way to find items near a specific location rather than reading through a list.</p>
+
+      <h4>What users can do here</h4>
+      <ul class="feature-list">
+        <li>See coloured map markers: <strong>red</strong> for lost listings, <strong>green</strong> for found listings.</li>
+        <li>Click any marker to see a popup with the item's title, category, and a link to its full detail page.</li>
+        <li>Filter by type (All / Lost / Found) using a tab bar at the top.</li>
+        <li>Filter by category using a collapsible category panel.</li>
+        <li>Enable a <strong>radius filter</strong>: the page requests GPS location and then shows only listings within a chosen radius (1, 5, 10, 25, or 50 km).</li>
+        <li>Up to 500 listings are loaded at once (newest first). Only listings with both latitude and longitude appear.</li>
+      </ul>
+
+      <h4>How it fits in</h4>
+      <p>The map is particularly useful when a user knows roughly where an item was lost or found and wants to check visually. It complements the text search on /search.</p>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-blue">
+        <h5>Who uses it</h5>
+        <ul>
+          <li>Users who prefer a visual search</li>
+          <li>People searching in a specific neighbourhood</li>
+        </ul>
+      </div>
+      <div class="info-box box-green">
+        <h5>Colour key</h5>
+        <ul>
+          <li>🔴 Red = Lost listing</li>
+          <li>🟢 Green = Found listing</li>
+        </ul>
+      </div>
+      <div class="info-box box-amber">
+        <h5>Login required?</h5>
+        <p>Yes — behind an auth guard.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ §2 — LISTING LIFECYCLE ══ -->
+<div class="section-header">
+  <div class="cat-label">Section 2</div>
+  <h2>Listing Lifecycle</h2>
+  <p>Everything related to creating, viewing, editing, claiming, and sharing a listing — from first report to resolution.</p>
+</div>
+
+<!-- PAGE 4: Lost Report -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-amber">🔴</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 04</div>
+      <h3>Report a Lost Item</h3>
+      <span class="page-url">/lost/report</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>A 3-step wizard where a user creates a "Lost" listing for something they have lost. The form collects enough detail so the AI matching engine can automatically find a corresponding "Found" listing.</p>
+
+      <h4>Step 1 — Basic Information</h4>
+      <ul class="feature-list">
+        <li>Item name (up to 80 characters) — e.g., "Black iPhone 15 Pro".</li>
+        <li>Category — chosen from a grid: Phone, Wallet, Key, Bag, Laptop, Watch/Jewellery, ID/Documents, Pet, Other.</li>
+        <li>Description (up to 1000 characters) — appearance, special marks, circumstances of loss.</li>
+        <li><strong>AI Description Suggestion:</strong> once a title and category are filled in, one click asks the AI to draft a suggested description. The user can edit it freely before continuing.</li>
+        <li>If "Pet" is chosen, additional fields appear: species, breed, colour/pattern, age/size, microchip number.</li>
+      </ul>
+
+      <h4>Step 2 — Location &amp; Date</h4>
+      <ul class="feature-list">
+        <li>Location text field — where the item was lost (e.g., "Kadıköy / Istanbul").</li>
+        <li>Auto-detect button: uses the browser's GPS to fill the location field automatically via reverse geocoding.</li>
+        <li>Map pin button: opens a map modal where the user can drop a precise pin.</li>
+        <li>Date and optional time of loss.</li>
+      </ul>
+
+      <h4>Step 3 — Photos</h4>
+      <ul class="feature-list">
+        <li>Upload 1–5 photos. Each image goes through a crop/resize tool before upload.</li>
+        <li>The first uploaded photo triggers <strong>AI category detection</strong>: the AI analyses the image and suggests a category and title if those fields are still empty.</li>
+      </ul>
+
+      <h4>On submission</h4>
+      <p>The listing is saved with status "pending" and awaits admin approval before going public. A duplicate-detection warning appears if the user already posted in the same category in the last 24 hours. A draft is auto-saved to localStorage so work isn't lost if the user navigates away.</p>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-amber">
+        <h5>Who uses it</h5>
+        <p>Any logged-in user who lost an item and wants help finding it.</p>
+      </div>
+      <div class="info-box box-purple">
+        <h5>AI features</h5>
+        <ul>
+          <li>✨ AI description writer</li>
+          <li>✨ AI image category detection</li>
+        </ul>
+      </div>
+      <div class="info-box box-green">
+        <h5>After submitting</h5>
+        <p>User is redirected to My Listings and earns +10 points. The listing goes live after admin approval.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 5: Found Report -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-green">🟢</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 05</div>
+      <h3>Report a Found Item</h3>
+      <span class="page-url">/found/report</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>Identical in structure to the Lost Report page, but for users who found an item belonging to someone else and want to help it get back to its owner. The language shifts to "Where did you find it?" and "What did it look like when you found it?"</p>
+
+      <h4>Key differences from the Lost Report</h4>
+      <ul class="feature-list">
+        <li>The listing is saved with <code>type = "found"</code>.</li>
+        <li>Step 2 asks "Where and when did you find it?" instead of "Where did you lose it?"</li>
+        <li>The description prompt encourages the finder to describe what was inside or near the item, helping the true owner recognise it.</li>
+        <li>All other steps and AI features — AI description, image detection, GPS, map pin, crop tool, draft saving, duplicate check — are identical to the Lost Report.</li>
+      </ul>
+
+      <h4>What happens after submission</h4>
+      <p>Same as the Lost Report: held for admin moderation. Once approved, the AI matching engine scans it against existing Lost listings and notifies both parties if a strong match is found. The finder earns +10 points.</p>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-green">
+        <h5>Who uses it</h5>
+        <p>Logged-in users who found something and want to connect it with its owner.</p>
+      </div>
+      <div class="info-box box-blue">
+        <h5>Same features as Lost Report</h5>
+        <ul>
+          <li>3-step wizard</li>
+          <li>Pet-specific fields</li>
+          <li>AI description &amp; image AI</li>
+          <li>GPS auto-detect &amp; map pin</li>
+          <li>Draft auto-save</li>
+          <li>Duplicate detection</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 6: Item Detail -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-blue">📋</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 06</div>
+      <h3>Item Detail Page</h3>
+      <span class="page-url">/items/[id]</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>The full detail view of a single listing. This is the most feature-rich page on the platform — it is where the core interaction between the person who lost an item and the person who found it actually takes place.</p>
+
+      <h4>What a visitor sees</h4>
+      <ul class="feature-list">
+        <li>A large photo gallery (up to 5 photos) with a thumbnail strip to navigate between them.</li>
+        <li>Item title, type badge (Lost / Found), category badge, and status (Resolved if closed).</li>
+        <li>Location and date/time details.</li>
+        <li>Total view count and number of "I saw it" sighting reports.</li>
+        <li>Full description text.</li>
+        <li>The listing owner's truncated email and their average star rating from past transactions.</li>
+        <li>Up to 3 AI-matched listings from the opposite type, each showing a percentage similarity score.</li>
+        <li>A grid of similar listings in the same category.</li>
+      </ul>
+
+      <h4>Actions for non-owners (logged in)</h4>
+      <ul class="feature-list">
+        <li><strong>On a Found listing:</strong> "This item is mine!" — opens a claim modal to prove ownership (name, where lost, brand/model, distinctive feature).</li>
+        <li><strong>On a Lost listing:</strong> "I saw this!" — sighting modal to report where they last saw it. Also "I found it!" — same claim modal.</li>
+        <li>Add/remove from Favourites.</li>
+        <li>Share: native share, copy URL, WhatsApp, Twitter/X, QR code, poster, social-image generator.</li>
+        <li>Report the listing as spam, misleading, inappropriate, duplicate, or other.</li>
+        <li>If a match score is ≥ 85%, a "Send Message" button appears directly on the match card.</li>
+        <li>Rate the listing owner (stars + optional comment) once the listing is resolved.</li>
+      </ul>
+
+      <h4>Actions for the listing owner</h4>
+      <ul class="feature-list">
+        <li>Three-dot menu: Edit listing, Renew for 30 more days, Mark as Resolved, Delete.</li>
+        <li>When resolved, the owner is prompted to rate the finder/claimant.</li>
+        <li>On mobile, a sticky bottom action bar shows the primary action button.</li>
+      </ul>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-blue">
+        <h5>Who uses it</h5>
+        <ul>
+          <li>Owner — to manage their listing</li>
+          <li>Claimants — to prove ownership</li>
+          <li>Finders — to report a sighting</li>
+          <li>Any logged-in user browsing</li>
+        </ul>
+      </div>
+      <div class="info-box box-purple">
+        <h5>AI on this page</h5>
+        <p>AI-matched listings load in the background and are displayed with a percentage similarity score. A score ≥ 85% enables direct messaging.</p>
+      </div>
+      <div class="info-box box-amber">
+        <h5>Pending listings</h5>
+        <p>A listing awaiting admin approval is only visible to its creator. Everyone else sees a "Not Found" screen.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 7: Edit -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-orange">✏️</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 07</div>
+      <h3>Edit Listing</h3>
+      <span class="page-url">/items/[id]/edit</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>A form that lets the listing owner update any detail of their published listing. Only the owner can access it — anyone else sees a "You cannot edit this listing" message.</p>
+
+    <h4>What can be changed</h4>
+    <ul class="feature-list">
+      <li>Title, category, location (text field and map pin), date, and description.</li>
+      <li>Replace the main photo — the user picks a new image, which goes through the same crop tool used at listing creation.</li>
+    </ul>
+
+    <h4>After saving</h4>
+    <p>Changes are saved to the database and the AI matching index for this listing is regenerated so the matching engine reflects the updated content. The user is redirected back to the item detail page.</p>
+  </div>
+</div>
+
+<!-- PAGE 8: Claim -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-green">🙋</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 08</div>
+      <h3>Ownership Claim Page</h3>
+      <span class="page-url">/items/[id]/claim</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>A dedicated form where a logged-in user formally claims that a "Found" listing belongs to them. This is an alternative to the claim modal on the Item Detail page — both do the same thing, but this page gives more space for typing a detailed response.</p>
+
+    <h4>What the user fills in</h4>
+    <ul class="feature-list">
+      <li><strong>Full name</strong> (required) — how the claimant wants to be identified.</li>
+      <li><strong>When they lost it</strong> — date (required).</li>
+      <li><strong>Where they lost it</strong> — location text (required).</li>
+      <li><strong>Brand / model</strong> — optional, e.g., "Apple AirPods Pro".</li>
+      <li><strong>Distinctive feature</strong> (required) — a detail only the true owner would know, e.g., "scratch on the bottom-right corner".</li>
+      <li><strong>Additional note</strong> — any other context (optional).</li>
+    </ul>
+
+    <h4>What happens after submission</h4>
+    <p>A claim record is created with status "pending". The listing owner receives an in-app notification and an email. The owner can approve or reject the claim in their profile's "Incoming Claims" tab. If approved, a private conversation channel is automatically opened between both users.</p>
+  </div>
+</div>
+
+<!-- PAGE 9: Poster -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-slate">🖨️</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 09</div>
+      <h3>Printable Poster</h3>
+      <span class="page-url">/items/[id]/poster</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>A clean, print-optimised A4 layout of the listing that the owner can print and put up around the neighbourhood where the item was lost or found. All navigation is stripped away and the dark UI is replaced with a bright white layout for paper printing.</p>
+
+    <h4>What the poster contains</h4>
+    <ul class="feature-list">
+      <li>A large "LOST" or "FOUND" header in bold colour (amber for lost, green for found).</li>
+      <li>The item photo, title, description, category, location, and date.</li>
+      <li>A call-to-action with the listing URL so anyone who spots it can visit and submit a claim or sighting.</li>
+      <li>BulanVarMı? branding and website address.</li>
+    </ul>
+
+    <h4>How to use</h4>
+    <p>A top control bar (hidden when printing) has a "Print / Save as PDF" button which triggers the browser's native print dialog. The user can then print physically or save as PDF.</p>
+  </div>
+</div>
+
+
+<!-- ══ §3 — MESSAGING & NOTIFICATIONS ══ -->
+<div class="section-header">
+  <div class="cat-label">Section 3</div>
+  <h2>Messaging &amp; Notifications</h2>
+  <p>How users communicate once a claim is approved, and how they stay informed about activity on their listings.</p>
+</div>
+
+<!-- PAGE 10: Messages List -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-blue">💬</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 10</div>
+      <h3>Messages List</h3>
+      <span class="page-url">/messages</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>An inbox listing all conversations the logged-in user is part of. Conversations are created automatically when a listing owner approves an ownership claim — both the owner and the claimant are added. Conversations cannot be started manually; they are always tied to a specific listing.</p>
+
+      <h4>What users can do here</h4>
+      <ul class="feature-list">
+        <li>See all conversations sorted by creation date (newest first).</li>
+        <li>Each entry shows the item title, the other participant's email, creation time, and an unread count badge if there are new messages.</li>
+        <li>Click a conversation to open the full chat.</li>
+        <li>Delete a conversation (with confirmation). Deletion removes all messages permanently.</li>
+        <li>New conversations and incoming messages update in real time — no page refresh needed.</li>
+      </ul>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-blue">
+        <h5>Who uses it</h5>
+        <p>Any user who has an approved claim, either as the item owner or as the claimant.</p>
+      </div>
+      <div class="info-box box-green">
+        <h5>Real-time</h5>
+        <p>Unread counts and new conversations appear live via Supabase realtime — no refresh needed.</p>
+      </div>
+      <div class="info-box box-amber">
+        <h5>Login required?</h5>
+        <p>Yes — unauthenticated users see a "Please log in" panel.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 11: Conversation Detail -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-blue">💭</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 11</div>
+      <h3>Conversation Detail</h3>
+      <span class="page-url">/messages/[conversationId]</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>The actual chat window for a single conversation. It looks like a standard messaging app: the user's own messages appear on the right in blue, the other person's messages appear on the left in dark grey. Only the two participants can access the conversation.</p>
+
+      <h4>What users can do here</h4>
+      <ul class="feature-list">
+        <li>Send text messages — messages appear immediately (optimistic UI) and are confirmed by the server in the background.</li>
+        <li>Send photos — uploaded to storage and displayed inline in the chat.</li>
+        <li>Use <strong>message templates</strong> (Quick Replies) — a panel with pre-built phrases to save typing. Users can also add their own custom templates.</li>
+        <li>Delete their own messages (with confirmation).</li>
+        <li>See read receipts: ✓ = sent, ✓✓ = the other person has read it.</li>
+        <li>See a live connection status badge (Connecting / Live connection active / Connection error).</li>
+        <li>System messages appear in a distinct green bubble — e.g., "The listing has been resolved."</li>
+      </ul>
+
+      <h4>Real-time behaviour</h4>
+      <p>The page subscribes to a Supabase realtime channel. Incoming messages from the other user appear instantly. When the chat is open, incoming messages are automatically marked as read.</p>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-blue">
+        <h5>Who uses it</h5>
+        <p>The listing owner and the approved claimant — only these two people can see this conversation.</p>
+      </div>
+      <div class="info-box box-green">
+        <h5>Features</h5>
+        <ul>
+          <li>Text + image messaging</li>
+          <li>Read receipts (✓✓)</li>
+          <li>Quick reply templates</li>
+          <li>System message bubbles</li>
+          <li>Live realtime updates</li>
+          <li>Message delete</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 12: Notifications -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-amber">🔔</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 12</div>
+      <h3>Notifications</h3>
+      <span class="page-url">/notifications</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>An in-app notification centre that logs all platform events relevant to the logged-in user, in reverse chronological order.</p>
+
+    <h4>Types of notifications shown</h4>
+    <ul class="feature-list">
+      <li>A new ownership claim was submitted on one of the user's listings.</li>
+      <li>A claim the user submitted was approved or rejected.</li>
+      <li>A new message arrived in one of the user's conversations.</li>
+      <li>The AI engine found a potential match for one of the user's listings.</li>
+    </ul>
+
+    <h4>Behaviour</h4>
+    <p>When the page loads, all unread notifications (shown with a blue highlight) are automatically marked as read. Each notification links directly to the related listing or conversation. The page shows the last 50 notifications.</p>
+  </div>
+</div>
+
+
+<!-- ══ §4 — USER ACCOUNT ══ -->
+<div class="section-header">
+  <div class="cat-label">Section 4</div>
+  <h2>User Account</h2>
+  <p>Profile management, listing management, saved favourites, search alerts, public profiles, and the business dashboard.</p>
+</div>
+
+<!-- PAGE 13: Profile -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-purple">👤</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 13</div>
+      <h3>My Profile</h3>
+      <span class="page-url">/profile</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>The personal account hub. It combines everything about the logged-in user in one place: their listings, claims, favourites, notification preferences, statistics, and account security settings. The page is divided into tabs.</p>
+
+      <h4>Tab — My Listings</h4>
+      <p>Shows all listings created by the user (active, resolved, pending, expired) as cards, each linking to the listing's detail page.</p>
+
+      <h4>Tab — Incoming Claims</h4>
+      <p>Lists all ownership claims submitted by other users on the current user's "Found" listings. Each claim shows the claimant's name, email, where they say they lost the item, and their stated distinctive feature. The owner can <strong>Approve</strong> (which opens a conversation) or <strong>Reject</strong> each claim.</p>
+
+      <h4>Tab — Sent Claims</h4>
+      <p>Shows all claims the user has submitted on other people's listings, with the current status (Pending / Approved / Rejected).</p>
+
+      <h4>Tab — Notifications</h4>
+      <p>Toggle switches for email notifications (claims, messages, AI matches, weekly digest), Privacy Mode (hides email from other users), and browser push notification subscription.</p>
+
+      <h4>Tab — Statistics</h4>
+      <p>A table showing each listing with its view count, favourite count, and claim count. Summary cards at the top show totals.</p>
+
+      <h4>Tab — Account</h4>
+      <p>Phone number verification (SMS OTP), SMS notification toggle, referral code generation and sharing, points and badge display, and two-factor authentication (TOTP via Google Authenticator).</p>
+
+      <h4>Profile header</h4>
+      <p>Shows avatar, full name, email, and email-verification status. Buttons: Upload Photo, Edit Profile (name), Log Out.</p>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-purple">
+        <h5>Who uses it</h5>
+        <p>The logged-in user managing their own account.</p>
+      </div>
+      <div class="info-box box-blue">
+        <h5>Tabs</h5>
+        <ul>
+          <li>My Listings</li>
+          <li>Incoming Claims</li>
+          <li>Sent Claims</li>
+          <li>Notifications / Privacy</li>
+          <li>Statistics</li>
+          <li>Account (2FA, phone, referral)</li>
+        </ul>
+      </div>
+      <div class="info-box box-green">
+        <h5>Points earned by action</h5>
+        <ul>
+          <li>+10 — creating a listing</li>
+          <li>+50 — resolving a listing</li>
+          <li>+20 — approved claim</li>
+          <li>+5 — sighting report</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 14: My Items -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-amber">📂</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 14</div>
+      <h3>My Listings</h3>
+      <span class="page-url">/my-items</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>A dedicated full-page view of all listings the logged-in user has created. This is the primary post-submission destination — users are redirected here after creating a listing. It provides more room and actions than the "My Listings" tab inside the profile page.</p>
+
+      <h4>What users can do here</h4>
+      <ul class="feature-list">
+        <li>See all their listings in a card grid (newest first).</li>
+        <li>View a statistics bar at the top: total, active, lost, found, resolved, and expired counts.</li>
+        <li>Each card has a three-dot menu: Edit or Delete (with confirmation).</li>
+        <li><strong>Renew</strong> a listing that is about to expire or has expired — extends its life by 60 days.</li>
+        <li>Cards show moderation status: a yellow "Pending Review" badge or a red "Flagged — please edit" badge if the AI moderation flagged the content.</li>
+      </ul>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-amber">
+        <h5>Who uses it</h5>
+        <p>Logged-in users managing their own listings.</p>
+      </div>
+      <div class="info-box box-green">
+        <h5>Listing statuses</h5>
+        <ul>
+          <li>Active — visible to all</li>
+          <li>Pending — awaiting approval</li>
+          <li>Flagged — needs editing</li>
+          <li>Resolved — closed</li>
+          <li>Expired — past expiry date</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 15: Favorites -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-amber">⭐</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 15</div>
+      <h3>Favourites</h3>
+      <span class="page-url">/favorites</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>A saved-items list where users keep track of listings they want to monitor. Listings are added to favourites by clicking the star button on any Item Detail page.</p>
+
+    <h4>What users can do here</h4>
+    <ul class="feature-list">
+      <li>See all favourited listings as a card grid with photo, type badge, status, category, and location.</li>
+      <li>Click any card to go to the listing's detail page.</li>
+      <li>Remove a listing from favourites by clicking the trash icon — the item disappears immediately without a page refresh.</li>
+    </ul>
+
+    <h4>Use case</h4>
+    <p>Commonly used by people who see a listing that might match their lost item but aren't certain yet, or who want to follow a case to see if it gets resolved. Also useful for finders monitoring multiple Lost listings for the same type of item.</p>
+  </div>
+</div>
+
+<!-- PAGE 16: Alerts -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-blue">🔔</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 16</div>
+      <h3>Search Alerts</h3>
+      <span class="page-url">/alerts</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>A page where users set up saved searches that automatically send an email notification whenever a new listing matching their criteria is posted. Ideal for people who lost something and want to be notified automatically instead of checking the site daily.</p>
+
+      <h4>Creating an alert</h4>
+      <ul class="feature-list">
+        <li>A keyword (searches listing title and description).</li>
+        <li>Listing type: All / Lost / Found.</li>
+        <li>Category filter.</li>
+        <li>Location name (text).</li>
+        <li>Optional GPS radius — the page requests browser location; alerts fire only for listings within the chosen distance.</li>
+      </ul>
+
+      <h4>Managing existing alerts</h4>
+      <ul class="feature-list">
+        <li>Each alert is shown as a row with its filter tags (keyword, category, location) and creation date.</li>
+        <li>Toggle on/off to pause an alert without deleting it.</li>
+        <li>Delete permanently.</li>
+        <li>Maximum 10 alerts per user. A usage counter is shown (e.g., "3/10 alerts in use").</li>
+        <li>Shows the date of the last notification sent for each alert.</li>
+      </ul>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-blue">
+        <h5>Who uses it</h5>
+        <p>Users who lost something and want passive notifications rather than checking the site daily.</p>
+      </div>
+      <div class="info-box box-green">
+        <h5>How alerts fire</h5>
+        <p>A scheduled cron job checks all active alerts against newly added listings and sends email notifications to matching users.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 17: Public User Profile -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-slate">🪪</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 17</div>
+      <h3>Public User Profile</h3>
+      <span class="page-url">/users/[email]</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>A public-facing profile page for any registered user. It provides transparency and builds trust between strangers interacting through the platform — for example, before a claim is approved, you can check a claimant's track record.</p>
+
+      <h4>What the profile shows</h4>
+      <ul class="feature-list">
+        <li>Avatar, full name, join date (month and year only).</li>
+        <li>Star rating average and total number of ratings received.</li>
+        <li>Badges and total points earned.</li>
+        <li>Quick stats: total listings, lost, found, resolved, and "helped" count (found listings that were resolved).</li>
+        <li>A grid of the user's active and resolved listings (up to 48, newest first).</li>
+        <li>A "Ratings" tab showing individual star ratings and written comments from past interactions.</li>
+      </ul>
+
+      <h4>Actions for viewers</h4>
+      <ul class="feature-list">
+        <li><strong>Report this profile</strong> — submits an abuse report (spam, misleading, inappropriate, duplicate, other).</li>
+        <li><strong>Admin-only:</strong> A floating panel at the bottom-right shows Ban / Unban and "Send Message" buttons.</li>
+      </ul>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-slate">
+        <h5>Who uses it</h5>
+        <ul>
+          <li>Users verifying trustworthiness before interacting</li>
+          <li>Owners reviewing a claimant's history</li>
+          <li>Admins managing user behaviour</li>
+        </ul>
+      </div>
+      <div class="info-box box-amber">
+        <h5>Privacy mode</h5>
+        <p>If the profile owner enabled Privacy Mode, their email is hidden from all other users.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 18: Business Dashboard -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-blue">🏢</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 18</div>
+      <h3>Business Dashboard</h3>
+      <span class="page-url">/business</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>A management panel designed for organisations — courier companies, hotels, shopping centres, hospitals, schools — that regularly handle lost and found items. It gives companies a branded identity and tools to manage multiple listings efficiently.</p>
+
+      <h4>Converting to a business account</h4>
+      <p>If the user's account is not yet a business account, the page shows a conversion form: enter the company or organisation name and select the business type. Once submitted, the account is upgraded immediately.</p>
+
+      <h4>Business dashboard features</h4>
+      <ul class="feature-list">
+        <li>Header card showing company name, type badge, and email.</li>
+        <li><strong>Statistics cards:</strong> total listings, active listings, resolved listings, total sighting reports.</li>
+        <li><strong>Analytics charts:</strong> bar chart of listing counts by category, pie chart of active vs. resolved status.</li>
+        <li><strong>Listing management table:</strong> all listings with photo, type badge, status, view count, sighting count. Checkboxes for bulk delete.</li>
+        <li><strong>CSV export:</strong> downloads all listings as a spreadsheet (ID, title, type, category, location, status, views, creation date).</li>
+        <li><strong>Resolution rate</strong> displayed as a summary metric.</li>
+      </ul>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-blue">
+        <h5>Who uses it</h5>
+        <p>Organisations that post many lost &amp; found listings and need bulk management tools.</p>
+      </div>
+      <div class="info-box box-green">
+        <h5>Business account types</h5>
+        <ul>
+          <li>Company</li>
+          <li>Municipality</li>
+          <li>School / University</li>
+          <li>Hospital</li>
+          <li>Hotel</li>
+          <li>Other institution</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══ §5 — AUTH ══ -->
+<div class="section-header">
+  <div class="cat-label">Section 5</div>
+  <h2>Authentication</h2>
+  <p>All pages that handle user identity: logging in, registering, resetting passwords, and verifying accounts.</p>
+</div>
+
+<!-- PAGE 19: Login -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-blue">🔐</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 19</div>
+      <h3>Login</h3>
+      <span class="page-url">/auth/login</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>The sign-in page. It offers three different ways to log in, catering to different user preferences.</p>
+
+      <h4>Login methods</h4>
+      <ul class="feature-list">
+        <li><strong>Google OAuth:</strong> "Sign in with Google" button — opens Google's authentication and returns the user to where they were trying to go. The redirect URL is preserved throughout the OAuth flow.</li>
+        <li><strong>Email + password:</strong> Standard form with email address and password. A "Forgot my password" link is provided.</li>
+        <li><strong>Phone (SMS OTP):</strong> User enters their phone number with country code; a 6-digit SMS code is sent. After entering the code, they are logged in. If the phone number has no email attached, the user is redirected to the Complete Profile page first.</li>
+      </ul>
+
+      <h4>After login</h4>
+      <p>The user is sent to the page they were originally trying to reach (captured in the URL's <code>?redirect=</code> parameter), or to the home page if no redirect was set.</p>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-blue">
+        <h5>Login methods</h5>
+        <ul>
+          <li>🔵 Google (OAuth)</li>
+          <li>📧 Email + password</li>
+          <li>📱 Phone (SMS OTP)</li>
+        </ul>
+      </div>
+      <div class="info-box box-slate">
+        <h5>Smart redirect</h5>
+        <p>If a user was sent to login from a protected page, they return to that page after logging in — not to the home page.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 20: Register -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-green">📝</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 20</div>
+      <h3>Register</h3>
+      <span class="page-url">/auth/register</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>The account creation page. A 2-step wizard that first asks what type of account the user wants, then collects their credentials.</p>
+
+      <h4>Step 1 — Account type</h4>
+      <ul class="feature-list">
+        <li><strong>Personal Account:</strong> for individuals who want to post lost/found listings.</li>
+        <li><strong>Business / Organisation Account:</strong> for companies and institutions. Selecting this reveals additional fields (company name, business type) in step 2.</li>
+      </ul>
+
+      <h4>Step 2 — Registration method</h4>
+      <ul class="feature-list">
+        <li><strong>Email tab:</strong> Full name, email address, password (minimum 6 characters). Business accounts also require company name and business type.</li>
+        <li><strong>Phone tab:</strong> Phone number → SMS OTP → verify. If the phone number is new, the user proceeds to Complete Profile to add an email.</li>
+        <li><strong>Referral code:</strong> If the URL contains a <code>?ref=</code> parameter (from a friend's referral link), it is pre-filled and the referral is recorded.</li>
+      </ul>
+
+      <h4>After registration (email method)</h4>
+      <p>The user is redirected to the Email Verification page and receives a confirmation email. The account is active only after clicking the link in that email. The system checks the email against a blacklist before creating the account.</p>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-green">
+        <h5>Account types</h5>
+        <ul>
+          <li>👤 Personal</li>
+          <li>🏢 Business/Organisation</li>
+        </ul>
+      </div>
+      <div class="info-box box-blue">
+        <h5>Registration methods</h5>
+        <ul>
+          <li>📧 Email + password</li>
+          <li>📱 Phone (SMS OTP)</li>
+        </ul>
+      </div>
+      <div class="info-box box-slate">
+        <h5>Referral</h5>
+        <p>If registered via a referral link (<code>?ref=CODE</code>), the referral is tracked and both users may earn benefits.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 21: Forgot Password -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-slate">🔑</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 21</div>
+      <h3>Forgot Password</h3>
+      <span class="page-url">/auth/forgot-password</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>A simple form where a user who forgot their password requests a reset link. The user enters their email address and submits. Supabase sends a password reset email with a magic link. Clicking that link takes the user to a page where they choose a new password.</p>
+
+    <h4>After submission</h4>
+    <p>The page shows a success message confirming the email was sent (regardless of whether the email exists in the system, for security). A link to return to the login page is provided.</p>
+  </div>
+</div>
+
+<!-- PAGE 22: Verify Email -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-blue">✉️</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 22</div>
+      <h3>Email Verification Waiting Page</h3>
+      <span class="page-url">/auth/verify-email</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>A confirmation screen shown immediately after a user registers with email and password. It tells the user that a verification email has been sent and instructs them to click the link inside it to activate their account.</p>
+
+    <h4>What it shows</h4>
+    <p>A large mail icon, the heading "Verify Your Email", the email address the link was sent to (from the URL parameter), a reminder to check the spam/junk folder, and two buttons: "Log In" and "Back to Home".</p>
+
+    <h4>This is purely informational</h4>
+    <p>The actual verification happens via the magic link in the email — this page just tells the user to go check their inbox.</p>
+  </div>
+</div>
+
+<!-- PAGE 23: Complete Profile -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-purple">✅</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 23</div>
+      <h3>Complete Profile</h3>
+      <span class="page-url">/auth/complete-profile</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>A profile completion step shown exclusively to users who registered or logged in via phone number (SMS OTP) and do not yet have an email on their account. Without an email, the user cannot receive notifications or be contacted — so this step is required before they can proceed.</p>
+
+    <h4>What the user fills in</h4>
+    <ul class="feature-list">
+      <li><strong>Full name</strong> — how they appear to other users on the platform.</li>
+      <li><strong>Email address</strong> — used for notifications, messages, and as the account identifier for listing ownership.</li>
+    </ul>
+
+    <p>The phone number they already verified is shown with a green "verified" badge at the top of the form. After submitting, the profile is saved and the user is sent to wherever they were originally trying to go.</p>
+  </div>
+</div>
+
+
+<!-- ══ §6 — COMMUNITY & INFO ══ -->
+<div class="section-header">
+  <div class="cat-label">Section 6</div>
+  <h2>Community &amp; Info Pages</h2>
+  <p>Specialised listing sections, community stories, real-world resources, support, and legal/policy pages.</p>
+</div>
+
+<!-- PAGE 24: Pets -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-pink">🐾</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 24</div>
+      <h3>Pet Listings</h3>
+      <span class="page-url">/pets</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>A dedicated section showing only listings in the "Pet" category — lost and found animals. It is separate from the general search page because pet listings have unique filterable fields (species, breed, colour, microchip number) that deserve their own UI.</p>
+
+      <h4>Filters available</h4>
+      <ul class="feature-list">
+        <li>Keyword search across name and description.</li>
+        <li>Type filter: All / Lost / Found.</li>
+        <li>Species filter: All, Cat, Dog, Bird, Rabbit, Hamster, Other — each shown with an emoji.</li>
+      </ul>
+
+      <h4>What each listing card shows</h4>
+      <ul class="feature-list">
+        <li>Photo (or species emoji if no photo).</li>
+        <li>Lost/Found badge and species badge.</li>
+        <li>Breed, colour, and age chips.</li>
+        <li>Microchip number (if provided) — shown in blue so vets can spot it immediately.</li>
+        <li>Location, view count, and time since posting.</li>
+      </ul>
+
+      <h4>Tips section</h4>
+      <p>Below the grid there is an informational box with advice on posting an effective pet listing — multiple photos, microchip details, distinctive markings, reward offers.</p>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-pink">
+        <h5>Who uses it</h5>
+        <ul>
+          <li>Pet owners who lost their animal</li>
+          <li>People who found a stray animal</li>
+          <li>Vets and shelters checking microchip numbers</li>
+        </ul>
+      </div>
+      <div class="info-box box-blue">
+        <h5>Stats bar</h5>
+        <ul>
+          <li>Total pet listings</li>
+          <li>Lost count</li>
+          <li>Found count</li>
+        </ul>
+      </div>
+      <div class="info-box box-amber">
+        <h5>Login required?</h5>
+        <p>Yes — behind an auth guard.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 25: Success Stories -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-green">🎉</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 25</div>
+      <h3>Success Stories</h3>
+      <span class="page-url">/hikayeler</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>A community page where users who successfully found their lost item (or returned a found item) can share their experience. It builds social proof and trust in the platform, and inspires other users who are still searching.</p>
+
+    <h4>Browsing stories</h4>
+    <p>Approved stories appear as cards with the item title, a partially anonymised email (e.g., "me***@gmail.com"), the date, and the full story text. Only admin-approved stories are shown publicly.</p>
+
+    <h4>Submitting a story</h4>
+    <p>Logged-in users see a "Share Your Story" button. Clicking it reveals a form with two fields: the name/title of the item they recovered and the story itself (how they lost it, how the platform helped, how they got it back). After submission the story is held for admin moderation before going public.</p>
+
+    <h4>Not logged in</h4>
+    <p>Visitors can read all approved stories freely. A login prompt is shown when they want to submit their own story.</p>
+  </div>
+</div>
+
+<!-- PAGE 26: Lost Property Offices -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-blue">🏛️</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 26</div>
+      <h3>Lost Property Offices</h3>
+      <span class="page-url">/kayip-buro</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>An informational reference page listing the contact details of official lost property bureaus and police stations across Turkey's major cities and airports. It serves as a real-world complement to the platform — users who cannot find their item online can also check physical offices.</p>
+
+    <h4>Locations covered</h4>
+    <p>Istanbul (Police HQ + IBB public transport), Ankara (Police HQ + EGO public transport), Izmir, Bursa, Antalya, Istanbul Airport, Sabiha Gökçen Airport, and Esenboğa Airport.</p>
+
+    <h4>Information per office</h4>
+    <p>Official name, address, phone number, and a note explaining what types of items they handle. All content is static; users are advised to verify details with official sources.</p>
+
+    <h4>Practical tips section</h4>
+    <p>Four tip cards: get an official incident report, keep photos of valuables, report within 24–48 hours, and use BulanVarMı? alongside official channels.</p>
+
+    <h4>CTA banner</h4>
+    <p>An amber banner at the top encourages users to also post a BulanVarMı? listing for faster AI-assisted results alongside the official process. No login required to view this page.</p>
+  </div>
+</div>
+
+<!-- PAGE 27: Support -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-blue">🆘</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 27</div>
+      <h3>Support &amp; Contact</h3>
+      <span class="page-url">/destek</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>The customer support page where users can contact the BulanVarMı? team with questions, bug reports, complaints, or partnership enquiries. It also provides quick answers to common questions via an FAQ accordion.</p>
+
+      <h4>Contact form</h4>
+      <ul class="feature-list">
+        <li>Full name (required).</li>
+        <li>Email address — where the team's reply will be sent (required).</li>
+        <li>Subject — chosen from: Account Issue, Technical Problem, Listing Issue, Payment Issue, Privacy &amp; Data, Partnership, Other.</li>
+        <li>Message text (up to 2000 characters, required).</li>
+      </ul>
+      <p>After submitting, a green success screen confirms the message was sent and a confirmation email goes to the user's address.</p>
+
+      <h4>Sidebar information</h4>
+      <ul class="feature-list">
+        <li>Support email address.</li>
+        <li>Typical response time: under 24 hours.</li>
+        <li>Quick-access links to key platform pages.</li>
+        <li>FAQ accordion with 4 common questions: listing approval time, how to search for your item, account deletion, and refund policy.</li>
+      </ul>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-blue">
+        <h5>Who uses it</h5>
+        <ul>
+          <li>Users with problems or questions</li>
+          <li>Businesses wanting to partner</li>
+          <li>KVKK / GDPR data requests</li>
+        </ul>
+      </div>
+      <div class="info-box box-green">
+        <h5>Login required?</h5>
+        <p>No — anyone can submit a support request, no account needed.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 28: Privacy Policy -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-slate">🔒</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 28</div>
+      <h3>Privacy Policy</h3>
+      <span class="page-url">/gizlilik</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>The platform's legal privacy policy, written in Turkish, explaining how BulanVarMı? collects, stores, uses, and protects users' personal data — compliant with Turkish KVKK (Personal Data Protection Law) and GDPR principles.</p>
+
+    <h4>Sections covered</h4>
+    <ul class="feature-list">
+      <li>Data controller identity and contact details.</li>
+      <li>What personal data is collected: name, email, phone, listing content, location, usage logs.</li>
+      <li>Legal basis and purpose for processing: service provision, communication, legal obligations.</li>
+      <li>Data sharing with third-party processors (hosting, email, analytics).</li>
+      <li>Data retention periods.</li>
+      <li>User rights: access, correction, deletion, portability, objection.</li>
+      <li>Cookie usage policy.</li>
+    </ul>
+    <p>Last updated May 2026. Available to all visitors without login.</p>
+  </div>
+</div>
+
+<!-- PAGE 29: Terms of Use -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-slate">📜</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 29</div>
+      <h3>Terms of Use</h3>
+      <span class="page-url">/kullanim-sartlari</span>
+    </div>
+  </div>
+  <div class="page-body-full">
+    <h4>What this page is</h4>
+    <p>The platform's terms and conditions, written in Turkish. By using BulanVarMı? the user agrees to these terms.</p>
+
+    <h4>Sections covered</h4>
+    <ul class="feature-list">
+      <li>Parties and acceptance — the agreement between BulanVarMı? and the end user.</li>
+      <li>Permitted and prohibited uses of the platform.</li>
+      <li>Rules for listing content: no spam, no fraudulent claims, no inappropriate material.</li>
+      <li>Liability limitations — the platform facilitates connections but is not responsible for transaction outcomes between users.</li>
+      <li>Account termination and banning rules.</li>
+      <li>Governing law (Turkish law) and dispute resolution.</li>
+      <li>Amendment policy — the platform reserves the right to update the terms.</li>
+    </ul>
+    <p>Last updated May 2026. Available to all visitors without login.</p>
+  </div>
+</div>
+
+<!-- PAGE 30: Admin Panel -->
+<div class="page-card">
+  <div class="page-header">
+    <div class="page-icon icon-red">⚙️</div>
+    <div class="page-title-block">
+      <div class="page-num">Page 30</div>
+      <h3>Admin Panel</h3>
+      <span class="page-url">/admin</span>
+    </div>
+  </div>
+  <div class="page-body">
+    <div class="page-description">
+      <h4>What this page is</h4>
+      <p>The back-office control centre of the platform, accessible only to designated admin users. It is a single-page panel divided into tabs, each covering a different area of platform management.</p>
+
+      <h4>Tab — Dashboard</h4>
+      <p>Overview statistics: total listings (and new in the last 7 days), registered users, pending listings, open support sessions, resolved items, total sightings. A bar chart shows daily listing volume (lost vs. found) for the past 30 days.</p>
+
+      <h4>Tab — Listings</h4>
+      <p>A full table of all listings with search and filter. Actions per listing: <strong>Approve</strong> (makes it public), <strong>Flag</strong> (returns it to the owner for editing), <strong>Delete</strong>. Pending listings are highlighted in amber.</p>
+
+      <h4>Tab — Users</h4>
+      <p>A list of all registered users with email, join date, listing count, resolved count, and ban status. Actions: ban/unban a user, add their email to the permanent blacklist (prevents re-registration).</p>
+
+      <h4>Tab — Reports</h4>
+      <p>All abuse reports submitted by users (for listings or profiles), showing the reporter, reason, and status. The admin can mark reports as resolved and optionally act on the reported content.</p>
+
+      <h4>Tab — Support</h4>
+      <p>Live customer support management. Shows all open and closed support sessions. The admin can click into any session to see the full chat history and reply in real time. Sessions can be closed from this view.</p>
+
+      <h4>Tab — Success Stories</h4>
+      <p>Lists all submitted success stories with approval status. The admin can approve (makes it public) or delete each story.</p>
+
+      <h4>Tab — User Requests</h4>
+      <p>Contact form submissions from the /destek page appear here. The admin can read the full message, write a response, mark it as resolved, or delete it.</p>
+
+      <h4>Tab — Sightings</h4>
+      <p>All "I saw it" sighting reports, showing the item, reporter, location, and note. Useful for spotting patterns or verifying suspicious reports.</p>
+    </div>
+    <div class="sidebar-box">
+      <div class="info-box box-red">
+        <h5>Access</h5>
+        <p>Restricted to email addresses in the admin configuration. All other users are redirected to the home page.</p>
+      </div>
+      <div class="info-box box-blue">
+        <h5>Admin tabs</h5>
+        <ul>
+          <li>📊 Dashboard</li>
+          <li>📋 Listings</li>
+          <li>👥 Users</li>
+          <li>⚑ Reports</li>
+          <li>💬 Live Support</li>
+          <li>🎉 Success Stories</li>
+          <li>📩 User Requests</li>
+          <li>👁 Sightings</li>
+        </ul>
+      </div>
+      <div class="info-box box-amber">
+        <h5>Key action</h5>
+        <p>Listing approval is the most critical admin task — a listing only goes public after an admin clicks "Approve".</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- FOOTER -->
+<div style="background:#0f1729; color:#475569; text-align:center; padding:32px 24px; font-size:11px; line-height:1.8;">
+  <div style="color:#60a5fa; font-size:22px; font-weight:900; letter-spacing:-0.5px; margin-bottom:8px;">BulanVarMı?</div>
+  <div>Platform Page Documentation — English Edition</div>
+  <div style="margin-top:6px;">Document generated July 2026 &nbsp;·&nbsp; 30 pages covered across 6 sections</div>
+  <div style="margin-top:16px; color:#334155; font-size:10px;">Internal product reference describing the pages and features of the BulanVarMı? lost &amp; found platform.</div>
+</div>
+
+</body>
+</html>
